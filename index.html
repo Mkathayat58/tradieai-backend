@@ -1249,18 +1249,21 @@ function viewJobDoc(id, type) {
 function confirmStatusUpdate(status) {
   if (status===currentJob.status) return;
   const overlay = document.createElement('div');
+  overlay.id = 'status-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:flex-end;';
   overlay.innerHTML = `
     <div style="background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px max(env(safe-area-inset-bottom),24px);width:100%;">
       <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;">Update status?</div>
       <div style="font-size:14px;color:var(--text-muted);margin-bottom:20px;line-height:1.5;">Change from <strong>${currentJob.status}</strong> to <strong>${status}</strong>?</div>
-      <button class="btn" onclick="applyStatusUpdate('${status}');this.closest('div[style]').remove()"><i class="ti ti-check"></i> Yes, update</button>
-      <button class="btn btn-outline" style="margin-bottom:0;" onclick="this.closest('div[style]').remove()"><i class="ti ti-x"></i> Cancel</button>
+      <button class="btn" onclick="applyStatusUpdate('${status}')"><i class="ti ti-check"></i> Yes, update</button>
+      <button class="btn btn-outline" style="margin-bottom:0;" onclick="document.getElementById('status-overlay').remove()"><i class="ti ti-x"></i> Cancel</button>
     </div>`;
   document.body.appendChild(overlay);
 }
 
 async function applyStatusUpdate(status) {
+  const overlay = document.getElementById('status-overlay');
+  if (overlay) overlay.remove();
   await sb.from('jobs').update({status, updated_at:new Date().toISOString()}).eq('id', currentJob.id);
   currentJob.status = status;
   allJobs = allJobs.map(j => j.id===currentJob.id ? {...j, status} : j);
