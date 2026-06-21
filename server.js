@@ -343,4 +343,166 @@ app.get('/api/usage', requireAuth, async (req, res) => {
 });
 
 // ── START ──
+// ── TEAM: GET OR CREATE TEAM FOR OWNER ──
+async function getOrCreateTeam(userId) {
+  let { data: team } = await supabase.from('teams').select('*').eq('owner_user_id', userId).single();
+  if (!team) {
+    const { data: newTeam } = await supabase.from('teams').insert({ owner_user_id: userId }).select().single();
+    team = newTeam;
+  }
+  return team;
+}
+
+// ── TEAM: CHECK IF USER IS STAFF ──
+async function getStaffContext(userId) {
+  const { data } = await supabase
+    .from('team_members')
+    .select('*, teams(owner_user_id)')
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .eq('role', 'staff')
+    .single();
+  return data || null;
+}
+
+// ── TEAM: INVITE STAFF ──
+app.post('/api/team/invite', requireAuth, async (req, res) => {
+  const { name, email } = req.body;
+  if (!name || !email) return res.status(400).json({ error: 'Name and email required' });
+
+  const team = await getOrCreateTeam(req.user.id);
+  if (!team) return res.status(500).json({ error: 'Could not create team' });
+
+  // Check not already invited
+  const { data: existing } = await supabase
+    .from('team_members')
+    .select('id')
+    .eq('team_id', team.id)
+    .eq('email', email)
+    .single();
+  if (existing) return res.status(400).json({ error: 'This person has already been invited' });
+
+  // Invite via Supabase auth
+  const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
+    data: { name, team_id: team.id, role: 'staff' },
+    redirectTo: `${process.env.FRONTEND_URL || 'https://tradieai-backend.onrender.com'}/index.html`
+  });
+  if (inviteError) return res.status(400).json({ error: inviteError.message });
+
+  // Save to team_members
+  const { data: member, error: memberError } = await supabase.from('team_members').insert({
+    team_id: team.id,
+    user_id: inviteData.user?.id || null,
+    name,
+    email,
+    role: 'staff',
+    status: 'pending'
+  }).select().single();
+  if (memberError) return res.status(400).json({ error: memberError.message });
+
+  res.json({ success: true, member });
+});
+
+// ── TEAM: LIST MEMBERS ──
+app.get('/api/team/members', requireAuth, async (req, res) => {
+  const team = await getOrCreateTeam(req.user.id);
+  if (!team) return res.json([]);
+
+  const { data, error } = await supabase
+    .from('team_members')
+    .select('*')
+    .eq('team_id', team.id)
+    .order('invited_at', { ascending: false });
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data || []);
+});
+
+// ── TEAM: REMOVE MEMBER ──
+app.delete('/api/team/members/:id', requireAuth, async (req, res) => {
+  const team = await getOrCreateTeam(req.user.id);
+  if (!team) return res.status(404).json({ error: 'Team not found' });
+
+  const { error } = await supabase
+    .from('team_members')
+    .delete()
+    .eq('id', req.params.id)
+    .eq('team_id', team.id);
+  if (error) return res.status(400).json({ error: error.message });
+  res.json({ success: true });
+});
+
+// ── TEAM: ACTIVATE MEMBER (called when staff completes signup) ──
+app.post('/api/team/activate', requireAuth, async (req, res) => {
+  const { data: member, error } = await supabase
+    .from('team_members')
+    .update({ status: 'active', user_id: req.user.id, joined_at: new Date().toISOString() })
+    .eq('email', req.user.email)
+    .eq('status', 'pending')
+    .select()
+    .single();
+  if (error || !member) return res.status(404).json({ error: 'No pending invite found for this email' });
+
+  // Create a minimal profile for the staff member if not exists
+  const { data: existingProfile } = await supabase.from('profiles').select('id').eq('id', req.user.id).single();
+  if (!existingProfile) {
+    await supabase.from('profiles').insert({
+      id: req.user.id,
+      email: req.user.email,
+      name: member.name,
+      firstname: member.name.split(' ')[0],
+      plan: 'free',
+      usage_count: 0,
+      usage_reset: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString()
+    });
+  }
+  res.json({ success: true, member });
+});
+
+// ── TEAM: GET MY ROLE ──
+app.get('/api/team/my-role', requireAuth, async (req, res) => {
+  const staffContext = await getStaffContext(req.user.id);
+  if (staffContext) {
+    return res.json({ role: 'staff', owner_id: staffContext.teams.owner_user_id, member: staffContext });
+  }
+  // Check if they own a team
+  const { data: team } = await supabase.from('teams').select('id').eq('owner_user_id', req.user.id).single();
+  res.json({ role: 'owner', team_id: team?.id || null });
+});
+
+// ── JOBS: GET FOR STAFF (only assigned jobs) ──
+app.get('/api/jobs/assigned', requireAuth, async (req, res) => {
+  const { data, error } = await supabase
+    .from('jobs')
+    .select('*')
+    .eq('assigned_to', req.user.id)
+    .order('created_at', { ascending: false });
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data || []);
+});
+
+// ── JOB ACTIVITY: LOG ──
+app.post('/api/jobs/:id/activity', requireAuth, async (req, res) => {
+  const { action, user_name } = req.body;
+  if (!action) return res.status(400).json({ error: 'Action required' });
+
+  const { data, error } = await supabase.from('job_activity').insert({
+    job_id: req.params.id,
+    user_id: req.user.id,
+    user_name: user_name || 'Unknown',
+    action
+  }).select().single();
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+
+// ── JOB ACTIVITY: GET ──
+app.get('/api/jobs/:id/activity', requireAuth, async (req, res) => {
+  const { data, error } = await supabase
+    .from('job_activity')
+    .select('*')
+    .eq('job_id', req.params.id)
+    .order('created_at', { ascending: false });
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data || []);
+});
 app.listen(PORT, () => console.log(`Tradie AI backend running on port ${PORT}`));
