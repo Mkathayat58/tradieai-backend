@@ -1506,8 +1506,7 @@ async function deleteJobFile(path) {
   await sb.storage.from('job-files').remove([path]);
   showToast('File deleted ✓');
   await loadJobFiles();
-}
-  function goJobs() {
+function goJobs() {
   loadJobs();
   goTo('screen-jobs');
   setActiveNav('jobs');
