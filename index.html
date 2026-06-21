@@ -1534,10 +1534,13 @@ async function loadTeamMembers() {
         <div class="team-member-name">${m.name}</div>
         <div class="team-member-email">${m.email}</div>
       </div>
-      <span class="team-status-badge team-status-${m.status}">${m.status}</span>
-      <button onclick="removeStaff('${m.id}','${m.name}')" style="background:none;border:none;padding:4px;cursor:pointer;-webkit-tap-highlight-color:transparent;">
-        <i class="ti ti-x" style="font-size:18px;color:var(--text-muted);"></i>
-      </button>
+     <span class="team-status-badge team-status-${m.status}">${m.status}</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        ${m.status === 'pending' ? `<button onclick="resendInvite('${m.email}')" style="background:var(--green-light);border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--green);cursor:pointer;-webkit-tap-highlight-color:transparent;">Resend</button>` : ''}
+        <button onclick="removeStaff('${m.id}','${m.name}')" style="background:none;border:none;padding:4px;cursor:pointer;-webkit-tap-highlight-color:transparent;">
+          <i class="ti ti-x" style="font-size:18px;color:var(--text-muted);"></i>
+        </button>
+      </div>
     </div>`).join('');
 }
 
@@ -1575,7 +1578,33 @@ async function removeStaff(memberId, name) {
     </div>`;
   document.body.appendChild(overlay);
 }
-
+async function resendInvite(email) {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return showToast('Please log in again', true);
+  const res = await fetch(BACKEND_URL+'/api/team/resend-invite', {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token },
+    body: JSON.stringify({ email })
+  });
+  const data = await res.json();
+  if (!res.ok) return showToast(data.error || 'Could not resend invite', true);
+  if (data.link) {
+    // Rate limited — show the magic link directly so owner can share it manually
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:flex-end;';
+    overlay.innerHTML = `
+      <div style="background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px max(env(safe-area-inset-bottom),24px);width:100%;">
+        <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;">Share this link</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.5;">Email rate limit reached. Copy this link and send it to <strong>${email}</strong> manually via WhatsApp or SMS.</div>
+        <div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-size:11px;color:var(--text);word-break:break-all;margin-bottom:16px;">${data.link}</div>
+        <button class="btn" onclick="navigator.clipboard.writeText('${data.link}').then(()=>showToast('Link copied ✓')).catch(()=>showToast('Copy failed',true))"><i class="ti ti-copy"></i> Copy link</button>
+        <button class="btn btn-outline" style="margin-bottom:0;" onclick="this.closest('div[style]').parentElement.remove()"><i class="ti ti-x"></i> Close</button>
+      </div>`;
+    document.body.appendChild(overlay);
+    return;
+  }
+  showToast('Invite resent to '+email+' ✓');
+}
 async function confirmRemoveStaff(memberId) {
   const overlay = document.getElementById('remove-staff-overlay');
   if (overlay) overlay.remove();
