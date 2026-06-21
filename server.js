@@ -460,11 +460,25 @@ app.post('/api/team/activate', requireAuth, async (req, res) => {
 
 // ── TEAM: GET MY ROLE ──
 app.get('/api/team/my-role', requireAuth, async (req, res) => {
+  // Check by user_id first (already activated)
   const staffContext = await getStaffContext(req.user.id);
   if (staffContext) {
     return res.json({ role: 'staff', owner_id: staffContext.teams.owner_user_id, member: staffContext });
   }
-  // Check if they own a team
+
+  // Check by email (pending — first login via magic link)
+  const { data: pendingMember } = await supabase
+    .from('team_members')
+    .select('*, teams(owner_user_id)')
+    .eq('email', req.user.email)
+    .in('status', ['pending', 'active'])
+    .single();
+
+  if (pendingMember) {
+    return res.json({ role: 'staff', owner_id: pendingMember.teams.owner_user_id, member: pendingMember });
+  }
+
+  // They are an owner
   const { data: team } = await supabase.from('teams').select('id').eq('owner_user_id', req.user.id).single();
   res.json({ role: 'owner', team_id: team?.id || null });
 });
