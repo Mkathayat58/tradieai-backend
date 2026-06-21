@@ -735,7 +735,31 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     </div>
   </div>
 </div>
-
+<!-- STAFF SET PASSWORD -->
+<div class="screen" id="screen-staff-setpassword">
+  <div class="auth-header">
+    <div class="auth-title">Join your team</div>
+    <div class="auth-sub">Set a password to get started</div>
+  </div>
+  <div class="auth-body">
+    <div style="background:var(--green-light);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:20px;display:flex;gap:10px;align-items:flex-start;">
+      <i class="ti ti-user-check" style="font-size:20px;color:var(--green);flex-shrink:0;"></i>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--green-dark);margin-bottom:2px;" id="staff-invite-greeting">You've been invited!</div>
+        <div style="font-size:12px;color:var(--green-dark);line-height:1.4;">Set your password below to access your assigned jobs.</div>
+      </div>
+    </div>
+    <div class="field"><label>Your email</label><input type="email" id="staff-invite-email" disabled style="opacity:0.6;background:var(--surface2);"></div>
+    <div class="field"><label>Set a password</label>
+      <div class="password-wrap"><input type="password" id="staff-pw" placeholder="Min. 8 characters"><button class="eye-btn" onclick="togglePw('staff-pw',this)"><i class="ti ti-eye"></i></button></div>
+    </div>
+    <div class="field"><label>Confirm password</label>
+      <div class="password-wrap"><input type="password" id="staff-pw-confirm" placeholder="Re-enter password"><button class="eye-btn" onclick="togglePw('staff-pw-confirm',this)"><i class="ti ti-eye"></i></button></div>
+    </div>
+    <div class="error-msg" id="staff-pw-error"></div>
+    <button class="btn" onclick="staffSetPassword()"><i class="ti ti-check"></i> Set password & join team</button>
+  </div>
+</div>
 <!-- STAFF HOME -->
 <div class="screen" id="screen-staff-home">
   <div class="staff-home-header">
@@ -1495,6 +1519,27 @@ function goHistory() { renderHistoryPage(); goTo('screen-history'); setActiveNav
 function goSettings() { goTo('screen-settings'); setActiveNav('settings'); }
 function goUpgrade() { goTo('screen-upgrade'); setActiveNav('upgrade'); }
 function goTeam() { goTo('screen-team'); loadTeamMembers(); populateAssignDropdown(); }
+// ── STAFF PASSWORD SETUP ──
+async function staffSetPassword() {
+  const pw = document.getElementById('staff-pw').value;
+  const confirm = document.getElementById('staff-pw-confirm').value;
+  if (pw.length < 8) return showError('staff-pw-error', 'Password must be at least 8 characters.');
+  if (pw !== confirm) return showError('staff-pw-error', 'Passwords do not match.');
+  hideError('staff-pw-error');
+
+  const { error } = await sb.auth.updateUser({ password: pw });
+  if (error) return showError('staff-pw-error', error.message);
+
+  // Activate team member record
+  const session = (await sb.auth.getSession()).data.session;
+  await fetch(BACKEND_URL+'/api/team/activate', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer '+session.access_token }
+  });
+
+  currentUser = session.user;
+  await loadProfile();
+}
 // ── TEAM & ROLE ──
 let myRole = 'owner';
 let staffContext = null;
@@ -1760,6 +1805,26 @@ async function staffStatusUpdate(status) {
 }
 // INIT
 (async () => {
+  // Detect Supabase magic link / invite callback in URL hash
+  const hash = window.location.hash;
+  if (hash && hash.includes('access_token') && hash.includes('type=invite')) {
+    const params = new URLSearchParams(hash.replace('#', ''));
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    if (accessToken) {
+      const { data, error } = await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+      if (!error && data.session) {
+        currentUser = data.session.user;
+        // Show staff set password screen
+        document.getElementById('staff-invite-email').value = currentUser.email;
+        document.getElementById('staff-invite-greeting').textContent = 'Hi ' + (currentUser.user_metadata?.name || '') + '! You\'ve been invited.';
+        history.replaceState(null, '', window.location.pathname);
+        goTo('screen-staff-setpassword');
+        return;
+      }
+    }
+  }
+
   const {data:{session}} = await sb.auth.getSession();
   if (session) {
     currentUser = session.user;
