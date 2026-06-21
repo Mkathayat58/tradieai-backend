@@ -753,6 +753,23 @@ async function loadProfile() {
   await loadHistory();
   goTo('screen-home');
 }
+async function loadChatHistory() {
+  const { data, error } = await sb.from('history')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .eq('template', 'chat')
+    .order('created_at', { ascending: false })
+    .limit(10);
+  if (error || !data || !data.length) return;
+  const messages = document.getElementById('chat-messages');
+  messages.innerHTML = '';
+  data.reverse().forEach(h => {
+    addChatMsg(h.input, 'user');
+    addChatMsg(h.output, 'ai');
+    chatHistory.push({ role:'user', content:h.input });
+    chatHistory.push({ role:'assistant', content:h.output });
+  });
+}
 async function loadHistory() {
   const { data, error } = await sb.from('history')
     .select('*')
@@ -929,7 +946,7 @@ async function saveProfileSettings() {
 
 // ── TEMPLATE ──
 function openTemplate(type) {
-  if (type === 'chat') { goTo('screen-chat'); return; }
+  if (type === 'chat') { loadChatHistory(); goTo('screen-chat'); return; }
   currentTemplate = type;
   const t = templates[type];
   document.getElementById('tpl-title').textContent = t.title;
