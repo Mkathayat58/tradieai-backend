@@ -498,7 +498,14 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
       <span class="settings-title">History</span>
     </div>
   </div>
-  <div class="settings-body" id="history-body"><div class="empty-state" style="padding:40px 20px;">No history yet</div></div>
+  <div class="settings-body" id="history-body" style="flex:1;overflow-y:auto;"><div class="empty-state" style="padding:40px 20px;">No history yet</div></div>
+  <nav class="bottom-nav">
+    <button class="nav-btn" onclick="goHome()"><i class="ti ti-home"></i><span>Home</span></button>
+    <button class="nav-btn" onclick="goJobs()"><i class="ti ti-briefcase"></i><span>Jobs</span></button>
+    <button class="nav-btn active" onclick="goHistory()"><i class="ti ti-clock"></i><span>History</span></button>
+    <button class="nav-btn" onclick="goSettings()"><i class="ti ti-settings"></i><span>Settings</span></button>
+    <button class="nav-btn" onclick="goUpgrade()"><i class="ti ti-crown"></i><span>Upgrade</span></button>
+  </nav>
 </div>
 
 <!-- ═══════════ SETTINGS ═══════════ -->
@@ -589,6 +596,13 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
       <button class="btn btn-danger" onclick="doLogout()"><i class="ti ti-logout"></i> Log out</button>
     </div>
   </div>
+  <nav class="bottom-nav">
+    <button class="nav-btn" onclick="goHome()"><i class="ti ti-home"></i><span>Home</span></button>
+    <button class="nav-btn" onclick="goJobs()"><i class="ti ti-briefcase"></i><span>Jobs</span></button>
+    <button class="nav-btn" onclick="goHistory()"><i class="ti ti-clock"></i><span>History</span></button>
+    <button class="nav-btn active" onclick="goSettings()"><i class="ti ti-settings"></i><span>Settings</span></button>
+    <button class="nav-btn" onclick="goUpgrade()"><i class="ti ti-crown"></i><span>Upgrade</span></button>
+  </nav>
 </div>
 
 <!-- ═══════════ UPGRADE ═══════════ -->
@@ -634,7 +648,13 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
       </ul>
       <button class="btn btn-outline" onclick="showToast('Coming soon!')">Get Power — $29/mo</button>
     </div>
-  </div>
+  <nav class="bottom-nav">
+    <button class="nav-btn" onclick="goHome()"><i class="ti ti-home"></i><span>Home</span></button>
+    <button class="nav-btn" onclick="goJobs()"><i class="ti ti-briefcase"></i><span>Jobs</span></button>
+    <button class="nav-btn" onclick="goHistory()"><i class="ti ti-clock"></i><span>History</span></button>
+    <button class="nav-btn" onclick="goSettings()"><i class="ti ti-settings"></i><span>Settings</span></button>
+    <button class="nav-btn active" onclick="goUpgrade()"><i class="ti ti-crown"></i><span>Upgrade</span></button>
+  </nav>
 </div>
 
 <!-- TOAST -->
