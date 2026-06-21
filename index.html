@@ -511,16 +511,48 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
   <div class="settings-body">
     <div class="settings-section">
       <div class="settings-section-title">Your profile</div>
-      <div class="settings-card">
-        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-user"></i><span class="settings-row-label">Name</span></div><span class="settings-row-val" id="s-name">—</span></div>
-        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-phone"></i><span class="settings-row-label">Phone</span></div><span class="settings-row-val" id="s-phone">—</span></div>
-        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-mail"></i><span class="settings-row-label">Email</span></div><span class="settings-row-val" id="s-email">—</span></div>
-        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-building"></i><span class="settings-row-label">Business</span></div><span class="settings-row-val" id="s-biz">—</span></div>
-        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-tool"></i><span class="settings-row-label">Trade</span></div><span class="settings-row-val" id="s-trade">—</span></div>
-        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-map-pin"></i><span class="settings-row-label">State</span></div><span class="settings-row-val" id="s-state">—</span></div>
-        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-id-badge"></i><span class="settings-row-label">Licence</span></div><span class="settings-row-val" id="s-licence">—</span></div>
-        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-receipt"></i><span class="settings-row-label">ABN</span></div><span class="settings-row-val" id="s-abn">—</span></div>
+      <div class="field"><label>First name</label><input type="text" id="s-firstname" placeholder="First name"></div>
+      <div class="field"><label>Last name</label><input type="text" id="s-lastname" placeholder="Last name"></div>
+      <div class="field"><label>Phone number</label><input type="tel" id="s-phone" placeholder="e.g. 0412 345 678"></div>
+      <div class="field"><label>Email address</label><input type="email" id="s-email" placeholder="your@email.com"></div>
+      <div class="field"><label>Business name</label><input type="text" id="s-biz" placeholder="e.g. Dave's Electrical"></div>
+      <div class="field"><label>Trade</label>
+        <select id="s-trade">
+          <option value="Electrician">Electrician</option>
+          <option value="Plumber">Plumber</option>
+          <option value="Builder">Builder</option>
+          <option value="Cleaner">Cleaner</option>
+          <option value="Landscaper">Landscaper</option>
+          <option value="Painter">Painter</option>
+          <option value="Carpenter">Carpenter</option>
+          <option value="Other">Other</option>
+        </select>
       </div>
+      <div class="field"><label>State</label>
+        <select id="s-state">
+          <option value="VIC">Victoria (VIC)</option>
+          <option value="NSW">New South Wales (NSW)</option>
+          <option value="QLD">Queensland (QLD)</option>
+          <option value="WA">Western Australia (WA)</option>
+          <option value="SA">South Australia (SA)</option>
+          <option value="TAS">Tasmania (TAS)</option>
+          <option value="ACT">ACT</option>
+          <option value="NT">Northern Territory (NT)</option>
+        </select>
+      </div>
+      <div class="field"><label>Business address</label><input type="text" id="s-address" placeholder="e.g. 123 Smith St, Melbourne VIC 3000"></div>
+      <div class="field"><label>Licence number</label><input type="text" id="s-licence" placeholder="e.g. REC 123456"></div>
+      <div class="field"><label>ABN</label><input type="text" id="s-abn" placeholder="e.g. 12 345 678 901"></div>
+      <div class="field"><label>Payment terms</label>
+        <select id="s-terms">
+          <option value="Payment due on completion">Payment due on completion</option>
+          <option value="Payment due within 7 days">Payment due within 7 days</option>
+          <option value="Payment due within 14 days">Payment due within 14 days</option>
+          <option value="Payment due within 30 days">Payment due within 30 days</option>
+          <option value="50% deposit required upfront">50% deposit required upfront</option>
+        </select>
+      </div>
+      <button class="btn" onclick="saveProfileSettings()"><i class="ti ti-check"></i> Save changes</button>
     </div>
     <div class="settings-section">
       <div class="settings-section-title">Plan & usage</div>
@@ -795,15 +827,40 @@ function renderRecent() {
 
 function updateSettings() {
   if (!userProfile) return;
-  document.getElementById('s-name').textContent = userProfile.name || '—';
-  document.getElementById('s-phone').textContent = userProfile.phone || '—';
-  document.getElementById('s-email').textContent = currentUser?.email || '—';
-  document.getElementById('s-biz').textContent = userProfile.bizname || '—';
-  document.getElementById('s-trade').textContent = userProfile.trade || '—';
-  document.getElementById('s-state').textContent = userProfile.state || '—';
-  document.getElementById('s-licence').textContent = userProfile.licence || 'Not set';
-  document.getElementById('s-abn').textContent = userProfile.abn || 'Not set';
+  document.getElementById('s-firstname').value = userProfile.firstname || '';
+  document.getElementById('s-lastname').value = userProfile.lastname || '';
+  document.getElementById('s-phone').value = userProfile.phone || '';
+  document.getElementById('s-email').value = currentUser?.email || '';
+  document.getElementById('s-biz').value = userProfile.bizname || '';
+  document.getElementById('s-trade').value = userProfile.trade || 'Electrician';
+  document.getElementById('s-state').value = userProfile.state || 'VIC';
+  document.getElementById('s-address').value = userProfile.address || '';
+  document.getElementById('s-licence').value = userProfile.licence || '';
+  document.getElementById('s-abn').value = userProfile.abn || '';
+  document.getElementById('s-terms').value = userProfile.terms || 'Payment due on completion';
   document.getElementById('s-plan').textContent = (userProfile.plan || 'free').charAt(0).toUpperCase() + (userProfile.plan||'free').slice(1);
+}
+
+async function saveProfileSettings() {
+  const updated = {
+    firstname: document.getElementById('s-firstname').value.trim(),
+    lastname: document.getElementById('s-lastname').value.trim(),
+    name: document.getElementById('s-firstname').value.trim() + ' ' + document.getElementById('s-lastname').value.trim(),
+    phone: document.getElementById('s-phone').value.trim(),
+    bizname: document.getElementById('s-biz').value.trim(),
+    trade: document.getElementById('s-trade').value,
+    state: document.getElementById('s-state').value,
+    address: document.getElementById('s-address').value.trim(),
+    licence: document.getElementById('s-licence').value.trim(),
+    abn: document.getElementById('s-abn').value.trim(),
+    terms: document.getElementById('s-terms').value,
+    updated_at: new Date().toISOString()
+  };
+  const { error } = await sb.from('profiles').update(updated).eq('id', currentUser.id);
+  if (error) return showToast('Could not save — please try again', true);
+  userProfile = { ...userProfile, ...updated };
+  showToast('Profile saved successfully ✓');
+  initHome();
 }
 
 // ── TEMPLATE ──
