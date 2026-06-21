@@ -226,6 +226,23 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 .status-select-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px;}
 .status-select-btn{border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px;text-align:center;font-size:12px;font-weight:500;cursor:pointer;color:var(--text);background:var(--surface);-webkit-tap-highlight-color:transparent;}
 .status-select-btn.active-status{border-color:var(--green);background:var(--green-light);color:var(--green);}
+/* ── TEAM ── */
+.team-member-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.team-member-info{flex:1;min-width:0;}
+.team-member-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;}
+.team-member-email{font-size:12px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.team-status-badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;flex-shrink:0;}
+.team-status-pending{background:var(--amber-light);color:var(--amber);}
+.team-status-active{background:var(--green-light);color:var(--green-dark);}
+.activity-log{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:12px;}
+.activity-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-bottom:0.5px solid var(--border);}
+.activity-item:last-child{border-bottom:none;}
+.activity-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;margin-top:5px;}
+.activity-text{font-size:13px;color:var(--text);flex:1;}
+.activity-time{font-size:11px;color:var(--text-muted);margin-top:2px;}
+.staff-home-header{background:var(--green);padding:16px 20px 20px;padding-top:max(env(safe-area-inset-top),16px);}
+.staff-job-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.staff-job-card:active{background:var(--surface2);}
 </style>
 </head>
 <body>
@@ -540,6 +557,15 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
       </div>
       <div style="margin-top:10px;"><button class="btn" onclick="goUpgrade()"><i class="ti ti-crown"></i> Upgrade plan</button></div>
     </div>
+  <div class="settings-section">
+      <div class="settings-section-title">Team</div>
+      <div class="settings-card">
+        <div class="settings-row" onclick="goTeam()" style="cursor:pointer;">
+          <div class="settings-row-left"><i class="ti ti-users"></i><span class="settings-row-label">Manage team</span></div>
+          <i class="ti ti-chevron-right" style="font-size:16px;color:var(--border);"></i>
+        </div>
+      </div>
+    </div>
     <div class="settings-section">
       <button class="btn btn-danger" onclick="doLogout()"><i class="ti ti-logout"></i> Log out</button>
     </div>
@@ -653,6 +679,9 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     <div class="field"><label>Status</label>
       <select id="jf-status"><option value="New">New</option><option value="Quoted">Quoted</option><option value="Accepted">Accepted</option><option value="Declined">Declined</option><option value="In Progress">In Progress</option><option value="Completed">Completed</option><option value="Invoiced">Invoiced</option><option value="Paid">Paid</option></select>
     </div>
+    <div class="field"><label>Assign to <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label>
+      <select id="jf-assigned"><option value="">Unassigned</option></select>
+    </div>
     <div class="field"><label>Notes</label><textarea class="job-input" id="jf-notes" placeholder="Any extra notes about this job..." style="min-height:70px;"></textarea></div>
     <button class="btn" id="job-save-btn" onclick="saveJob()"><i class="ti ti-check"></i> Save job</button>
   </div>
@@ -683,7 +712,47 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     <button class="nav-btn" onclick="goUpgrade()"><i class="ti ti-crown"></i><span>Upgrade</span></button>
   </nav>
 </div>
+<!-- TEAM MANAGEMENT (owner) -->
+<div class="screen" id="screen-team">
+  <div class="settings-header">
+    <div class="settings-topbar">
+      <button class="back-btn" onclick="goSettings()"><i class="ti ti-arrow-left"></i></button>
+      <span class="settings-title">My Team</span>
+    </div>
+  </div>
+  <div class="settings-body">
+    <div class="settings-section">
+      <div class="settings-section-title">Invite a staff member</div>
+      <div class="settings-card" style="padding:16px;">
+        <div class="field" style="margin-bottom:12px;"><label>Full name</label><input type="text" id="invite-name" placeholder="e.g. Dave Smith"></div>
+        <div class="field" style="margin-bottom:12px;"><label>Email address</label><input type="email" id="invite-email" placeholder="e.g. dave@email.com"></div>
+        <button class="btn" style="margin-bottom:0;" onclick="inviteStaff()"><i class="ti ti-send"></i> Send invite</button>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">Team members</div>
+      <div id="team-members-list"><div class="empty-state" style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;">No team members yet</div></div>
+    </div>
+  </div>
+</div>
 
+<!-- STAFF HOME -->
+<div class="screen" id="screen-staff-home">
+  <div class="staff-home-header">
+    <div class="home-topbar">
+      <span class="home-logo">Tradie AI</span>
+      <button class="avatar-btn" id="staff-avatar">DK</button>
+    </div>
+    <div class="home-greeting" id="staff-greeting">G'day 👋</div>
+    <div class="home-sub">Your assigned jobs</div>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:16px;" id="staff-jobs-list">
+    <div class="empty-state" style="padding:40px 20px;text-align:center;color:var(--text-muted);">No jobs assigned yet</div>
+  </div>
+  <div style="background:var(--surface);border-top:0.5px solid var(--border);padding:14px 20px max(env(safe-area-inset-bottom),14px);flex-shrink:0;">
+    <button class="btn btn-danger" style="margin-bottom:0;" onclick="doLogout()"><i class="ti ti-logout"></i> Log out</button>
+  </div>
+</div>
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
@@ -1122,6 +1191,7 @@ function filterJobs(status, btn) {
 function goNewJob() {
   currentJob = null;
   document.getElementById('job-form-title').textContent = 'New job';
+  populateAssignDropdown();
   document.getElementById('jf-customer').value='';
   document.getElementById('jf-phone').value='';
   document.getElementById('jf-email').value='';
@@ -1145,6 +1215,9 @@ function editCurrentJob() {
   document.getElementById('jf-due').value = currentJob.due_date||'';
   document.getElementById('jf-status').value = currentJob.status||'New';
   document.getElementById('jf-notes').value = currentJob.notes||'';
+  populateAssignDropdown().then(() => {
+    if (currentJob.assigned_to) document.getElementById('jf-assigned').value = currentJob.assigned_to;
+  });
   document.getElementById('job-save-btn').disabled=false;
   document.getElementById('job-save-btn').innerHTML='<i class="ti ti-check"></i> Save job';
   goTo('screen-new-job');
@@ -1158,6 +1231,7 @@ async function saveJob() {
   btn.disabled=true; btn.innerHTML='<i class="ti ti-loader"></i> Saving...';
   const jobData = {
     user_id: currentUser.id,
+    assigned_to: document.getElementById('jf-assigned').value || null,
     customer_name: customer,
     customer_phone: document.getElementById('jf-phone').value.trim(),
     customer_email: document.getElementById('jf-email').value.trim(),
@@ -1189,6 +1263,7 @@ async function viewJob(id) {
   document.getElementById('jd-number').textContent = currentJob.job_number;
   await renderJobDetail();
   goTo('screen-job-detail');
+  await loadActivityLog(currentJob.id);
 }
 
 async function renderJobDetail() {
@@ -1235,6 +1310,8 @@ async function renderJobDetail() {
       </div>
       <input type="file" id="doc-upload-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="display:none;" onchange="handleDocUpload(event)">
       <div class="detail-section" id="docs-list">${docsHtml}</div>
+      <div class="section-label">Activity</div>
+      <div class="activity-log" id="activity-log"><div class="empty-state" style="padding:16px;">Loading...</div></div>
     </div>`;
 }
 function viewJobDoc(id, type) {
@@ -1267,8 +1344,10 @@ async function applyStatusUpdate(status) {
   await sb.from('jobs').update({status, updated_at:new Date().toISOString()}).eq('id', currentJob.id);
   currentJob.status = status;
   allJobs = allJobs.map(j => j.id===currentJob.id ? {...j, status} : j);
+  await logActivity(currentJob.id, 'marked '+status);
   showToast('Status updated to '+status+' ✓');
   await renderJobDetail();
+  await loadActivityLog(currentJob.id);
 }
 
 function triggerDocUpload() {
@@ -1377,12 +1456,258 @@ function goHome() { goTo('screen-home'); setActiveNav('home'); }
 function goHistory() { renderHistoryPage(); goTo('screen-history'); setActiveNav('history'); }
 function goSettings() { goTo('screen-settings'); setActiveNav('settings'); }
 function goUpgrade() { goTo('screen-upgrade'); setActiveNav('upgrade'); }
+function goTeam() { goTo('screen-team'); loadTeamMembers(); populateAssignDropdown(); }
+// ── TEAM & ROLE ──
+let myRole = 'owner';
+let staffContext = null;
 
+async function checkRole() {
+  const session = (await sb.auth.getSession()).data.session;
+  if (!session) return;
+  const res = await fetch(BACKEND_URL+'/api/team/my-role', {
+    headers: { 'Authorization': 'Bearer '+session.access_token }
+  });
+  const data = await res.json();
+  myRole = data.role;
+  staffContext = data.member || null;
+  return data;
+}
+
+async function goTeam() {
+  goTo('screen-team');
+  await loadTeamMembers();
+  await populateAssignDropdown();
+}
+
+async function loadTeamMembers() {
+  const session = (await sb.auth.getSession()).data.session;
+  const res = await fetch(BACKEND_URL+'/api/team/members', {
+    headers: { 'Authorization': 'Bearer '+session.access_token }
+  });
+  const members = await res.json();
+  const list = document.getElementById('team-members-list');
+  if (!members.length) {
+    list.innerHTML = '<div class="empty-state" style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;">No team members yet</div>';
+    return;
+  }
+  list.innerHTML = members.map(m => `
+    <div class="team-member-card">
+      <div class="team-member-info">
+        <div class="team-member-name">${m.name}</div>
+        <div class="team-member-email">${m.email}</div>
+      </div>
+      <span class="team-status-badge team-status-${m.status}">${m.status}</span>
+      <button onclick="removeStaff('${m.id}','${m.name}')" style="background:none;border:none;padding:4px;cursor:pointer;-webkit-tap-highlight-color:transparent;">
+        <i class="ti ti-x" style="font-size:18px;color:var(--text-muted);"></i>
+      </button>
+    </div>`).join('');
+}
+
+async function inviteStaff() {
+  const name = document.getElementById('invite-name').value.trim();
+  const email = document.getElementById('invite-email').value.trim();
+  if (!name) return showToast('Please enter a name', true);
+  if (!email) return showToast('Please enter an email', true);
+  const session = (await sb.auth.getSession()).data.session;
+  const res = await fetch(BACKEND_URL+'/api/team/invite', {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token },
+    body: JSON.stringify({ name, email })
+  });
+  const data = await res.json();
+  if (!res.ok) return showToast(data.error || 'Could not send invite', true);
+  document.getElementById('invite-name').value = '';
+  document.getElementById('invite-email').value = '';
+  showToast('Invite sent to '+email+' ✓');
+  await loadTeamMembers();
+  await populateAssignDropdown();
+}
+
+async function removeStaff(memberId, name) {
+  const overlay = document.createElement('div');
+  overlay.id = 'remove-staff-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:flex-end;';
+  overlay.innerHTML = `
+    <div style="background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px max(env(safe-area-inset-bottom),24px);width:100%;">
+      <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;">Remove ${name}?</div>
+      <div style="font-size:14px;color:var(--text-muted);margin-bottom:20px;line-height:1.5;">They will lose access. Their completed jobs will remain on your account.</div>
+      <button class="btn btn-danger" style="margin-bottom:12px;" onclick="confirmRemoveStaff('${memberId}')"><i class="ti ti-user-minus"></i> Yes, remove</button>
+      <button class="btn btn-outline" style="margin-bottom:0;" onclick="document.getElementById('remove-staff-overlay').remove()"><i class="ti ti-x"></i> Cancel</button>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function confirmRemoveStaff(memberId) {
+  const overlay = document.getElementById('remove-staff-overlay');
+  if (overlay) overlay.remove();
+  const session = (await sb.auth.getSession()).data.session;
+  await fetch(BACKEND_URL+'/api/team/members/'+memberId, {
+    method: 'DELETE',
+    headers: { 'Authorization': 'Bearer '+session.access_token }
+  });
+  showToast('Staff member removed ✓');
+  await loadTeamMembers();
+  await populateAssignDropdown();
+}
+
+async function populateAssignDropdown() {
+  const session = (await sb.auth.getSession()).data.session;
+  const res = await fetch(BACKEND_URL+'/api/team/members', {
+    headers: { 'Authorization': 'Bearer '+session.access_token }
+  });
+  const members = await res.json();
+  const active = members.filter(m => m.status === 'active');
+  const select = document.getElementById('jf-assigned');
+  if (!select) return;
+  select.innerHTML = '<option value="">Unassigned</option>' +
+    active.map(m => `<option value="${m.user_id}">${m.name}</option>`).join('');
+}
+
+// ── ACTIVITY LOG ──
+async function loadActivityLog(jobId) {
+  const session = (await sb.auth.getSession()).data.session;
+  const res = await fetch(BACKEND_URL+'/api/jobs/'+jobId+'/activity', {
+    headers: { 'Authorization': 'Bearer '+session.access_token }
+  });
+  const entries = await res.json();
+  const log = document.getElementById('activity-log');
+  if (!log) return;
+  if (!entries.length) { log.innerHTML = '<div class="empty-state" style="padding:16px;font-size:13px;">No activity yet</div>'; return; }
+  log.innerHTML = entries.map(e => `
+    <div class="activity-item">
+      <div class="activity-dot"></div>
+      <div>
+        <div class="activity-text"><strong>${e.user_name}</strong> — ${e.action}</div>
+        <div class="activity-time">${new Date(e.created_at).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})}, ${new Date(e.created_at).toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'})}</div>
+      </div>
+    </div>`).join('');
+}
+
+async function logActivity(jobId, action) {
+  const session = (await sb.auth.getSession()).data.session;
+  const userName = userProfile?.firstname || userProfile?.name || 'Unknown';
+  await fetch(BACKEND_URL+'/api/jobs/'+jobId+'/activity', {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token },
+    body: JSON.stringify({ action, user_name: userName })
+  });
+}
+
+// ── STAFF HOME ──
+async function loadStaffHome() {
+  const session = (await sb.auth.getSession()).data.session;
+  const initials = (userProfile?.firstname||userProfile?.name||'S').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('staff-avatar').textContent = initials;
+  document.getElementById('staff-greeting').textContent = 'G\'day '+(userProfile?.firstname||userProfile?.name||'')+' 👋';
+  const res = await fetch(BACKEND_URL+'/api/jobs/assigned', {
+    headers: { 'Authorization': 'Bearer '+session.access_token }
+  });
+  const jobs = await res.json();
+  const list = document.getElementById('staff-jobs-list');
+  if (!jobs.length) {
+    list.innerHTML = '<div class="empty-state" style="padding:40px 20px;text-align:center;color:var(--text-muted);">No jobs assigned yet</div>';
+    return;
+  }
+  list.innerHTML = jobs.map(j => {
+    const statusClass = 'status-'+j.status.replace(' ','-');
+    const isOverdue = j.due_date && new Date(j.due_date)<new Date() && !['Completed','Paid'].includes(j.status);
+    const dueText = j.due_date ? new Date(j.due_date).toLocaleDateString('en-AU',{day:'numeric',month:'short'}) : '';
+    return `<div class="staff-job-card" onclick="viewStaffJob('${j.id}')">
+      <div class="job-card-top">
+        <span class="job-num">${j.job_number}</span>
+        <span class="job-status-badge ${statusClass}">${j.status}</span>
+      </div>
+      <div class="job-customer">${j.customer_name}</div>
+      <div class="job-desc">${j.description}</div>
+      <div class="job-card-bottom">
+        <span class="job-value">${j.value ? '$'+parseFloat(j.value).toLocaleString('en-AU') : ''}</span>
+        ${dueText ? `<span class="job-due ${isOverdue?'overdue':''}">${isOverdue?'⚠ Overdue: ':'Due: '}${dueText}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function viewStaffJob(id) {
+  const session = (await sb.auth.getSession()).data.session;
+  const res = await fetch(BACKEND_URL+'/api/jobs/assigned', {
+    headers: { 'Authorization': 'Bearer '+session.access_token }
+  });
+  const jobs = await res.json();
+  currentJob = jobs.find(j => j.id === id);
+  if (!currentJob) return;
+  document.getElementById('jd-number').textContent = currentJob.job_number;
+  // Staff-only detail view
+  const isOverdue = currentJob.due_date && new Date(currentJob.due_date)<new Date() && !['Completed','Paid'].includes(currentJob.status);
+  const statusClass = 'status-'+currentJob.status.replace(' ','-');
+  const {data: docs} = await sb.from('job_documents').select('*').eq('job_id', currentJob.id).order('created_at',{ascending:false});
+  const docsHtml = docs?.length ? docs.map(d => `
+    <div class="doc-item">
+      <div class="r-icon"><i class="ti ${d.type==='photo'?'ti-photo':'ti-file-text'}"></i></div>
+      <div><div class="r-title" style="font-size:13px;font-weight:500;">${d.input}</div>
+      <div class="r-time" style="font-size:11px;">${new Date(d.created_at).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'})}</div></div>
+    </div>`).join('') : '<div class="empty-state" style="padding:16px;">No documents yet</div>';
+
+  document.getElementById('job-detail-body').innerHTML = `
+    <div style="padding:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <span class="job-status-badge ${statusClass}" style="font-size:13px;padding:5px 14px;">${currentJob.status}</span>
+        ${isOverdue ? '<span style="font-size:12px;color:var(--red);font-weight:600;">⚠ Overdue</span>' : ''}
+      </div>
+      <div class="detail-section">
+        <div class="detail-row"><span class="detail-label"><i class="ti ti-user"></i>Customer</span><span class="detail-val">${currentJob.customer_name}</span></div>
+        ${currentJob.customer_phone ? `<div class="detail-row"><span class="detail-label"><i class="ti ti-phone"></i>Phone</span><a href="tel:${currentJob.customer_phone}" style="font-size:13px;color:var(--green);font-weight:500;text-decoration:none;">${currentJob.customer_phone} <i class="ti ti-phone-call" style="font-size:13px;"></i></a></div>` : ''}
+        ${currentJob.customer_email ? `<div class="detail-row"><span class="detail-label"><i class="ti ti-mail"></i>Email</span><span class="detail-val">${currentJob.customer_email}</span></div>` : ''}
+        <div class="detail-row"><span class="detail-label"><i class="ti ti-file-description"></i>Description</span><span class="detail-val" style="max-width:200px;white-space:normal;text-align:right;">${currentJob.description}</span></div>
+        ${currentJob.due_date ? `<div class="detail-row"><span class="detail-label"><i class="ti ti-calendar"></i>Due date</span><span class="detail-val ${isOverdue?'overdue':''}">${new Date(currentJob.due_date).toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'long'})}</span></div>` : ''}
+      </div>
+      <div class="section-label">Update status</div>
+      <div class="status-select-grid">
+        ${['In Progress','Completed'].map(s => `
+          <button class="status-select-btn ${currentJob.status===s?'active-status':''}" onclick="staffStatusUpdate('${s}')">${s}</button>`).join('')}
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="section-label" style="margin-bottom:0;">Documents</div>
+        <button onclick="triggerDocUpload()" style="background:var(--green-light);border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--green);cursor:pointer;display:flex;align-items:center;gap:5px;-webkit-tap-highlight-color:transparent;"><i class="ti ti-upload" style="font-size:14px;"></i> Upload</button>
+      </div>
+      <input type="file" id="doc-upload-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="display:none;" onchange="handleDocUpload(event)">
+      <div class="detail-section" id="docs-list">${docsHtml}</div>
+    </div>`;
+
+  // Hide the Edit button for staff
+  const editBtn = document.querySelector('#screen-job-detail button[onclick="editCurrentJob()"]');
+  if (editBtn) editBtn.style.display = 'none';
+
+  goTo('screen-job-detail');
+  await loadActivityLog(currentJob.id);
+}
+
+async function staffStatusUpdate(status) {
+  if (status === currentJob.status) return;
+  await sb.from('jobs').update({status, updated_at: new Date().toISOString()}).eq('id', currentJob.id);
+  await logActivity(currentJob.id, 'marked '+status);
+  currentJob.status = status;
+  showToast('Status updated to '+status+' ✓');
+  await viewStaffJob(currentJob.id);
+}
 // INIT
 (async () => {
   const {data:{session}} = await sb.auth.getSession();
-  if (session) { currentUser=session.user; await loadProfile(); }
-  else { goTo('screen-landing'); }
+  if (session) {
+    currentUser = session.user;
+    await loadProfile();
+    const roleData = await checkRole();
+    if (roleData?.role === 'staff') {
+      // Activate member if first login
+      const activateRes = await fetch(BACKEND_URL+'/api/team/activate', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer '+session.access_token }
+      });
+      await loadStaffHome();
+      goTo('screen-staff-home');
+    }
+  } else {
+    goTo('screen-landing');
+  }
 })();
 </script>
 </body>
