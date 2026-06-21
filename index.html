@@ -975,7 +975,7 @@ async function sendToAI() {
     document.getElementById('result-badge').textContent = t.badge;
     goTo('screen-result');
     updateUsage();
-    renderRecent();
+    await loadHistory();
   } catch(e) {
     clearInterval(interval);
     showToast('Something went wrong — please try again', true);
