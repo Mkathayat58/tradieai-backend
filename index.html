@@ -1187,13 +1187,18 @@ async function viewJob(id) {
   currentJob = allJobs.find(j => j.id===id);
   if (!currentJob) return;
   document.getElementById('jd-number').textContent = currentJob.job_number;
+  await renderJobDetail();
+  goTo('screen-job-detail');
+}
+
+async function renderJobDetail() {
   const isOverdue = currentJob.due_date && new Date(currentJob.due_date)<new Date() && !['Completed','Paid'].includes(currentJob.status);
   const statusClass = 'status-'+currentJob.status.replace(' ','-');
   const {data: docs} = await sb.from('job_documents').select('*').eq('job_id', currentJob.id).order('created_at',{ascending:false});
   const docsHtml = docs?.length ? docs.map(d => `
     <div class="doc-item" onclick="viewJobDoc('${d.id}','${d.type}')">
-      <div class="r-icon"><i class="ti ti-file-text"></i></div>
-      <div><div class="r-title" style="font-size:13px;font-weight:500;">${d.type.charAt(0).toUpperCase()+d.type.slice(1)}</div>
+      <div class="r-icon"><i class="ti ${d.type==='photo'?'ti-photo':'ti-file-text'}"></i></div>
+      <div><div class="r-title" style="font-size:13px;font-weight:500;">${d.input}</div>
       <div class="r-time" style="font-size:11px;">${new Date(d.created_at).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'})}</div></div>
     </div>`).join('') : '<div class="empty-state" style="padding:16px;">No documents yet</div>';
 
@@ -1215,7 +1220,7 @@ async function viewJob(id) {
       <div class="section-label">Update status</div>
       <div class="status-select-grid">
         ${['New','Quoted','In Progress','Completed','Invoiced','Paid'].map(s => `
-          <button class="status-select-btn ${currentJob.status===s?'active-status':''}" onclick="updateJobStatus('${s}',this)">${s}</button>`).join('')}
+          <button class="status-select-btn ${currentJob.status===s?'active-status':''}" onclick="confirmStatusUpdate('${s}')">${s}</button>`).join('')}
       </div>
       <div class="section-label">Actions</div>
       <div class="action-grid">
@@ -1224,10 +1229,13 @@ async function viewJob(id) {
         <div class="action-card" onclick="openTemplateForJob('email')"><i class="ti ti-mail"></i><span>Send email</span></div>
         <div class="action-card" onclick="openTemplateForJob('followup')"><i class="ti ti-clock"></i><span>Follow up</span></div>
       </div>
-      <div class="section-label">Documents</div>
-      <div class="detail-section">${docsHtml}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="section-label" style="margin-bottom:0;">Documents</div>
+        <button onclick="triggerDocUpload()" style="background:var(--green-light);border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--green);cursor:pointer;display:flex;align-items:center;gap:5px;-webkit-tap-highlight-color:transparent;"><i class="ti ti-upload" style="font-size:14px;"></i> Upload</button>
+      </div>
+      <input type="file" id="doc-upload-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="display:none;" onchange="handleDocUpload(event)">
+      <div class="detail-section" id="docs-list">${docsHtml}</div>
     </div>`;
-  goTo('screen-job-detail');
 }
 function viewJobDoc(id, type) {
   sb.from('job_documents').select('*').eq('id',id).single().then(({data}) => {
@@ -1238,13 +1246,63 @@ function viewJobDoc(id, type) {
     goTo('screen-result');
   });
 }
-async function updateJobStatus(status, btn) {
-  document.querySelectorAll('.status-select-btn').forEach(b => b.classList.remove('active-status'));
-  btn.classList.add('active-status');
+function confirmStatusUpdate(status) {
+  if (status===currentJob.status) return;
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:flex-end;';
+  overlay.innerHTML = `
+    <div style="background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px max(env(safe-area-inset-bottom),24px);width:100%;">
+      <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;">Update status?</div>
+      <div style="font-size:14px;color:var(--text-muted);margin-bottom:20px;line-height:1.5;">Change from <strong>${currentJob.status}</strong> to <strong>${status}</strong>?</div>
+      <button class="btn" onclick="applyStatusUpdate('${status}');this.closest('div[style]').remove()"><i class="ti ti-check"></i> Yes, update</button>
+      <button class="btn btn-outline" style="margin-bottom:0;" onclick="this.closest('div[style]').remove()"><i class="ti ti-x"></i> Cancel</button>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function applyStatusUpdate(status) {
   await sb.from('jobs').update({status, updated_at:new Date().toISOString()}).eq('id', currentJob.id);
   currentJob.status = status;
   allJobs = allJobs.map(j => j.id===currentJob.id ? {...j, status} : j);
   showToast('Status updated to '+status+' ✓');
+  await renderJobDetail();
+}
+
+function triggerDocUpload() {
+  document.getElementById('doc-upload-input').click();
+}
+
+async function handleDocUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 10*1024*1024) return showToast('File must be under 10MB', true);
+  showToast('Uploading...');
+  const ext = file.name.split('.').pop();
+  const path = `${currentUser.id}/${currentJob.id}/${Date.now()}.${ext}`;
+  const {error: uploadError} = await sb.storage.from('job-files').upload(path, file, {upsert:false});
+  if (uploadError) { showToast('Upload failed — please try again', true); return; }
+  const {data: urlData} = sb.storage.from('job-files').getPublicUrl(path);
+  const docType = file.type.startsWith('image/') ? 'photo' : 'document';
+  await sb.from('job_documents').insert({
+    job_id: currentJob.id,
+    user_id: currentUser.id,
+    type: docType,
+    input: file.name,
+    output: urlData.publicUrl,
+    created_at: new Date().toISOString()
+  });
+  event.target.value = '';
+  showToast('Uploaded ✓');
+  const {data: docs} = await sb.from('job_documents').select('*').eq('job_id', currentJob.id).order('created_at',{ascending:false});
+  const docsList = document.getElementById('docs-list');
+  if (docsList) {
+    docsList.innerHTML = docs.map(d => `
+      <div class="doc-item" onclick="viewJobDoc('${d.id}','${d.type}')">
+        <div class="r-icon"><i class="ti ${d.type==='photo'?'ti-photo':'ti-file-text'}"></i></div>
+        <div><div class="r-title" style="font-size:13px;font-weight:500;">${d.input}</div>
+        <div class="r-time" style="font-size:11px;">${new Date(d.created_at).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'})}</div></div>
+      </div>`).join('');
+  }
 }
 function openTemplateForJob(type) {
   const t = templates[type];
