@@ -421,6 +421,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
   </div>
   <nav class="bottom-nav">
     <button class="nav-btn active" id="nav-home" onclick="goHome()"><i class="ti ti-home"></i><span>Home</span></button>
+    <button class="nav-btn" id="nav-jobs" onclick="goJobs()"><i class="ti ti-briefcase"></i><span>Jobs</span></button>
     <button class="nav-btn" id="nav-history" onclick="goHistory()"><i class="ti ti-clock"></i><span>History</span></button>
     <button class="nav-btn" id="nav-settings" onclick="goSettings()"><i class="ti ti-settings"></i><span>Settings</span></button>
     <button class="nav-btn" id="nav-upgrade" onclick="goUpgrade()"><i class="ti ti-crown"></i><span>Upgrade</span></button>
@@ -1079,7 +1080,7 @@ function renderHistoryPage() {
 }
 
 // ── NAV ──
-function setActiveNav(id) { ['home','history','settings','upgrade'].forEach(n => document.getElementById('nav-'+n)?.classList.toggle('active',n===id)); }
+function setActiveNav(id) { ['home','jobs','history','settings','upgrade'].forEach(n => document.getElementById('nav-'+n)?.classList.toggle('active',n===id)); }
 function goHome() { goTo('screen-home'); setActiveNav('home'); }
 function goHistory() { renderHistoryPage(); goTo('screen-history'); setActiveNav('history'); }
 function goSettings() { goTo('screen-settings'); setActiveNav('settings'); }
@@ -1096,5 +1097,324 @@ function goUpgrade() { goTo('screen-upgrade'); setActiveNav('upgrade'); }
   }
 })();
 </script>
+<!-- ═══════════ JOBS LIST ═══════════ -->
+<div class="screen" id="screen-jobs">
+  <div class="settings-header">
+    <div class="settings-topbar" style="justify-content:space-between;">
+      <span class="settings-title">Jobs</span>
+      <button onclick="goNewJob()" style="background:var(--green-light);border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--green);cursor:pointer;display:flex;align-items:center;gap:6px;"><i class="ti ti-plus" style="font-size:16px;"></i> New job</button>
+    </div>
+  </div>
+  <div style="padding:12px 16px;background:var(--green);display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;">
+    <button class="status-filter-btn active" onclick="filterJobs('all',this)">All</button>
+    <button class="status-filter-btn" onclick="filterJobs('New',this)">New</button>
+    <button class="status-filter-btn" onclick="filterJobs('Quoted',this)">Quoted</button>
+    <button class="status-filter-btn" onclick="filterJobs('In Progress',this)">In Progress</button>
+    <button class="status-filter-btn" onclick="filterJobs('Completed',this)">Completed</button>
+    <button class="status-filter-btn" onclick="filterJobs('Invoiced',this)">Invoiced</button>
+    <button class="status-filter-btn" onclick="filterJobs('Paid',this)">Paid</button>
+  </div>
+  <div style="padding:12px 16px;background:var(--green-dark);display:flex;justify-content:space-between;align-items:center;">
+    <span style="font-size:12px;color:var(--green-mid);">Pipeline value</span>
+    <span style="font-size:16px;font-weight:700;color:#E1F5EE;" id="pipeline-value">$0</span>
+  </div>
+  <div class="settings-body" id="jobs-list" style="padding:16px;"></div>
+</div>
+
+<!-- ═══════════ NEW/EDIT JOB ═══════════ -->
+<div class="screen" id="screen-new-job">
+  <div class="tpl-header">
+    <button class="back-btn" onclick="goJobs()"><i class="ti ti-arrow-left"></i></button>
+    <span class="tpl-header-title" id="job-form-title">New job</span>
+  </div>
+  <div class="tpl-body">
+    <div class="field"><label>Customer name</label><input type="text" id="jf-customer" placeholder="e.g. John Smith"></div>
+    <div class="field"><label>Customer phone</label><input type="tel" id="jf-phone" placeholder="e.g. 0412 345 678"></div>
+    <div class="field"><label>Customer email</label><input type="email" id="jf-email" placeholder="e.g. john@email.com"></div>
+    <div class="field"><label>Job description</label><textarea class="job-input" id="jf-description" placeholder="e.g. Replace switchboard and install 3 new circuits at 123 Smith St Footscray" style="min-height:90px;"></textarea></div>
+    <div class="field"><label>Job value ($)</label><input type="number" id="jf-value" placeholder="e.g. 1200"></div>
+    <div class="field"><label>Due date</label><input type="date" id="jf-due"></div>
+    <div class="field"><label>Status</label>
+      <select id="jf-status">
+        <option value="New">New</option>
+        <option value="Quoted">Quoted</option>
+        <option value="Accepted">Accepted</option>
+        <option value="Declined">Declined</option>
+        <option value="In Progress">In Progress</option>
+        <option value="Completed">Completed</option>
+        <option value="Invoiced">Invoiced</option>
+        <option value="Paid">Paid</option>
+      </select>
+    </div>
+    <div class="field"><label>Notes</label><textarea class="job-input" id="jf-notes" placeholder="Any extra notes about this job..." style="min-height:70px;"></textarea></div>
+    <button class="btn" id="job-save-btn" onclick="saveJob()"><i class="ti ti-check"></i> Save job</button>
+  </div>
+</div>
+
+<!-- ═══════════ JOB DETAIL ═══════════ -->
+<div class="screen" id="screen-job-detail">
+  <div class="tpl-header" style="justify-content:space-between;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button class="back-btn" onclick="goJobs()"><i class="ti ti-arrow-left"></i></button>
+      <span class="tpl-header-title" id="jd-number">JOB-0001</span>
+    </div>
+    <button onclick="editCurrentJob()" style="background:none;border:none;color:var(--green-mid);font-size:13px;cursor:pointer;font-weight:500;">Edit</button>
+  </div>
+  <div class="settings-body" id="job-detail-body"></div>
+</div>
+
+<style>
+.status-filter-btn{background:var(--green-dark);color:var(--green-mid);border:none;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent;}
+.status-filter-btn.active{background:#E1F5EE;color:var(--green);}
+.job-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.job-card:active{background:var(--surface2);}
+.job-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
+.job-num{font-size:12px;font-weight:600;color:var(--text-muted);}
+.job-status-badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;}
+.status-New{background:#EEEDFE;color:#3C3489;}
+.status-Quoted{background:#FAEEDA;color:#633806;}
+.status-Accepted{background:#E1F5EE;color:#085041;}
+.status-Declined{background:#FAECE7;color:#712B13;}
+.status-In-Progress{background:#E6F1FB;color:#0C447C;}
+.status-Completed{background:#EAF3DE;color:#27500A;}
+.status-Invoiced{background:#FAEEDA;color:#633806;}
+.status-Paid{background:#E1F5EE;color:#085041;}
+.job-customer{font-size:15px;font-weight:600;color:var(--text);margin-bottom:3px;}
+.job-desc{font-size:13px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:6px;}
+.job-card-bottom{display:flex;justify-content:space-between;align-items:center;}
+.job-value{font-size:14px;font-weight:600;color:var(--green);}
+.job-due{font-size:12px;color:var(--text-muted);}
+.job-due.overdue{color:var(--red);font-weight:600;}
+.detail-section{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:12px;}
+.detail-row{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:0.5px solid var(--border);}
+.detail-row:last-child{border-bottom:none;}
+.detail-label{font-size:13px;color:var(--text-muted);display:flex;align-items:center;gap:8px;}
+.detail-label i{font-size:16px;}
+.detail-val{font-size:13px;color:var(--text);font-weight:500;text-align:right;max-width:200px;}
+.action-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.action-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.action-card:active{background:var(--surface2);}
+.action-card i{font-size:24px;color:var(--green);display:block;margin-bottom:6px;}
+.action-card span{font-size:12px;font-weight:500;color:var(--text);}
+.doc-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-bottom:0.5px solid var(--border);cursor:pointer;}
+.doc-item:last-child{border-bottom:none;}
+.doc-item:active{background:var(--surface2);}
+.status-select-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px;}
+.status-select-btn{border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px;text-align:center;font-size:12px;font-weight:500;cursor:pointer;color:var(--text);background:var(--surface);-webkit-tap-highlight-color:transparent;}
+.status-select-btn.active-status{border-color:var(--green);background:var(--green-light);color:var(--green);}
+</style>
+
+<script>
+// ── JOBS ──
+let allJobs = [];
+let currentJob = null;
+let currentFilter = 'all';
+
+async function loadJobs() {
+  const { data, error } = await sb.from('jobs')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: false });
+  if (error) return;
+  allJobs = data || [];
+  renderJobs();
+  updatePipeline();
+}
+
+function updatePipeline() {
+  const total = allJobs
+    .filter(j => !['Completed','Paid','Declined'].includes(j.status))
+    .reduce((sum, j) => sum + (parseFloat(j.value) || 0), 0);
+  document.getElementById('pipeline-value').textContent = '$' + total.toLocaleString('en-AU', {minimumFractionDigits:0});
+}
+
+function renderJobs() {
+  const list = document.getElementById('jobs-list');
+  const filtered = currentFilter === 'all' ? allJobs : allJobs.filter(j => j.status === currentFilter);
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty-state" style="padding:40px 20px;text-align:center;color:var(--text-muted);">No jobs yet — tap New job to get started</div>';
+    return;
+  }
+  list.innerHTML = filtered.map(j => {
+    const isOverdue = j.due_date && new Date(j.due_date) < new Date() && !['Completed','Paid'].includes(j.status);
+    const statusClass = 'status-' + j.status.replace(' ','-');
+    const dueText = j.due_date ? new Date(j.due_date).toLocaleDateString('en-AU',{day:'numeric',month:'short'}) : '';
+    return `<div class="job-card" onclick="viewJob('${j.id}')">
+      <div class="job-card-top">
+        <span class="job-num">${j.job_number}</span>
+        <span class="job-status-badge ${statusClass}">${j.status}</span>
+      </div>
+      <div class="job-customer">${j.customer_name}</div>
+      <div class="job-desc">${j.description}</div>
+      <div class="job-card-bottom">
+        <span class="job-value">${j.value ? '$'+parseFloat(j.value).toLocaleString('en-AU') : 'No value set'}</span>
+        ${dueText ? `<span class="job-due ${isOverdue?'overdue':''}">${isOverdue?'⚠ Overdue: ':'Due: '}${dueText}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterJobs(status, btn) {
+  currentFilter = status;
+  document.querySelectorAll('.status-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderJobs();
+}
+
+function goNewJob() {
+  currentJob = null;
+  document.getElementById('job-form-title').textContent = 'New job';
+  document.getElementById('jf-customer').value = '';
+  document.getElementById('jf-phone').value = '';
+  document.getElementById('jf-email').value = '';
+  document.getElementById('jf-description').value = '';
+  document.getElementById('jf-value').value = '';
+  document.getElementById('jf-due').value = '';
+  document.getElementById('jf-status').value = 'New';
+  document.getElementById('jf-notes').value = '';
+  goTo('screen-new-job');
+}
+
+function editCurrentJob() {
+  if (!currentJob) return;
+  document.getElementById('job-form-title').textContent = 'Edit job';
+  document.getElementById('jf-customer').value = currentJob.customer_name || '';
+  document.getElementById('jf-phone').value = currentJob.customer_phone || '';
+  document.getElementById('jf-email').value = currentJob.customer_email || '';
+  document.getElementById('jf-description').value = currentJob.description || '';
+  document.getElementById('jf-value').value = currentJob.value || '';
+  document.getElementById('jf-due').value = currentJob.due_date || '';
+  document.getElementById('jf-status').value = currentJob.status || 'New';
+  document.getElementById('jf-notes').value = currentJob.notes || '';
+  goTo('screen-new-job');
+}
+
+async function saveJob() {
+  const customer = document.getElementById('jf-customer').value.trim();
+  const desc = document.getElementById('jf-description').value.trim();
+  if (!customer) return showToast('Please enter a customer name');
+  if (!desc) return showToast('Please describe the job');
+  const btn = document.getElementById('job-save-btn');
+  btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader"></i> Saving...';
+  const jobData = {
+    user_id: currentUser.id,
+    customer_name: customer,
+    customer_phone: document.getElementById('jf-phone').value.trim(),
+    customer_email: document.getElementById('jf-email').value.trim(),
+    description: desc,
+    value: parseFloat(document.getElementById('jf-value').value) || 0,
+    due_date: document.getElementById('jf-due').value || null,
+    status: document.getElementById('jf-status').value,
+    notes: document.getElementById('jf-notes').value.trim(),
+    updated_at: new Date().toISOString()
+  };
+  if (currentJob) {
+    const { error } = await sb.from('jobs').update(jobData).eq('id', currentJob.id);
+    if (error) { showToast('Could not save — try again', true); btn.disabled=false; btn.innerHTML='<i class="ti ti-check"></i> Save job'; return; }
+    currentJob = { ...currentJob, ...jobData };
+  } else {
+    const jobNum = 'JOB-' + String(allJobs.length + 1).padStart(4, '0');
+    jobData.job_number = jobNum;
+    const { data, error } = await sb.from('jobs').insert(jobData).select().single();
+    if (error) { showToast('Could not save — try again', true); btn.disabled=false; btn.innerHTML='<i class="ti ti-check"></i> Save job'; return; }
+    currentJob = data;
+  }
+  btn.disabled=false; btn.innerHTML='<i class="ti ti-check"></i> Save job';
+  await loadJobs();
+  showToast('Job saved ✓');
+  if (currentJob) viewJob(currentJob.id); else goJobs();
+}
+
+async function viewJob(id) {
+  currentJob = allJobs.find(j => j.id === id);
+  if (!currentJob) return;
+  document.getElementById('jd-number').textContent = currentJob.job_number;
+  const isOverdue = currentJob.due_date && new Date(currentJob.due_date) < new Date() && !['Completed','Paid'].includes(currentJob.status);
+  const statusClass = 'status-' + currentJob.status.replace(' ','-');
+  const { data: docs } = await sb.from('job_documents').select('*').eq('job_id', currentJob.id).order('created_at', { ascending: false });
+  const docsHtml = docs?.length ? docs.map(d => `
+    <div class="doc-item" onclick="viewJobDoc('${d.id}','${d.type}')">
+      <div class="r-icon"><i class="ti ti-file-text"></i></div>
+      <div><div class="r-title" style="font-size:13px;font-weight:500;">${d.type.charAt(0).toUpperCase()+d.type.slice(1)}</div>
+      <div class="r-time" style="font-size:11px;">${new Date(d.created_at).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'})}</div></div>
+    </div>`).join('') : '<div class="empty-state" style="padding:16px;">No documents yet</div>';
+
+  document.getElementById('job-detail-body').innerHTML = `
+    <div style="padding:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <span class="job-status-badge ${statusClass}" style="font-size:13px;padding:5px 14px;">${currentJob.status}</span>
+        ${isOverdue ? '<span style="font-size:12px;color:var(--red);font-weight:600;">⚠ Overdue</span>' : ''}
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-row"><span class="detail-label"><i class="ti ti-user"></i>Customer</span><span class="detail-val">${currentJob.customer_name}</span></div>
+        ${currentJob.customer_phone ? `<div class="detail-row"><span class="detail-label"><i class="ti ti-phone"></i>Phone</span><a href="tel:${currentJob.customer_phone}" style="font-size:13px;color:var(--green);font-weight:500;text-decoration:none;">${currentJob.customer_phone} <i class="ti ti-phone-call" style="font-size:13px;"></i></a></div>` : ''}
+        ${currentJob.customer_email ? `<div class="detail-row"><span class="detail-label"><i class="ti ti-mail"></i>Email</span><span class="detail-val">${currentJob.customer_email}</span></div>` : ''}
+        <div class="detail-row"><span class="detail-label"><i class="ti ti-file-description"></i>Description</span><span class="detail-val" style="max-width:200px;white-space:normal;text-align:right;">${currentJob.description}</span></div>
+        ${currentJob.value ? `<div class="detail-row"><span class="detail-label"><i class="ti ti-currency-dollar"></i>Value</span><span class="detail-val" style="color:var(--green);">$${parseFloat(currentJob.value).toLocaleString('en-AU')}</span></div>` : ''}
+        ${currentJob.due_date ? `<div class="detail-row"><span class="detail-label"><i class="ti ti-calendar"></i>Due date</span><span class="detail-val ${isOverdue?'overdue':''}">${new Date(currentJob.due_date).toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'long'})}</span></div>` : ''}
+        ${currentJob.notes ? `<div class="detail-row"><span class="detail-label"><i class="ti ti-notes"></i>Notes</span><span class="detail-val" style="max-width:200px;white-space:normal;text-align:right;">${currentJob.notes}</span></div>` : ''}
+      </div>
+
+      <div class="section-label">Update status</div>
+      <div class="status-select-grid">
+        ${['New','Quoted','In Progress','Completed','Invoiced','Paid'].map(s => `
+          <button class="status-select-btn ${currentJob.status===s?'active-status':''}" onclick="updateJobStatus('${s}',this)">${s}</button>`).join('')}
+      </div>
+
+      <div class="section-label">Actions</div>
+      <div class="action-grid">
+        ${currentJob.customer_phone ? `<div class="action-card" onclick="window.location.href='tel:${currentJob.customer_phone}'"><i class="ti ti-phone-call"></i><span>Call customer</span></div>` : ''}
+        <div class="action-card" onclick="openTemplateForJob('quote')"><i class="ti ti-file-invoice"></i><span>Write quote</span></div>
+        <div class="action-card" onclick="openTemplateForJob('email')"><i class="ti ti-mail"></i><span>Send email</span></div>
+        <div class="action-card" onclick="openTemplateForJob('followup')"><i class="ti ti-clock"></i><span>Follow up</span></div>
+      </div>
+
+      <div class="section-label">Documents</div>
+      <div class="detail-section">${docsHtml}</div>
+    </div>`;
+  goTo('screen-job-detail');
+}
+
+let jobDocId = null;
+function viewJobDoc(id, type) {
+  const docs = [];
+  sb.from('job_documents').select('*').eq('id', id).single().then(({data}) => {
+    if (!data) return;
+    document.getElementById('result-doc').textContent = data.output;
+    document.getElementById('result-title').textContent = type.charAt(0).toUpperCase()+type.slice(1);
+    document.getElementById('result-badge').textContent = type;
+    goTo('screen-result');
+  });
+}
+
+async function updateJobStatus(status, btn) {
+  document.querySelectorAll('.status-select-btn').forEach(b => b.classList.remove('active-status'));
+  btn.classList.add('active-status');
+  await sb.from('jobs').update({ status, updated_at: new Date().toISOString() }).eq('id', currentJob.id);
+  currentJob.status = status;
+  allJobs = allJobs.map(j => j.id === currentJob.id ? { ...j, status } : j);
+  showToast('Status updated to ' + status + ' ✓');
+}
+
+function openTemplateForJob(type) {
+  const t = templates[type];
+  currentTemplate = type;
+  document.getElementById('tpl-title').textContent = t.title;
+  document.getElementById('tpl-hint').textContent = t.hint;
+  document.getElementById('tpl-label').textContent = t.label;
+  document.getElementById('job-input').placeholder = t.placeholder;
+  document.getElementById('job-input').value = currentJob.description;
+  document.getElementById('char-count').textContent = currentJob.description.length;
+  goTo('screen-template');
+}
+
+async function goJobs() {
+  await loadJobs();
+  goTo('screen-jobs');
+  setActiveNav('jobs');
+}
+</script>
+
 </body>
 </html>
