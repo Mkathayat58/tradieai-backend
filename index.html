@@ -1370,10 +1370,18 @@ async function viewJob(id) {
         <div class="action-card" onclick="openTemplateForJob('followup')"><i class="ti ti-clock"></i><span>Follow up</span></div>
       </div>
 
-      <div class="section-label">Documents</div>
+      <div class="section-label">Documents & Photos</div>
+      <div style="margin-bottom:12px;">
+        <label style="display:flex;align-items:center;justify-content:center;gap:8px;background:var(--green-light);border:1.5px dashed var(--green-mid);border-radius:var(--radius);padding:16px;cursor:pointer;font-size:14px;font-weight:500;color:var(--green);">
+          <i class="ti ti-upload" style="font-size:20px;"></i> Upload photo or document
+          <input type="file" id="job-file-input" accept="image/*,.pdf" multiple style="display:none;" onchange="uploadJobFiles(this)">
+        </label>
+      </div>
+      <div id="job-files-list" style="margin-bottom:12px;"></div>
       <div class="detail-section">${docsHtml}</div>
     </div>`;
   goTo('screen-job-detail');
+  await loadJobFiles();
 }
 
 let jobDocId = null;
@@ -1411,7 +1419,55 @@ function openTemplateForJob(type) {
   goTo('screen-template');
 }
 
-async function goJobs() {
+async function uploadJobFiles(input) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
+  showToast('Uploading...');
+  for (const file of files) {
+    const path = `${currentUser.id}/${currentJob.id}/${Date.now()}_${file.name}`;
+    const { error } = await sb.storage.from('job-files').upload(path, file);
+    if (error) { showToast('Upload failed — try again', true); return; }
+  }
+  showToast('Uploaded successfully ✓');
+  await loadJobFiles();
+  input.value = '';
+}
+
+async function loadJobFiles() {
+  const prefix = `${currentUser.id}/${currentJob.id}/`;
+  const { data, error } = await sb.storage.from('job-files').list(prefix);
+  if (error || !data?.length) {
+    document.getElementById('job-files-list').innerHTML = '';
+    return;
+  }
+  const icons = { jpg:'ti-photo', jpeg:'ti-photo', png:'ti-photo', heic:'ti-photo', pdf:'ti-file-type-pdf' };
+  document.getElementById('job-files-list').innerHTML = '<div class="detail-section">' +
+    data.map(f => {
+      const ext = f.name.split('.').pop().toLowerCase();
+      const icon = icons[ext] || 'ti-file';
+      return `<div class="doc-item" onclick="viewJobFile('${prefix+f.name}','${ext}')">
+        <div class="r-icon"><i class="ti ${icon}"></i></div>
+        <div style="flex:1;">
+          <div class="r-title" style="font-size:13px;font-weight:500;">${f.name.split('_').slice(1).join('_')}</div>
+          <div class="r-time" style="font-size:11px;">${(f.metadata?.size/1024).toFixed(0)}KB</div>
+        </div>
+        <button onclick="event.stopPropagation();deleteJobFile('${prefix+f.name}')" style="background:none;border:none;color:var(--red);font-size:18px;cursor:pointer;padding:4px;"><i class="ti ti-trash"></i></button>
+      </div>`;
+    }).join('') + '</div>';
+}
+
+async function viewJobFile(path, ext) {
+  const { data } = await sb.storage.from('job-files').createSignedUrl(path, 60);
+  if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+}
+
+async function deleteJobFile(path) {
+  const confirmed = confirm('Delete this file?');
+  if (!confirmed) return;
+  await sb.storage.from('job-files').remove([path]);
+  showToast('File deleted ✓');
+  await loadJobFiles();
+}
   await loadJobs();
   goTo('screen-jobs');
   setActiveNav('jobs');
