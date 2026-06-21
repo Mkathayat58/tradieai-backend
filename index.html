@@ -1351,7 +1351,7 @@ async function viewJob(id) {
       <div class="r-icon"><i class="ti ti-file-text"></i></div>
       <div><div class="r-title" style="font-size:13px;font-weight:500;">${d.type.charAt(0).toUpperCase()+d.type.slice(1)}</div>
       <div class="r-time" style="font-size:11px;">${new Date(d.created_at).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'})}</div></div>
-    </div>`).join('') : '<div class="empty-state" style="padding:16px;">No documents yet</div>';
+    </div>`).join('') : '';
 
   document.getElementById('job-detail-body').innerHTML = `
     <div style="padding:16px;">
@@ -1392,7 +1392,8 @@ async function viewJob(id) {
         </label>
       </div>
       <div id="job-files-list" style="margin-bottom:12px;"></div>
-      <div class="detail-section">${docsHtml}</div>
+      ${docsHtml ? `<div class="detail-section">${docsHtml}</div>` : ''}
+      <div id="no-docs-msg" style="display:block;"><div class="empty-state" style="padding:16px;">No documents yet</div></div>
     </div>`;
   goTo('screen-job-detail');
   loadJobFiles();
@@ -1452,8 +1453,12 @@ async function loadJobFiles() {
   const { data, error } = await sb.storage.from('job-files').list(prefix);
   if (error || !data?.length) {
     document.getElementById('job-files-list').innerHTML = '';
+    const noDoc = document.getElementById('no-docs-msg');
+    if (noDoc) noDoc.style.display = 'block';
     return;
   }
+  const noDoc = document.getElementById('no-docs-msg');
+  if (noDoc) noDoc.style.display = 'none';
   const icons = { jpg:'ti-photo', jpeg:'ti-photo', png:'ti-photo', heic:'ti-photo', pdf:'ti-file-type-pdf' };
   document.getElementById('job-files-list').innerHTML = '<div class="detail-section">' +
     data.map(f => {
