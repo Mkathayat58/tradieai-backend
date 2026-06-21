@@ -942,7 +942,7 @@ async function sendToAI() {
   try {
     const res = await fetch(BACKEND_URL + '/api/generate', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (await sb.auth.getSession()).data.session?.access_token },
       body: JSON.stringify({ template: currentTemplate, message: input, profile: userProfile })
     });
     clearInterval(interval);
@@ -1007,7 +1007,7 @@ async function sendChat() {
   try {
     const res = await fetch(BACKEND_URL + '/api/chat', {
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','Authorization':'Bearer ' + (await sb.auth.getSession()).data.session?.access_token},
       body: JSON.stringify({ messages: chatHistory.slice(-10), profile: userProfile })
     });
     const data = await res.json();
