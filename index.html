@@ -853,6 +853,44 @@ async function doLogout() {
 // PROFILE
 async function loadProfile() {
   const {data, error} = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  
+  // Check if this user is a staff member first
+  const session = (await sb.auth.getSession()).data.session;
+  const roleRes = await fetch(BACKEND_URL+'/api/team/my-role', {
+    headers: { 'Authorization': 'Bearer '+session.access_token }
+  });
+  const roleData = await roleRes.json();
+  myRole = roleData.role;
+  staffContext = roleData.member || null;
+
+  if (myRole === 'staff') {
+    // Activate if first login
+    await fetch(BACKEND_URL+'/api/team/activate', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer '+session.access_token }
+    });
+    // Create minimal profile if needed
+    if (error || !data) {
+      await sb.from('profiles').upsert({
+        id: currentUser.id,
+        email: currentUser.email,
+        name: roleData.member?.name || '',
+        firstname: roleData.member?.name?.split(' ')[0] || '',
+        plan: 'free',
+        usage_count: 0,
+        usage_reset: new Date(new Date().getFullYear(), new Date().getMonth()+1, 1).toISOString()
+      });
+      const {data: staffProfile} = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+      userProfile = staffProfile;
+    } else {
+      userProfile = data;
+    }
+    await loadStaffHome();
+    goTo('screen-staff-home');
+    return;
+  }
+
+  // Owner flow — normal
   if (error||!data) { goTo('screen-onboard'); return; }
   userProfile = data;
   initHome();
