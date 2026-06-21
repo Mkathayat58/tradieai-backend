@@ -1167,7 +1167,14 @@ function goUpgrade() { goTo('screen-upgrade'); setActiveNav('upgrade'); }
     </div>
     <button onclick="editCurrentJob()" style="background:none;border:none;color:var(--green-mid);font-size:13px;cursor:pointer;font-weight:500;">Edit</button>
   </div>
-  <div class="settings-body" id="job-detail-body"></div>
+  <div class="settings-body" id="job-detail-body" style="flex:1;overflow-y:auto;"></div>
+  <nav class="bottom-nav">
+    <button class="nav-btn" onclick="goHome()"><i class="ti ti-home"></i><span>Home</span></button>
+    <button class="nav-btn active" onclick="goJobs()"><i class="ti ti-briefcase"></i><span>Jobs</span></button>
+    <button class="nav-btn" onclick="goHistory()"><i class="ti ti-clock"></i><span>History</span></button>
+    <button class="nav-btn" onclick="goSettings()"><i class="ti ti-settings"></i><span>Settings</span></button>
+    <button class="nav-btn" onclick="goUpgrade()"><i class="ti ti-crown"></i><span>Upgrade</span></button>
+  </nav>
 </div>
 
 <style>
