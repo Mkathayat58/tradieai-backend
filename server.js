@@ -519,4 +519,30 @@ app.get('/api/jobs/:id/activity', requireAuth, async (req, res) => {
   if (error) return res.status(400).json({ error: error.message });
   res.json(data || []);
 });
+// ── TEAM: RESEND INVITE ──
+app.post('/api/team/resend-invite', requireAuth, async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email required' });
+
+  const { error } = await supabase.auth.admin.inviteUserByEmail(email, {
+    redirectTo: `${process.env.FRONTEND_URL || 'https://tradieai-frontend.onrender.com'}/index.html`
+  });
+
+  if (error) {
+    // If rate limited, generate a magic link instead
+    const { data: users } = await supabase.auth.admin.listUsers();
+    const user = users?.users?.find(u => u.email === email);
+    if (user) {
+      const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email
+      });
+      if (linkError) return res.status(400).json({ error: linkError.message });
+      return res.json({ success: true, link: linkData.properties.action_link });
+    }
+    return res.status(400).json({ error: error.message });
+  }
+
+  res.json({ success: true });
+});
 app.listen(PORT, () => console.log(`Tradie AI backend running on port ${PORT}`));
