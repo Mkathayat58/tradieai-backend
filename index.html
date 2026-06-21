@@ -2,281 +2,401 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0F6E56">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Tradie AI — Paperwork sorted in seconds</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --green:#0F6E56;--green-dark:#085041;--green-darker:#04342C;
+  --green-light:#E1F5EE;--green-mid:#9FE1CB;--green-bright:#5DCAA5;
+  --text:#1A1A1A;--text-mid:#555550;--text-muted:#888780;
+  --border:#E0DED8;--bg:#F4F3EF;--surface:#FFFFFF;--surface2:#F8F7F4;
+  --red:#A32D2D;--red-light:#FCEBEB;--amber:#854F0B;--amber-light:#FAEEDA;
+  --radius:14px;--radius-sm:10px;--radius-xs:6px;
+}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;}
 
-  :root {
-    --green: #0F6E56;
-    --green-dark: #085041;
-    --green-darker: #04342C;
-    --green-light: #E1F5EE;
-    --green-mid: #9FE1CB;
-    --green-bright: #5DCAA5;
-    --text: #1A1A1A;
-    --text-mid: #555550;
-    --text-muted: #888780;
-    --border: #E0DED8;
-    --bg: #F4F3EF;
-    --surface: #FFFFFF;
-    --surface2: #F8F7F4;
-    --amber: #854F0B;
-    --amber-light: #FAEEDA;
-    --red: #A32D2D;
-    --red-light: #FCEBEB;
-    --radius: 12px;
-    --radius-sm: 8px;
-    --shadow: 0 1px 3px rgba(0,0,0,0.06);
-  }
+/* ── SCREENS ── */
+.screen{display:none;min-height:100vh;flex-direction:column;}
+.screen.active{display:flex;}
 
-  html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 16px; line-height: 1.5; }
+/* ── INPUTS & BUTTONS ── */
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:13px;font-weight:500;color:var(--text-mid);margin-bottom:7px;}
+.field input,.field select,.field textarea{width:100%;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;font-size:15px;color:var(--text);background:var(--surface);font-family:inherit;outline:none;transition:border-color .15s;-webkit-appearance:none;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--green);}
+.field input::placeholder,.field textarea::placeholder{color:var(--text-muted);}
+.field select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888780' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:40px;}
+.btn{width:100%;background:var(--green);color:#fff;border:none;border-radius:var(--radius-sm);padding:16px;font-size:16px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s;-webkit-tap-highlight-color:transparent;margin-bottom:12px;}
+.btn:active{background:var(--green-dark);}
+.btn:disabled{background:var(--border);color:var(--text-muted);cursor:not-allowed;}
+.btn-outline{background:none;color:var(--green);border:1.5px solid var(--green);}
+.btn-outline:active{background:var(--green-light);}
+.btn-danger{background:none;color:var(--red);border:1.5px solid #F09595;}
+.btn i{font-size:20px;}
+.link-btn{background:none;border:none;color:var(--green);font-size:14px;font-weight:500;cursor:pointer;text-decoration:underline;-webkit-tap-highlight-color:transparent;}
 
-  /* ── SCREENS ── */
-  .screen { display: none; min-height: 100vh; flex-direction: column; }
-  .screen.active { display: flex; }
+/* ── TOAST ── */
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;border-radius:20px;padding:10px 20px;font-size:13px;font-weight:500;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;z-index:9999;}
+.toast.show{opacity:1;}
+.toast.error{background:var(--red);}
 
-  /* ── HOME SCREEN ── */
-  .home-header { background: var(--green); padding: 20px 20px 0; }
-  .home-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-  .logo { font-size: 20px; font-weight: 600; color: #E1F5EE; letter-spacing: -.01em; }
-  .avatar-btn { width: 34px; height: 34px; border-radius: 50%; background: var(--green-dark); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--green-mid); border: none; cursor: pointer; }
-  .home-greeting { font-size: 15px; font-weight: 500; color: #E1F5EE; margin-bottom: 3px; }
-  .home-sub { font-size: 13px; color: var(--green-mid); margin-bottom: 14px; }
-  .usage-pill { background: var(--green-dark); border-radius: var(--radius-sm); padding: 9px 12px; margin-bottom: 16px; }
-  .usage-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-  .usage-lbl { font-size: 11px; color: var(--green-mid); }
-  .usage-val { font-size: 11px; color: var(--green-bright); font-weight: 500; }
-  .usage-track { height: 4px; background: var(--green-darker); border-radius: 2px; overflow: hidden; }
-  .usage-fill { height: 100%; background: var(--green-bright); border-radius: 2px; transition: width .3s; }
+/* ── LANDING ── */
+.landing-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center;}
+.landing-logo{font-size:36px;font-weight:700;color:var(--green);margin-bottom:8px;letter-spacing:-.02em;}
+.landing-tagline{font-size:18px;color:var(--text-mid);margin-bottom:8px;line-height:1.4;}
+.landing-sub{font-size:14px;color:var(--text-muted);margin-bottom:40px;line-height:1.6;}
+.landing-features{width:100%;max-width:340px;margin-bottom:40px;}
+.feature-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border);text-align:left;}
+.feature-row:last-child{border-bottom:none;}
+.feature-icon{width:36px;height:36px;border-radius:var(--radius-xs);background:var(--green-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.feature-icon i{font-size:18px;color:var(--green);}
+.feature-text{font-size:14px;color:var(--text-mid);}
+.landing-btns{width:100%;max-width:340px;}
 
-  .home-body { flex: 1; padding: 20px 16px; overflow-y: auto; }
-  .section-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+/* ── AUTH SCREENS ── */
+.auth-header{background:var(--green);padding:24px 20px 20px;padding-top:max(env(safe-area-inset-top),24px);}
+.auth-back{background:none;border:none;color:var(--green-mid);font-size:22px;cursor:pointer;padding:0;display:flex;align-items:center;margin-bottom:16px;-webkit-tap-highlight-color:transparent;}
+.auth-title{font-size:24px;font-weight:700;color:#E1F5EE;margin-bottom:4px;}
+.auth-sub{font-size:14px;color:var(--green-mid);}
+.auth-body{flex:1;padding:24px 20px;overflow-y:auto;}
+.auth-footer{text-align:center;padding:0 20px 32px;font-size:14px;color:var(--text-muted);}
+.password-wrap{position:relative;}
+.password-wrap input{padding-right:50px;}
+.eye-btn{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:20px;color:var(--text-muted);-webkit-tap-highlight-color:transparent;}
+.error-msg{background:var(--red-light);border:0.5px solid #F09595;border-radius:var(--radius-xs);padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:16px;display:none;}
+.error-msg.show{display:block;}
 
-  .tpl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px; }
-  .tpl-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px 12px 14px; text-align: center; cursor: pointer; transition: transform .1s, box-shadow .1s; -webkit-tap-highlight-color: transparent; }
-  .tpl-card:active { transform: scale(0.97); }
-  .tpl-card:hover { box-shadow: var(--shadow); border-color: var(--green-mid); }
-  .tpl-icon { font-size: 26px; color: var(--green); margin-bottom: 7px; display: block; }
-  .tpl-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
-  .tpl-desc { font-size: 11px; color: var(--text-muted); }
+/* ── VERIFY EMAIL ── */
+.verify-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center;}
+.verify-icon{width:80px;height:80px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;margin:0 auto 24px;}
+.verify-icon i{font-size:40px;color:var(--green);}
+.verify-title{font-size:22px;font-weight:700;color:var(--text);margin-bottom:10px;}
+.verify-sub{font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:32px;}
+.verify-email-shown{font-weight:600;color:var(--green);}
 
-  .recent-list { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; }
-  .recent-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-bottom: 0.5px solid var(--border); cursor: pointer; -webkit-tap-highlight-color: transparent; }
-  .recent-item:last-child { border-bottom: none; }
-  .recent-item:active { background: var(--surface2); }
-  .r-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--green-light); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .r-icon i { font-size: 16px; color: var(--green); }
-  .r-info { flex: 1; min-width: 0; }
-  .r-title { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .r-time { font-size: 11px; color: var(--text-muted); }
-  .r-arrow { font-size: 16px; color: var(--border); }
-  .empty-recent { padding: 20px; text-align: center; font-size: 13px; color: var(--text-muted); }
+/* ── ONBOARDING ── */
+.ob-header{background:var(--green);padding:20px 20px 16px;padding-top:max(env(safe-area-inset-top),20px);}
+.ob-logo{font-size:18px;font-weight:700;color:#E1F5EE;margin-bottom:12px;}
+.ob-progress{display:flex;gap:6px;}
+.ob-dot{height:4px;flex:1;border-radius:2px;background:var(--green-dark);transition:background .3s;}
+.ob-dot.active{background:#E1F5EE;}
+.ob-dot.done{background:var(--green-bright);}
+.ob-step-label{font-size:12px;color:var(--green-mid);margin-top:8px;}
+.ob-body{flex:1;padding:24px 20px;overflow-y:auto;}
+.ob-title{font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px;}
+.ob-sub{font-size:14px;color:var(--text-muted);margin-bottom:24px;line-height:1.5;}
+.trade-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px;}
+.trade-opt{border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:14px 10px;text-align:center;cursor:pointer;background:var(--surface);-webkit-tap-highlight-color:transparent;transition:all .15s;}
+.trade-opt.selected{border-color:var(--green);background:var(--green-light);}
+.trade-opt i{font-size:26px;color:var(--text-muted);margin-bottom:6px;display:block;}
+.trade-opt.selected i{color:var(--green);}
+.trade-opt span{font-size:13px;font-weight:500;color:var(--text);}
 
-  /* ── BOTTOM NAV ── */
-  .bottom-nav { background: var(--surface); border-top: 0.5px solid var(--border); display: flex; padding: 8px 0 max(env(safe-area-inset-bottom), 10px); }
-  .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; cursor: pointer; padding: 4px 0; -webkit-tap-highlight-color: transparent; }
-  .nav-btn i { font-size: 22px; color: var(--border); }
-  .nav-btn span { font-size: 10px; font-weight: 500; color: var(--text-muted); }
-  .nav-btn.active i { color: var(--green); }
-  .nav-btn.active span { color: var(--green); }
+/* ── HOME ── */
+.home-header{background:var(--green);padding:16px 20px 0;padding-top:max(env(safe-area-inset-top),16px);}
+.home-topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.home-logo{font-size:20px;font-weight:700;color:#E1F5EE;}
+.avatar-btn{width:36px;height:36px;border-radius:50%;background:var(--green-dark);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--green-mid);border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.home-greeting{font-size:16px;font-weight:600;color:#E1F5EE;margin-bottom:3px;}
+.home-sub{font-size:13px;color:var(--green-mid);margin-bottom:14px;}
+.usage-pill{background:var(--green-dark);border-radius:var(--radius-xs);padding:10px 14px;margin-bottom:16px;}
+.usage-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.usage-lbl{font-size:11px;color:var(--green-mid);}
+.usage-val{font-size:11px;color:var(--green-bright);font-weight:600;}
+.usage-track{height:4px;background:var(--green-darker);border-radius:2px;overflow:hidden;}
+.usage-fill{height:100%;background:var(--green-bright);border-radius:2px;transition:width .3s;}
+.home-body{flex:1;padding:20px 16px;overflow-y:auto;}
+.section-label{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;}
+.tpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px;}
+.tpl-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:18px 12px 14px;text-align:center;cursor:pointer;transition:transform .1s;-webkit-tap-highlight-color:transparent;}
+.tpl-card:active{transform:scale(0.97);}
+.tpl-icon{font-size:28px;color:var(--green);margin-bottom:8px;display:block;}
+.tpl-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px;}
+.tpl-desc{font-size:11px;color:var(--text-muted);}
+.recent-list{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:20px;}
+.recent-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:0.5px solid var(--border);cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.recent-item:last-child{border-bottom:none;}
+.recent-item:active{background:var(--surface2);}
+.r-icon{width:34px;height:34px;border-radius:var(--radius-xs);background:var(--green-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.r-icon i{font-size:16px;color:var(--green);}
+.r-info{flex:1;min-width:0;}
+.r-title{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.r-time{font-size:11px;color:var(--text-muted);}
+.empty-state{padding:24px;text-align:center;color:var(--text-muted);font-size:13px;}
 
-  /* ── TEMPLATE SCREEN ── */
-  .tpl-screen-header { background: var(--green); padding: 16px 16px 16px; display: flex; align-items: center; gap: 12px; padding-top: max(env(safe-area-inset-top), 16px); }
-  .back-btn { background: none; border: none; color: var(--green-mid); font-size: 22px; cursor: pointer; padding: 4px; display: flex; align-items: center; -webkit-tap-highlight-color: transparent; }
-  .tpl-screen-title { font-size: 16px; font-weight: 600; color: #E1F5EE; }
-  .tpl-screen-body { flex: 1; padding: 20px 16px; overflow-y: auto; }
+/* ── BOTTOM NAV ── */
+.bottom-nav{background:var(--surface);border-top:0.5px solid var(--border);display:flex;padding:8px 0 max(env(safe-area-inset-bottom),10px);}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;padding:4px 0;-webkit-tap-highlight-color:transparent;}
+.nav-btn i{font-size:24px;color:var(--border);}
+.nav-btn span{font-size:10px;font-weight:500;color:var(--text-muted);}
+.nav-btn.active i{color:var(--green);}
+.nav-btn.active span{color:var(--green);}
 
-  .prompt-hint { background: var(--green-light); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 18px; display: flex; gap: 10px; }
-  .prompt-hint i { font-size: 16px; color: var(--green); flex-shrink: 0; margin-top: 2px; }
-  .prompt-hint p { font-size: 13px; color: var(--green-dark); line-height: 1.5; }
+/* ── TEMPLATE ── */
+.tpl-header{background:var(--green);padding:16px 20px;padding-top:max(env(safe-area-inset-top),16px);display:flex;align-items:center;gap:12px;}
+.back-btn{background:none;border:none;color:var(--green-mid);font-size:24px;cursor:pointer;padding:0;display:flex;align-items:center;-webkit-tap-highlight-color:transparent;}
+.tpl-header-title{font-size:17px;font-weight:600;color:#E1F5EE;}
+.tpl-body{flex:1;padding:20px 16px;overflow-y:auto;}
+.hint-box{background:var(--green-light);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:20px;display:flex;gap:10px;}
+.hint-box i{font-size:18px;color:var(--green);flex-shrink:0;margin-top:1px;}
+.hint-box p{font-size:13px;color:var(--green-dark);line-height:1.5;}
+.job-input{width:100%;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:14px;font-size:15px;color:var(--text);background:var(--surface);resize:none;font-family:inherit;line-height:1.5;outline:none;min-height:130px;transition:border-color .15s;}
+.job-input:focus{border-color:var(--green);}
+.job-input::placeholder{color:var(--text-muted);}
+.char-hint{font-size:11px;color:var(--text-muted);text-align:right;margin-top:6px;margin-bottom:20px;}
 
-  .input-label { font-size: 13px; font-weight: 500; color: var(--text-mid); margin-bottom: 8px; display: block; }
-  .job-input { width: 100%; border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; font-size: 14px; color: var(--text); background: var(--surface); resize: none; font-family: inherit; line-height: 1.5; outline: none; min-height: 120px; transition: border-color .15s; }
-  .job-input:focus { border-color: var(--green); }
-  .job-input::placeholder { color: var(--text-muted); }
-  .char-count { font-size: 11px; color: var(--text-muted); text-align: right; margin-top: 6px; margin-bottom: 18px; }
-  .send-btn { width: 100%; background: var(--green); color: #fff; border: none; border-radius: var(--radius); padding: 15px; font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background .15s; -webkit-tap-highlight-color: transparent; }
-  .send-btn:hover { background: var(--green-dark); }
-  .send-btn:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; }
-  .send-btn i { font-size: 18px; }
+/* ── LOADING ── */
+.loading-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:40px;}
+.dots{display:flex;gap:10px;}
+.dot{width:12px;height:12px;border-radius:50%;background:var(--green-mid);animation:bounce 1.2s infinite;}
+.dot:nth-child(2){animation-delay:.2s;}
+.dot:nth-child(3){animation-delay:.4s;}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-12px)}}
+.loading-text{font-size:15px;color:var(--text-muted);}
 
-  /* ── RESULT SCREEN ── */
-  .result-header { background: var(--green); padding: 16px; display: flex; align-items: center; justify-content: space-between; padding-top: max(env(safe-area-inset-top), 16px); }
-  .result-header-left { display: flex; align-items: center; gap: 12px; }
-  .result-badge { background: var(--green-dark); color: var(--green-mid); font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; }
-  .result-body { flex: 1; padding: 20px 16px; overflow-y: auto; }
-  .result-doc { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 16px; font-size: 14px; color: var(--text); line-height: 1.7; white-space: pre-wrap; word-wrap: break-word; }
-  .result-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-  .act-btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 13px; border-radius: var(--radius); font-size: 14px; font-weight: 500; cursor: pointer; border: none; -webkit-tap-highlight-color: transparent; }
-  .act-btn i { font-size: 18px; }
-  .act-copy { background: var(--green); color: #fff; grid-column: 1 / -1; }
-  .act-copy:active { background: var(--green-dark); }
-  .act-share { background: var(--green-light); color: var(--green-dark); border: 0.5px solid var(--green-mid); }
-  .act-redo { background: var(--surface2); color: var(--text-mid); border: 0.5px solid var(--border); }
-  .new-btn { width: 100%; background: none; border: 0.5px solid var(--border); border-radius: var(--radius); padding: 13px; font-size: 14px; color: var(--text-mid); cursor: pointer; font-weight: 500; -webkit-tap-highlight-color: transparent; }
+/* ── RESULT ── */
+.result-header{background:var(--green);padding:16px 20px;padding-top:max(env(safe-area-inset-top),16px);display:flex;align-items:center;justify-content:space-between;}
+.result-badge{background:var(--green-dark);color:var(--green-mid);font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;}
+.result-body{flex:1;padding:20px 16px;overflow-y:auto;}
+.result-doc{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;font-size:14px;color:var(--text);line-height:1.8;white-space:pre-wrap;word-wrap:break-word;}
+.result-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.act-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:14px;border-radius:var(--radius-sm);font-size:14px;font-weight:500;cursor:pointer;border:none;-webkit-tap-highlight-color:transparent;}
+.act-btn i{font-size:18px;}
+.act-copy{background:var(--green);color:#fff;grid-column:1/-1;}
+.act-copy:active{background:var(--green-dark);}
+.act-share{background:var(--green-light);color:var(--green-dark);border:0.5px solid var(--green-mid);}
+.act-redo{background:var(--surface2);color:var(--text-mid);border:0.5px solid var(--border);}
+.new-btn{width:100%;background:none;border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:14px;font-size:14px;color:var(--text-mid);cursor:pointer;font-weight:500;-webkit-tap-highlight-color:transparent;}
 
-  /* ── LOADING STATE ── */
-  .loading-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; padding: 40px 20px; gap: 16px; }
-  .loading-dots { display: flex; gap: 8px; }
-  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green-mid); animation: bounce 1.2s infinite; }
-  .dot:nth-child(2) { animation-delay: .2s; }
-  .dot:nth-child(3) { animation-delay: .4s; }
-  @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-10px)} }
-  .loading-text { font-size: 14px; color: var(--text-muted); }
+/* ── CHAT ── */
+.chat-messages{flex:1;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;}
+.msg{max-width:85%;padding:12px 16px;font-size:14px;line-height:1.5;border-radius:18px;}
+.msg-user{background:var(--green);color:#fff;border-bottom-right-radius:4px;align-self:flex-end;}
+.msg-ai{background:var(--surface);border:0.5px solid var(--border);color:var(--text);border-bottom-left-radius:4px;align-self:flex-start;white-space:pre-wrap;}
+.chat-input-row{padding:10px 14px;border-top:0.5px solid var(--border);background:var(--surface);display:flex;gap:10px;align-items:flex-end;padding-bottom:max(env(safe-area-inset-bottom),10px);}
+.chat-textarea{flex:1;border:1.5px solid var(--border);border-radius:20px;padding:10px 16px;font-size:15px;font-family:inherit;resize:none;outline:none;line-height:1.4;max-height:120px;background:var(--surface2);}
+.chat-textarea:focus{border-color:var(--green);}
+.chat-send-btn{width:42px;height:42px;background:var(--green);border:none;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent;}
+.chat-send-btn i{font-size:20px;color:#fff;}
+.chat-send-btn:disabled{background:var(--border);}
 
-  /* ── TOAST ── */
-  .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: var(--text); color: #fff; border-radius: 20px; padding: 10px 20px; font-size: 13px; font-weight: 500; opacity: 0; transition: opacity .2s; pointer-events: none; white-space: nowrap; z-index: 999; }
-  .toast.show { opacity: 1; }
+/* ── SETTINGS ── */
+.settings-header{background:var(--green);padding:20px;padding-top:max(env(safe-area-inset-top),20px);}
+.settings-topbar{display:flex;align-items:center;gap:12px;margin-bottom:0;}
+.settings-title{font-size:18px;font-weight:700;color:#E1F5EE;}
+.settings-body{flex:1;padding:20px 16px;overflow-y:auto;}
+.settings-section{margin-bottom:24px;}
+.settings-section-title{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;}
+.settings-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:0.5px solid var(--border);}
+.settings-row:last-child{border-bottom:none;}
+.settings-row-left{display:flex;align-items:center;gap:10px;}
+.settings-row-left i{font-size:18px;color:var(--text-muted);}
+.settings-row-label{font-size:14px;color:var(--text);}
+.settings-row-val{font-size:13px;color:var(--text-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
-  /* ── ONBOARDING SCREEN ── */
-  .onboard-body { flex: 1; padding: 32px 20px; display: flex; flex-direction: column; }
-  .onboard-logo { font-size: 28px; font-weight: 700; color: var(--green); margin-bottom: 6px; }
-  .onboard-tagline { font-size: 14px; color: var(--text-muted); margin-bottom: 32px; }
-  .onboard-q { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
-  .onboard-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
-  .onboard-opts { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
-  .onboard-opt { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; background: var(--surface); -webkit-tap-highlight-color: transparent; transition: border-color .15s, background .15s; }
-  .onboard-opt.selected { border-color: var(--green); background: var(--green-light); }
-  .onboard-opt i { font-size: 22px; color: var(--text-muted); }
-  .onboard-opt.selected i { color: var(--green); }
-  .onboard-opt span { font-size: 14px; font-weight: 500; color: var(--text); }
-  .field-group { margin-bottom: 18px; }
-  .field-label { font-size: 13px; font-weight: 500; color: var(--text-mid); margin-bottom: 7px; display: block; }
-  .field-input { width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 14px; color: var(--text); background: var(--surface); font-family: inherit; outline: none; transition: border-color .15s; }
-  .field-input:focus { border-color: var(--green); }
-  .onboard-next { width: 100%; background: var(--green); color: #fff; border: none; border-radius: var(--radius); padding: 15px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: auto; }
-  .onboard-step { font-size: 12px; color: var(--text-muted); margin-bottom: 24px; }
-  .step-dots { display: flex; gap: 6px; margin-bottom: 28px; }
-  .step-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
-  .step-dot.active { background: var(--green); width: 18px; border-radius: 3px; }
-
-  /* ── SETTINGS ── */
-  .settings-header { background: var(--green); padding: 20px 16px; }
-  .settings-title { font-size: 18px; font-weight: 600; color: #E1F5EE; }
-  .settings-body { flex: 1; padding: 20px 16px; overflow-y: auto; }
-  .settings-section { margin-bottom: 24px; }
-  .settings-section-title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
-  .settings-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-  .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-bottom: 0.5px solid var(--border); }
-  .settings-row:last-child { border-bottom: none; }
-  .settings-row-label { font-size: 14px; color: var(--text); }
-  .settings-row-val { font-size: 14px; color: var(--text-muted); }
-  .settings-edit { font-size: 13px; color: var(--green); font-weight: 500; cursor: pointer; border: none; background: none; }
-
-  /* ── UPGRADE SCREEN ── */
-  .upgrade-header { background: var(--green); padding: 24px 20px 20px; text-align: center; }
-  .upgrade-title { font-size: 20px; font-weight: 700; color: #E1F5EE; margin-bottom: 6px; }
-  .upgrade-sub { font-size: 13px; color: var(--green-mid); }
-  .upgrade-body { flex: 1; padding: 20px 16px; overflow-y: auto; }
-  .plan-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 12px; }
-  .plan-card.featured { border: 2px solid var(--green); }
-  .plan-badge { font-size: 11px; font-weight: 600; background: var(--green); color: #fff; padding: 3px 10px; border-radius: 20px; display: inline-block; margin-bottom: 10px; }
-  .plan-name { font-size: 17px; font-weight: 700; color: var(--text); }
-  .plan-price { font-size: 28px; font-weight: 700; color: var(--green); margin: 4px 0; }
-  .plan-price span { font-size: 14px; font-weight: 400; color: var(--text-muted); }
-  .plan-msgs { font-size: 13px; color: var(--text-muted); margin-bottom: 14px; }
-  .plan-features { list-style: none; display: flex; flex-direction: column; gap: 7px; }
-  .plan-feature { display: flex; gap: 8px; font-size: 13px; color: var(--text-mid); align-items: flex-start; }
-  .plan-feature i { color: var(--green); font-size: 15px; flex-shrink: 0; margin-top: 1px; }
-  .plan-btn { width: 100%; background: var(--green); color: #fff; border: none; border-radius: var(--radius-sm); padding: 13px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 16px; }
-  .plan-btn.outline { background: none; color: var(--green); border: 1px solid var(--green); }
-
-  /* FREE CHAT */
-  .chat-messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-  .msg { max-width: 85%; padding: 10px 14px; font-size: 14px; line-height: 1.5; }
-  .msg-user { background: var(--green); color: #fff; border-radius: 16px 16px 4px 16px; align-self: flex-end; }
-  .msg-ai { background: var(--surface); border: 0.5px solid var(--border); color: var(--text); border-radius: 16px 16px 16px 4px; align-self: flex-start; white-space: pre-wrap; }
-  .chat-input-row { padding: 10px 12px; border-top: 0.5px solid var(--border); background: var(--surface); display: flex; gap: 10px; align-items: flex-end; padding-bottom: max(env(safe-area-inset-bottom), 10px); }
-  .chat-textarea { flex: 1; border: 1px solid var(--border); border-radius: 20px; padding: 10px 16px; font-size: 14px; font-family: inherit; resize: none; outline: none; line-height: 1.4; max-height: 120px; background: var(--surface2); }
-  .chat-textarea:focus { border-color: var(--green); }
-  .chat-send-btn { width: 38px; height: 38px; background: var(--green); border: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
-  .chat-send-btn i { font-size: 18px; color: #fff; }
-  .chat-send-btn:disabled { background: var(--border); }
+/* ── UPGRADE ── */
+.upgrade-header{background:var(--green);padding:24px 20px 20px;text-align:center;padding-top:max(env(safe-area-inset-top),24px);}
+.upgrade-back{display:flex;align-items:center;margin-bottom:16px;}
+.upgrade-title{font-size:22px;font-weight:700;color:#E1F5EE;margin-bottom:6px;}
+.upgrade-sub{font-size:13px;color:var(--green-mid);}
+.upgrade-body{flex:1;padding:20px 16px;overflow-y:auto;}
+.plan-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:12px;}
+.plan-card.featured{border:2px solid var(--green);}
+.plan-badge{font-size:11px;font-weight:700;background:var(--green);color:#fff;padding:3px 12px;border-radius:20px;display:inline-block;margin-bottom:10px;}
+.plan-name{font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px;}
+.plan-price{font-size:30px;font-weight:700;color:var(--green);margin-bottom:2px;}
+.plan-price span{font-size:15px;font-weight:400;color:var(--text-muted);}
+.plan-msgs{font-size:13px;color:var(--text-muted);margin-bottom:14px;}
+.plan-features{list-style:none;display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+.plan-feature{display:flex;gap:8px;font-size:13px;color:var(--text-mid);align-items:flex-start;}
+.plan-feature i{color:var(--green);font-size:16px;flex-shrink:0;margin-top:1px;}
 </style>
 </head>
 <body>
 
-<!-- ═══════════════════════════════ ONBOARDING ═══════════════════════════════ -->
-<div class="screen active" id="screen-onboard">
-  <div class="onboard-body">
-    <div class="onboard-logo">Tradie AI</div>
-    <div class="onboard-tagline">Paperwork sorted in seconds</div>
-    <div class="step-dots">
-      <div class="step-dot active" id="sdot0"></div>
-      <div class="step-dot" id="sdot1"></div>
-      <div class="step-dot" id="sdot2"></div>
+<!-- ═══════════ LANDING ═══════════ -->
+<div class="screen active" id="screen-landing">
+  <div class="landing-body">
+    <div class="landing-logo">Tradie AI</div>
+    <div class="landing-tagline">Paperwork sorted in seconds</div>
+    <div class="landing-sub">Write quotes, emails & job ads instantly.<br>Built for Australian tradies.</div>
+    <div class="landing-features">
+      <div class="feature-row"><div class="feature-icon"><i class="ti ti-file-invoice" aria-hidden="true"></i></div><div class="feature-text">Professional quotes with GST in 30 seconds</div></div>
+      <div class="feature-row"><div class="feature-icon"><i class="ti ti-mail" aria-hidden="true"></i></div><div class="feature-text">Customer emails & complaint replies</div></div>
+      <div class="feature-row"><div class="feature-icon"><i class="ti ti-briefcase" aria-hidden="true"></i></div><div class="feature-text">Job ads ready for Seek or Gumtree</div></div>
+      <div class="feature-row"><div class="feature-icon"><i class="ti ti-device-mobile" aria-hidden="true"></i></div><div class="feature-text">Works on your phone — no desktop needed</div></div>
     </div>
-
-    <!-- Step 1: Trade -->
-    <div id="ob-step1">
-      <div class="onboard-q">What kind of work do you do?</div>
-      <div class="onboard-sub">So we can get the language right for your quotes and emails.</div>
-      <div class="onboard-opts" id="trade-opts">
-        <div class="onboard-opt selected" data-val="Electrician" onclick="selectTrade(this)"><i class="ti ti-bolt"></i><span>Electrician</span></div>
-        <div class="onboard-opt" data-val="Plumber" onclick="selectTrade(this)"><i class="ti ti-droplet"></i><span>Plumber</span></div>
-        <div class="onboard-opt" data-val="Builder / Carpenter" onclick="selectTrade(this)"><i class="ti ti-hammer"></i><span>Builder / Carpenter</span></div>
-        <div class="onboard-opt" data-val="Cleaner" onclick="selectTrade(this)"><i class="ti ti-sparkles"></i><span>Cleaner</span></div>
-        <div class="onboard-opt" data-val="Landscaper / Gardener" onclick="selectTrade(this)"><i class="ti ti-plant"></i><span>Landscaper / Gardener</span></div>
-        <div class="onboard-opt" data-val="Painter" onclick="selectTrade(this)"><i class="ti ti-paint"></i><span>Painter</span></div>
-        <div class="onboard-opt" data-val="Other trade" onclick="selectTrade(this)"><i class="ti ti-tool"></i><span>Other trade</span></div>
-      </div>
-      <button class="onboard-next" onclick="obNext(1)">Continue</button>
-    </div>
-
-    <!-- Step 2: Business details -->
-    <div id="ob-step2" style="display:none;">
-      <div class="onboard-q">Your business details</div>
-      <div class="onboard-sub">These go into every quote you write automatically.</div>
-      <div class="field-group">
-        <label class="field-label">Your first name</label>
-        <input class="field-input" id="ob-name" type="text" placeholder="e.g. Dave" autocomplete="given-name">
-      </div>
-      <div class="field-group">
-        <label class="field-label">Business name (or your name if sole trader)</label>
-        <input class="field-input" id="ob-bizname" type="text" placeholder="e.g. Dave's Electrical" autocomplete="organization">
-      </div>
-      <div class="field-group">
-        <label class="field-label">Licence / registration number (optional)</label>
-        <input class="field-input" id="ob-licence" type="text" placeholder="e.g. 123456">
-      </div>
-      <div class="field-group">
-        <label class="field-label">ABN (optional)</label>
-        <input class="field-input" id="ob-abn" type="text" placeholder="e.g. 12 345 678 901">
-      </div>
-      <button class="onboard-next" onclick="obNext(2)">Continue</button>
-    </div>
-
-    <!-- Step 3: State -->
-    <div id="ob-step3" style="display:none;">
-      <div class="onboard-q">Which state are you in?</div>
-      <div class="onboard-sub">So we use the right wording for local rules and regulations.</div>
-      <div class="onboard-opts" id="state-opts">
-        <div class="onboard-opt selected" data-val="Victoria (VIC)" onclick="selectState(this)"><i class="ti ti-map-pin"></i><span>Victoria (VIC)</span></div>
-        <div class="onboard-opt" data-val="New South Wales (NSW)" onclick="selectState(this)"><i class="ti ti-map-pin"></i><span>New South Wales (NSW)</span></div>
-        <div class="onboard-opt" data-val="Queensland (QLD)" onclick="selectState(this)"><i class="ti ti-map-pin"></i><span>Queensland (QLD)</span></div>
-        <div class="onboard-opt" data-val="Western Australia (WA)" onclick="selectState(this)"><i class="ti ti-map-pin"></i><span>Western Australia (WA)</span></div>
-        <div class="onboard-opt" data-val="South Australia (SA)" onclick="selectState(this)"><i class="ti ti-map-pin"></i><span>South Australia (SA)</span></div>
-        <div class="onboard-opt" data-val="Tasmania (TAS)" onclick="selectState(this)"><i class="ti ti-map-pin"></i><span>Tasmania (TAS)</span></div>
-        <div class="onboard-opt" data-val="ACT / NT" onclick="selectState(this)"><i class="ti ti-map-pin"></i><span>ACT / NT</span></div>
-      </div>
-      <button class="onboard-next" onclick="obNext(3)">Get started</button>
+    <div class="landing-btns">
+      <button class="btn" onclick="goTo('screen-signup')"><i class="ti ti-user-plus"></i> Get started free</button>
+      <button class="btn btn-outline" onclick="goTo('screen-login')"><i class="ti ti-login"></i> Log in</button>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════ HOME ═══════════════════════════════ -->
+<!-- ═══════════ SIGN UP ═══════════ -->
+<div class="screen" id="screen-signup">
+  <div class="auth-header">
+    <button class="auth-back" onclick="goTo('screen-landing')"><i class="ti ti-arrow-left"></i></button>
+    <div class="auth-title">Create account</div>
+    <div class="auth-sub">Free to start — no credit card needed</div>
+  </div>
+  <div class="auth-body">
+    <div class="error-msg" id="signup-error"></div>
+    <div class="field"><label>Email address</label><input type="email" id="su-email" placeholder="dave@daveselectrical.com.au" autocomplete="email"></div>
+    <div class="field"><label>Password</label>
+      <div class="password-wrap">
+        <input type="password" id="su-password" placeholder="Min. 8 characters" autocomplete="new-password">
+        <button class="eye-btn" onclick="togglePw('su-password',this)"><i class="ti ti-eye"></i></button>
+      </div>
+    </div>
+    <div class="field"><label>Confirm password</label>
+      <div class="password-wrap">
+        <input type="password" id="su-confirm" placeholder="Re-enter password" autocomplete="new-password">
+        <button class="eye-btn" onclick="togglePw('su-confirm',this)"><i class="ti ti-eye"></i></button>
+      </div>
+    </div>
+    <button class="btn" id="signup-btn" onclick="doSignup()"><i class="ti ti-user-plus"></i> Create account</button>
+  </div>
+  <div class="auth-footer">Already have an account? <button class="link-btn" onclick="goTo('screen-login')">Log in</button></div>
+</div>
+
+<!-- ═══════════ VERIFY EMAIL ═══════════ -->
+<div class="screen" id="screen-verify">
+  <div class="verify-body">
+    <div class="verify-icon"><i class="ti ti-mail-check" aria-hidden="true"></i></div>
+    <div class="verify-title">Check your email</div>
+    <div class="verify-sub">We sent a verification link to<br><span class="verify-email-shown" id="verify-email-shown">your email</span><br><br>Click the link in the email to activate your account, then come back here and log in.</div>
+    <button class="btn" onclick="goTo('screen-login')"><i class="ti ti-login"></i> Go to log in</button>
+    <button class="btn btn-outline" onclick="resendVerification()"><i class="ti ti-refresh"></i> Resend email</button>
+  </div>
+</div>
+
+<!-- ═══════════ LOG IN ═══════════ -->
+<div class="screen" id="screen-login">
+  <div class="auth-header">
+    <button class="auth-back" onclick="goTo('screen-landing')"><i class="ti ti-arrow-left"></i></button>
+    <div class="auth-title">Welcome back</div>
+    <div class="auth-sub">Log in to your Tradie AI account</div>
+  </div>
+  <div class="auth-body">
+    <div class="error-msg" id="login-error"></div>
+    <div class="field"><label>Email address</label><input type="email" id="li-email" placeholder="your@email.com" autocomplete="email"></div>
+    <div class="field"><label>Password</label>
+      <div class="password-wrap">
+        <input type="password" id="li-password" placeholder="Your password" autocomplete="current-password">
+        <button class="eye-btn" onclick="togglePw('li-password',this)"><i class="ti ti-eye"></i></button>
+      </div>
+    </div>
+    <button class="btn" id="login-btn" onclick="doLogin()"><i class="ti ti-login"></i> Log in</button>
+    <div style="text-align:center;margin-bottom:16px;"><button class="link-btn" onclick="goTo('screen-forgot')">Forgot password?</button></div>
+  </div>
+  <div class="auth-footer">Don't have an account? <button class="link-btn" onclick="goTo('screen-signup')">Sign up free</button></div>
+</div>
+
+<!-- ═══════════ FORGOT PASSWORD ═══════════ -->
+<div class="screen" id="screen-forgot">
+  <div class="auth-header">
+    <button class="auth-back" onclick="goTo('screen-login')"><i class="ti ti-arrow-left"></i></button>
+    <div class="auth-title">Reset password</div>
+    <div class="auth-sub">We will send you a reset link</div>
+  </div>
+  <div class="auth-body">
+    <div class="error-msg" id="forgot-error"></div>
+    <div class="field"><label>Email address</label><input type="email" id="fp-email" placeholder="your@email.com" autocomplete="email"></div>
+    <button class="btn" onclick="doForgot()"><i class="ti ti-mail"></i> Send reset link</button>
+  </div>
+  <div class="auth-footer"><button class="link-btn" onclick="goTo('screen-login')">Back to log in</button></div>
+</div>
+
+<!-- ═══════════ ONBOARDING ═══════════ -->
+<div class="screen" id="screen-onboard">
+  <div class="ob-header">
+    <div class="ob-logo">Tradie AI</div>
+    <div class="ob-progress">
+      <div class="ob-dot active" id="ob-d0"></div>
+      <div class="ob-dot" id="ob-d1"></div>
+      <div class="ob-dot" id="ob-d2"></div>
+    </div>
+    <div class="ob-step-label" id="ob-step-label">Step 1 of 3 — Your details</div>
+  </div>
+  <div class="ob-body" id="ob-body">
+
+    <!-- STEP 1: Personal -->
+    <div id="ob-s1">
+      <div class="ob-title">Let's set up your profile</div>
+      <div class="ob-sub">These details auto-fill into every quote and email you write.</div>
+      <div class="field"><label>First name</label><input type="text" id="ob-firstname" placeholder="e.g. Dave" autocomplete="given-name"></div>
+      <div class="field"><label>Last name</label><input type="text" id="ob-lastname" placeholder="e.g. Kowalski" autocomplete="family-name"></div>
+      <div class="field"><label>Phone number</label><input type="tel" id="ob-phone" placeholder="e.g. 0412 345 678" autocomplete="tel"></div>
+      <button class="btn" onclick="obNext(1)">Continue <i class="ti ti-arrow-right"></i></button>
+    </div>
+
+    <!-- STEP 2: Trade -->
+    <div id="ob-s2" style="display:none;">
+      <div class="ob-title">What's your trade?</div>
+      <div class="ob-sub">So we use the right language and standards in your documents.</div>
+      <div class="trade-grid">
+        <div class="trade-opt selected" data-val="Electrician" onclick="selectTrade(this)"><i class="ti ti-bolt"></i><span>Electrician</span></div>
+        <div class="trade-opt" data-val="Plumber" onclick="selectTrade(this)"><i class="ti ti-droplet"></i><span>Plumber</span></div>
+        <div class="trade-opt" data-val="Builder" onclick="selectTrade(this)"><i class="ti ti-hammer"></i><span>Builder</span></div>
+        <div class="trade-opt" data-val="Cleaner" onclick="selectTrade(this)"><i class="ti ti-sparkles"></i><span>Cleaner</span></div>
+        <div class="trade-opt" data-val="Landscaper" onclick="selectTrade(this)"><i class="ti ti-plant"></i><span>Landscaper</span></div>
+        <div class="trade-opt" data-val="Painter" onclick="selectTrade(this)"><i class="ti ti-paint"></i><span>Painter</span></div>
+        <div class="trade-opt" data-val="Carpenter" onclick="selectTrade(this)"><i class="ti ti-tools"></i><span>Carpenter</span></div>
+        <div class="trade-opt" data-val="Other" onclick="selectTrade(this)"><i class="ti ti-tool"></i><span>Other</span></div>
+      </div>
+      <button class="btn" onclick="obNext(2)">Continue <i class="ti ti-arrow-right"></i></button>
+    </div>
+
+    <!-- STEP 3: Business -->
+    <div id="ob-s3" style="display:none;">
+      <div class="ob-title">Your business details</div>
+      <div class="ob-sub">These go on every quote you generate automatically.</div>
+      <div class="field"><label>Business name</label><input type="text" id="ob-bizname" placeholder="e.g. Dave's Electrical Services"></div>
+      <div class="field"><label>State</label>
+        <select id="ob-state">
+          <option value="VIC">Victoria (VIC)</option>
+          <option value="NSW">New South Wales (NSW)</option>
+          <option value="QLD">Queensland (QLD)</option>
+          <option value="WA">Western Australia (WA)</option>
+          <option value="SA">South Australia (SA)</option>
+          <option value="TAS">Tasmania (TAS)</option>
+          <option value="ACT">ACT</option>
+          <option value="NT">Northern Territory (NT)</option>
+        </select>
+      </div>
+      <div class="field"><label>Business address</label><input type="text" id="ob-address" placeholder="e.g. 123 Smith St, Melbourne VIC 3000"></div>
+      <div class="field"><label>Licence / registration number <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label><input type="text" id="ob-licence" placeholder="e.g. REC 123456"></div>
+      <div class="field"><label>ABN <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label><input type="text" id="ob-abn" placeholder="e.g. 12 345 678 901"></div>
+      <div class="field"><label>Payment terms <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label>
+        <select id="ob-terms">
+          <option value="Payment due on completion">Payment due on completion</option>
+          <option value="Payment due within 7 days">Payment due within 7 days</option>
+          <option value="Payment due within 14 days">Payment due within 14 days</option>
+          <option value="Payment due within 30 days">Payment due within 30 days</option>
+          <option value="50% deposit required upfront">50% deposit required upfront</option>
+        </select>
+      </div>
+      <button class="btn" onclick="obNext(3)"><i class="ti ti-check"></i> Let's go!</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ HOME ═══════════ -->
 <div class="screen" id="screen-home">
   <div class="home-header">
     <div class="home-topbar">
-      <span class="logo">Tradie AI</span>
-      <button class="avatar-btn" onclick="goSettings()" id="avatar-initials">DK</button>
+      <span class="home-logo">Tradie AI</span>
+      <button class="avatar-btn" id="home-avatar" onclick="goSettings()">DK</button>
     </div>
-    <div class="home-greeting" id="home-greeting">G'day Dave 👋</div>
+    <div class="home-greeting" id="home-greeting">G'day 👋</div>
     <div class="home-sub">What do you need sorted today?</div>
     <div class="usage-pill">
       <div class="usage-row">
@@ -289,80 +409,57 @@
   <div class="home-body">
     <div class="section-label">What do you need?</div>
     <div class="tpl-grid">
-      <div class="tpl-card" onclick="openTemplate('quote')">
-        <i class="ti ti-file-invoice tpl-icon"></i>
-        <div class="tpl-name">Write a quote</div>
-        <div class="tpl-desc">Parts, labour & GST</div>
-      </div>
-      <div class="tpl-card" onclick="openTemplate('email')">
-        <i class="ti ti-mail tpl-icon"></i>
-        <div class="tpl-name">Customer email</div>
-        <div class="tpl-desc">Reply or follow up</div>
-      </div>
-      <div class="tpl-card" onclick="openTemplate('jobad')">
-        <i class="ti ti-briefcase tpl-icon"></i>
-        <div class="tpl-name">Job ad</div>
-        <div class="tpl-desc">Seek or Gumtree</div>
-      </div>
-      <div class="tpl-card" onclick="openTemplate('chat')">
-        <i class="ti ti-message-2 tpl-icon"></i>
-        <div class="tpl-name">Free chat</div>
-        <div class="tpl-desc">Ask me anything</div>
-      </div>
+      <div class="tpl-card" onclick="openTemplate('quote')"><i class="ti ti-file-invoice tpl-icon"></i><div class="tpl-name">Write a quote</div><div class="tpl-desc">Parts, labour & GST</div></div>
+      <div class="tpl-card" onclick="openTemplate('email')"><i class="ti ti-mail tpl-icon"></i><div class="tpl-name">Customer email</div><div class="tpl-desc">Reply or follow up</div></div>
+      <div class="tpl-card" onclick="openTemplate('jobad')"><i class="ti ti-briefcase tpl-icon"></i><div class="tpl-name">Job ad</div><div class="tpl-desc">Seek or Gumtree</div></div>
+      <div class="tpl-card" onclick="openTemplate('complaint')"><i class="ti ti-mood-angry tpl-icon"></i><div class="tpl-name">Complaint reply</div><div class="tpl-desc">Stay professional</div></div>
+      <div class="tpl-card" onclick="openTemplate('followup')"><i class="ti ti-clock tpl-icon"></i><div class="tpl-name">Follow up</div><div class="tpl-desc">Chase a quote</div></div>
+      <div class="tpl-card" onclick="openTemplate('chat')"><i class="ti ti-message-2 tpl-icon"></i><div class="tpl-name">Free chat</div><div class="tpl-desc">Ask me anything</div></div>
     </div>
     <div class="section-label">Recent</div>
-    <div class="recent-list" id="recent-list">
-      <div class="empty-recent">Your recent outputs will appear here</div>
-    </div>
+    <div class="recent-list" id="recent-list"><div class="empty-state">Your recent outputs will appear here</div></div>
   </div>
   <nav class="bottom-nav">
-    <button class="nav-btn active" onclick="goHome()"><i class="ti ti-home"></i><span>Home</span></button>
-    <button class="nav-btn" onclick="goHistory()"><i class="ti ti-clock"></i><span>History</span></button>
-    <button class="nav-btn" onclick="goSettings()"><i class="ti ti-settings"></i><span>Settings</span></button>
-    <button class="nav-btn" onclick="goUpgrade()"><i class="ti ti-crown"></i><span>Upgrade</span></button>
+    <button class="nav-btn active" id="nav-home" onclick="goHome()"><i class="ti ti-home"></i><span>Home</span></button>
+    <button class="nav-btn" id="nav-history" onclick="goHistory()"><i class="ti ti-clock"></i><span>History</span></button>
+    <button class="nav-btn" id="nav-settings" onclick="goSettings()"><i class="ti ti-settings"></i><span>Settings</span></button>
+    <button class="nav-btn" id="nav-upgrade" onclick="goUpgrade()"><i class="ti ti-crown"></i><span>Upgrade</span></button>
   </nav>
 </div>
 
-<!-- ═══════════════════════════════ TEMPLATE INPUT ═══════════════════════════════ -->
+<!-- ═══════════ TEMPLATE ═══════════ -->
 <div class="screen" id="screen-template">
-  <div class="tpl-screen-header">
+  <div class="tpl-header">
     <button class="back-btn" onclick="goHome()"><i class="ti ti-arrow-left"></i></button>
-    <span class="tpl-screen-title" id="tpl-title">Write a quote</span>
+    <span class="tpl-header-title" id="tpl-title">Write a quote</span>
   </div>
-  <div class="tpl-screen-body">
-    <div class="prompt-hint">
-      <i class="ti ti-bulb"></i>
-      <p id="tpl-hint">Describe the job in your own words — parts, total price including GST. Tradie AI handles the rest.</p>
-    </div>
-    <label class="input-label" id="tpl-input-label">Describe the job</label>
-    <textarea class="job-input" id="job-input" placeholder="" rows="5" oninput="updateChar()"></textarea>
-    <div class="char-count"><span id="char-count">0</span> characters</div>
-    <button class="send-btn" id="send-btn" onclick="sendToAI()">
-      <i class="ti ti-sparkles"></i> Generate
-    </button>
+  <div class="tpl-body">
+    <div class="hint-box"><i class="ti ti-bulb"></i><p id="tpl-hint">Describe the job in plain language.</p></div>
+    <label style="font-size:13px;font-weight:500;color:var(--text-mid);margin-bottom:8px;display:block;" id="tpl-label">Job details</label>
+    <textarea class="job-input" id="job-input" oninput="updateChar()"></textarea>
+    <div class="char-hint"><span id="char-count">0</span> characters</div>
+    <button class="btn" onclick="sendToAI()"><i class="ti ti-sparkles"></i> Generate</button>
   </div>
 </div>
 
-<!-- ═══════════════════════════════ LOADING ═══════════════════════════════ -->
+<!-- ═══════════ LOADING ═══════════ -->
 <div class="screen" id="screen-loading">
-  <div class="tpl-screen-header">
+  <div class="tpl-header">
     <button class="back-btn" onclick="goHome()"><i class="ti ti-x"></i></button>
-    <span class="tpl-screen-title">Writing your <span id="loading-type">quote</span>...</span>
+    <span class="tpl-header-title">Writing your <span id="loading-type">document</span>...</span>
   </div>
   <div class="loading-wrap">
-    <div class="loading-dots">
-      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
-    </div>
+    <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
     <div class="loading-text" id="loading-msg">Getting the wording right...</div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════ RESULT ═══════════════════════════════ -->
+<!-- ═══════════ RESULT ═══════════ -->
 <div class="screen" id="screen-result">
   <div class="result-header">
-    <div class="result-header-left">
+    <div style="display:flex;align-items:center;gap:12px;">
       <button class="back-btn" onclick="goHome()"><i class="ti ti-arrow-left"></i></button>
-      <span class="tpl-screen-title" id="result-title">Your quote</span>
+      <span class="tpl-header-title" id="result-title">Your quote</span>
     </div>
     <span class="result-badge" id="result-badge">Quote</span>
   </div>
@@ -371,124 +468,116 @@
     <div class="result-actions">
       <button class="act-btn act-copy" onclick="copyResult()"><i class="ti ti-copy"></i> Copy to clipboard</button>
       <button class="act-btn act-share" onclick="shareResult()"><i class="ti ti-share"></i> Share</button>
-      <button class="act-btn act-redo" onclick="goBack()"><i class="ti ti-edit"></i> Edit</button>
+      <button class="act-btn act-redo" onclick="goTo('screen-template')"><i class="ti ti-edit"></i> Edit</button>
     </div>
     <button class="new-btn" onclick="goHome()">Start something new</button>
   </div>
 </div>
 
-<!-- ═══════════════════════════════ FREE CHAT ═══════════════════════════════ -->
+<!-- ═══════════ CHAT ═══════════ -->
 <div class="screen" id="screen-chat">
-  <div class="tpl-screen-header">
+  <div class="tpl-header">
     <button class="back-btn" onclick="goHome()"><i class="ti ti-arrow-left"></i></button>
-    <span class="tpl-screen-title">Free chat</span>
+    <span class="tpl-header-title">Free chat</span>
   </div>
   <div class="chat-messages" id="chat-messages">
-    <div class="msg msg-ai">G'day! I'm Tradie AI. Ask me anything — I'm here to help with your business. 🤙</div>
+    <div class="msg msg-ai">G'day! I'm Tradie AI. Ask me anything — quotes, pricing, customer advice. I'm here to help. 🤙</div>
   </div>
   <div class="chat-input-row">
     <textarea class="chat-textarea" id="chat-input" placeholder="Ask me anything..." rows="1" onkeydown="chatKey(event)" oninput="autoResize(this)"></textarea>
-    <button class="chat-send-btn" id="chat-send-btn" onclick="sendChat()"><i class="ti ti-arrow-up"></i></button>
+    <button class="chat-send-btn" id="chat-send" onclick="sendChat()"><i class="ti ti-arrow-up"></i></button>
   </div>
 </div>
 
-<!-- ═══════════════════════════════ SETTINGS ═══════════════════════════════ -->
+<!-- ═══════════ HISTORY ═══════════ -->
+<div class="screen" id="screen-history">
+  <div class="settings-header">
+    <div class="settings-topbar">
+      <button class="back-btn" onclick="goHome()"><i class="ti ti-arrow-left"></i></button>
+      <span class="settings-title">History</span>
+    </div>
+  </div>
+  <div class="settings-body" id="history-body"><div class="empty-state" style="padding:40px 20px;">No history yet</div></div>
+</div>
+
+<!-- ═══════════ SETTINGS ═══════════ -->
 <div class="screen" id="screen-settings">
   <div class="settings-header">
-    <div class="home-topbar" style="margin-bottom:0;">
-      <button class="back-btn" style="color:#9FE1CB;padding:0;" onclick="goHome()"><i class="ti ti-arrow-left"></i></button>
+    <div class="settings-topbar">
+      <button class="back-btn" onclick="goHome()"><i class="ti ti-arrow-left"></i></button>
       <span class="settings-title">Settings</span>
-      <div style="width:34px;"></div>
     </div>
   </div>
   <div class="settings-body">
     <div class="settings-section">
       <div class="settings-section-title">Your profile</div>
       <div class="settings-card">
-        <div class="settings-row"><span class="settings-row-label">Name</span><span class="settings-row-val" id="s-name">—</span></div>
-        <div class="settings-row"><span class="settings-row-label">Business</span><span class="settings-row-val" id="s-biz">—</span></div>
-        <div class="settings-row"><span class="settings-row-label">Trade</span><span class="settings-row-val" id="s-trade">—</span></div>
-        <div class="settings-row"><span class="settings-row-label">State</span><span class="settings-row-val" id="s-state">—</span></div>
-        <div class="settings-row"><span class="settings-row-label">Licence No.</span><span class="settings-row-val" id="s-licence">—</span></div>
-        <div class="settings-row"><span class="settings-row-label">ABN</span><span class="settings-row-val" id="s-abn">—</span></div>
+        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-user"></i><span class="settings-row-label">Name</span></div><span class="settings-row-val" id="s-name">—</span></div>
+        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-phone"></i><span class="settings-row-label">Phone</span></div><span class="settings-row-val" id="s-phone">—</span></div>
+        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-mail"></i><span class="settings-row-label">Email</span></div><span class="settings-row-val" id="s-email">—</span></div>
+        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-building"></i><span class="settings-row-label">Business</span></div><span class="settings-row-val" id="s-biz">—</span></div>
+        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-tool"></i><span class="settings-row-label">Trade</span></div><span class="settings-row-val" id="s-trade">—</span></div>
+        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-map-pin"></i><span class="settings-row-label">State</span></div><span class="settings-row-val" id="s-state">—</span></div>
+        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-id-badge"></i><span class="settings-row-label">Licence</span></div><span class="settings-row-val" id="s-licence">—</span></div>
+        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-receipt"></i><span class="settings-row-label">ABN</span></div><span class="settings-row-val" id="s-abn">—</span></div>
       </div>
-      <button style="margin-top:10px;width:100%;background:none;border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:11px;font-size:13px;color:var(--green);cursor:pointer;font-weight:500;" onclick="resetOnboard()">Edit profile details</button>
     </div>
     <div class="settings-section">
-      <div class="settings-section-title">Plan</div>
+      <div class="settings-section-title">Plan & usage</div>
       <div class="settings-card">
-        <div class="settings-row"><span class="settings-row-label">Current plan</span><span class="settings-row-val" style="color:var(--green);font-weight:500;">Starter (Free)</span></div>
-        <div class="settings-row"><span class="settings-row-label">Messages used</span><span class="settings-row-val" id="s-usage">0 / 50</span></div>
+        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-crown"></i><span class="settings-row-label">Plan</span></div><span class="settings-row-val" id="s-plan" style="color:var(--green);font-weight:600;">Free</span></div>
+        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-message"></i><span class="settings-row-label">Messages used</span></div><span class="settings-row-val" id="s-usage">0 / 50</span></div>
       </div>
-      <button style="margin-top:10px;width:100%;background:var(--green);border:none;border-radius:var(--radius-sm);padding:13px;font-size:14px;color:#fff;cursor:pointer;font-weight:600;" onclick="goUpgrade()">Upgrade plan</button>
+      <div style="margin-top:10px;"><button class="btn" onclick="goUpgrade()"><i class="ti ti-crown"></i> Upgrade plan</button></div>
     </div>
     <div class="settings-section">
-      <div class="settings-section-title">About</div>
-      <div class="settings-card">
-        <div class="settings-row"><span class="settings-row-label">Version</span><span class="settings-row-val">1.0 MVP</span></div>
-        <div class="settings-row"><span class="settings-row-label">Built for</span><span class="settings-row-val">Australian tradies</span></div>
-      </div>
+      <button class="btn btn-danger" onclick="doLogout()"><i class="ti ti-logout"></i> Log out</button>
     </div>
-    <button style="width:100%;background:none;border:0.5px solid #F09595;border-radius:var(--radius-sm);padding:13px;font-size:14px;color:var(--red);cursor:pointer;font-weight:500;margin-bottom:20px;" onclick="clearData()">Clear all data</button>
   </div>
 </div>
 
-<!-- ═══════════════════════════════ HISTORY ═══════════════════════════════ -->
-<div class="screen" id="screen-history">
-  <div class="settings-header">
-    <div class="home-topbar" style="margin-bottom:0;">
-      <button class="back-btn" style="color:#9FE1CB;padding:0;" onclick="goHome()"><i class="ti ti-arrow-left"></i></button>
-      <span class="settings-title">History</span>
-      <div style="width:34px;"></div>
-    </div>
-  </div>
-  <div class="settings-body" id="history-body"></div>
-</div>
-
-<!-- ═══════════════════════════════ UPGRADE ═══════════════════════════════ -->
+<!-- ═══════════ UPGRADE ═══════════ -->
 <div class="screen" id="screen-upgrade">
   <div class="upgrade-header">
-    <button class="back-btn" style="color:#9FE1CB;margin-bottom:12px;" onclick="goHome()"><i class="ti ti-arrow-left"></i></button>
-    <div class="upgrade-title">Unlock more messages</div>
-    <div class="upgrade-sub">Pick the plan that suits your workload</div>
+    <div class="upgrade-back"><button class="back-btn" onclick="goHome()"><i class="ti ti-arrow-left"></i></button></div>
+    <div class="upgrade-title">Upgrade your plan</div>
+    <div class="upgrade-sub">More messages, more power</div>
   </div>
   <div class="upgrade-body">
     <div class="plan-card">
       <div class="plan-name">Starter</div>
       <div class="plan-price">Free</div>
-      <div class="plan-msgs">50 messages/month</div>
+      <div class="plan-msgs">50 messages / month</div>
       <ul class="plan-features">
-        <li class="plan-feature"><i class="ti ti-check"></i>All 4 templates</li>
-        <li class="plan-feature"><i class="ti ti-check"></i>Quote, email, job ad, free chat</li>
-        <li class="plan-feature"><i class="ti ti-check"></i>Save history</li>
+        <li class="plan-feature"><i class="ti ti-check"></i>All 6 templates</li>
+        <li class="plan-feature"><i class="ti ti-check"></i>Quote, email, job ad, chat</li>
+        <li class="plan-feature"><i class="ti ti-check"></i>History saved to your account</li>
       </ul>
-      <button class="plan-btn outline">Current plan</button>
+      <button class="btn btn-outline" disabled>Current plan</button>
     </div>
     <div class="plan-card featured">
       <div class="plan-badge">Most popular</div>
       <div class="plan-name">Pro</div>
       <div class="plan-price">$15<span>/month</span></div>
-      <div class="plan-msgs">500 messages/month</div>
+      <div class="plan-msgs">500 messages / month</div>
       <ul class="plan-features">
         <li class="plan-feature"><i class="ti ti-check"></i>Everything in Starter</li>
-        <li class="plan-feature"><i class="ti ti-check"></i>Access to all AI models</li>
-        <li class="plan-feature"><i class="ti ti-check"></i>Priority response speed</li>
-        <li class="plan-feature"><i class="ti ti-check"></i>Complaint reply template</li>
-        <li class="plan-feature"><i class="ti ti-check"></i>Follow-up template</li>
+        <li class="plan-feature"><i class="ti ti-check"></i>Priority AI responses</li>
+        <li class="plan-feature"><i class="ti ti-check"></i>Complaint & follow-up templates</li>
+        <li class="plan-feature"><i class="ti ti-check"></i>Full history archive</li>
       </ul>
-      <button class="plan-btn" onclick="showToast('Stripe coming soon — email hello@tradieai.com.au to join the waitlist!')">Get Pro — $15/mo</button>
+      <button class="btn" onclick="showToast('Stripe coming soon! Email hello@tradieai.com.au to join the waitlist.')">Get Pro — $15/mo</button>
     </div>
     <div class="plan-card">
       <div class="plan-name">Power</div>
       <div class="plan-price">$29<span>/month</span></div>
-      <div class="plan-msgs">2,000 messages/month</div>
+      <div class="plan-msgs">2,000 messages / month</div>
       <ul class="plan-features">
         <li class="plan-feature"><i class="ti ti-check"></i>Everything in Pro</li>
         <li class="plan-feature"><i class="ti ti-check"></i>Priority support</li>
-        <li class="plan-feature"><i class="ti ti-check"></i>Custom templates</li>
-        <li class="plan-feature"><i class="ti ti-check"></i>Team access (coming soon)</li>
+        <li class="plan-feature"><i class="ti ti-check"></i>Custom templates (coming soon)</li>
       </ul>
-      <button class="plan-btn outline" onclick="showToast('Coming soon!')">Get Power — $29/mo</button>
+      <button class="btn btn-outline" onclick="showToast('Coming soon!')">Get Power — $29/mo</button>
     </div>
   </div>
 </div>
@@ -497,242 +586,297 @@
 <div class="toast" id="toast"></div>
 
 <script>
+const SUPABASE_URL = 'https://lkporornrpyvgfvzvstr.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrcG9yb3JucnB5dmdmdnp2c3RyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5ODYxNjMsImV4cCI6MjA5NzU2MjE2M30.i2cNn9W-7OwOzCIj9H6uYXBbEaMLhguQransVCQ-Cjs';
 const BACKEND_URL = 'https://tradieai-backend.onrender.com';
-const MSG_LIMIT = 50;
+const PLAN_LIMITS = { free:50, starter:100, pro:500, power:2000 };
 
-let profile = JSON.parse(localStorage.getItem('tradieai_profile') || 'null');
-let history = JSON.parse(localStorage.getItem('tradieai_history') || '[]');
-let usageCount = parseInt(localStorage.getItem('tradieai_usage') || '0');
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentUser = null;
+let userProfile = null;
 let currentTemplate = 'quote';
-let lastInput = '';
 let chatHistory = [];
+let localHistory = [];
 
+// ── TEMPLATES CONFIG ──
 const templates = {
-  quote: {
-    title: 'Write a quote',
-    badge: 'Quote',
-    hint: 'Describe the job in plain language — what needs doing, parts cost, and your total charge including GST. Tradie AI formats it professionally.',
-    inputLabel: 'Describe the job',
-    placeholder: 'e.g. Replace 10 powerpoints and 3 light fittings in a house in Footscray. Parts cost me $180. Charging $520 all up including GST.',
-    loadingMsg: 'Formatting your quote...',
-    loadingType: 'quote',
-    resultTitle: 'Your quote',
-    systemPrompt: (p) => `You are Tradie AI, a professional assistant for Australian tradies. Write a clean, professional trade quote in Australian English.
-Business: ${p.bizname || p.name}${p.licence ? ` | Licence: ${p.licence}` : ''}${p.abn ? ` | ABN: ${p.abn}` : ''}
-Trade: ${p.trade} | State: ${p.state}
-Rules: Always include GST breakdown (price ex GST + 10% GST = total inc GST). Reference relevant Australian standards where appropriate (e.g. AS/NZS 3000 for electrical). Include "Quote valid for 30 days" and "Payment due on completion." Use Australian English. Keep it professional but not overly corporate. Output the quote text only, no extra commentary.`
-  },
-  email: {
-    title: 'Customer email',
-    badge: 'Email',
-    hint: 'Tell me the situation — who is the customer, what happened, and what you want to say. I will write a professional reply.',
-    inputLabel: 'What is the email about?',
-    placeholder: 'e.g. Customer is angry saying the job took longer than quoted. They want $100 off. The extra time was due to old wiring we found. Help me reply professionally without giving a discount.',
-    loadingMsg: 'Writing your email...',
-    loadingType: 'email',
-    resultTitle: 'Your email',
-    systemPrompt: (p) => `You are Tradie AI, helping an Australian tradie write professional customer emails.
-Business: ${p.bizname || p.name} | Trade: ${p.trade} | State: ${p.state}
-Rules: Write in Australian English. Tone should be professional but warm — like a confident business owner, not a corporate robot. No grovelling or excessive apologising. Be firm but fair. Output the email text only, with subject line if appropriate.`
-  },
-  jobad: {
-    title: 'Job ad',
-    badge: 'Job ad',
-    hint: 'Tell me what role you need, what state, and any key requirements. I will write a Seek-ready job ad that attracts good applicants.',
-    inputLabel: 'Describe the role',
-    placeholder: 'e.g. Need a 2nd year electrical apprentice, Melbourne. Must have cert 2. Pay award rates. Small team, good culture. Post it for Seek.',
-    loadingMsg: 'Writing your job ad...',
-    loadingType: 'job ad',
-    resultTitle: 'Your job ad',
-    systemPrompt: (p) => `You are Tradie AI, helping an Australian tradie write an effective job advertisement.
-Business: ${p.bizname || p.name} | Trade: ${p.trade} | State: ${p.state}
-Rules: Write in Australian English. Comply with Fair Work requirements — no discriminatory language, accurate pay information. Write in an approachable tone that attracts good applicants. Include sections for: role overview, what you will be doing, what we are looking for, what we offer. Output the job ad text only, ready to paste into Seek or Gumtree.`
-  }
+  quote:     { title:'Write a quote',     badge:'Quote',     loadingType:'quote',     hint:'Describe the job in plain language — what needs doing, parts cost, and your total charge including GST.',                                  label:'Describe the job',       placeholder:'e.g. Replace 10 powerpoints and 3 light fittings in Footscray. Parts $180, charging $520 all up inc GST.' },
+  email:     { title:'Customer email',    badge:'Email',     loadingType:'email',     hint:'Tell me the situation — who is the customer, what happened, and what you want to say.',                                                   label:'What is the email about?', placeholder:'e.g. Customer unhappy the job took longer than expected. They want $100 off. Reply professionally without giving a discount.' },
+  jobad:     { title:'Job ad',            badge:'Job ad',    loadingType:'job ad',    hint:'Tell me the role, state, pay, and any requirements. I will write a Seek-ready ad.',                                                      label:'Describe the role',      placeholder:'e.g. 2nd year electrical apprentice, Melbourne, award rates, small friendly team, post to Seek.' },
+  complaint: { title:'Complaint reply',   badge:'Complaint', loadingType:'reply',     hint:'Tell me what the complaint is and the facts of the situation. I will write a calm, professional response.',                              label:'What is the complaint?', placeholder:'e.g. Customer says the bathroom tiles are uneven. We followed the spec they gave us. Help me reply professionally.' },
+  followup:  { title:'Follow up',         badge:'Follow-up', loadingType:'follow-up', hint:'Tell me what you quoted, how long ago, and any details. I will write a short confident follow-up.',                                     label:'What are you following up?', placeholder:'e.g. Sent a kitchen rewire quote 2 weeks ago for $1,800. No reply. Follow up without sounding desperate.' },
+  chat:      { title:'Free chat',         badge:'Chat',      loadingType:'answer',    hint:'Ask me anything — pricing advice, how to handle a situation, what to charge, business questions.',                                       label:'Your question',          placeholder:'e.g. What should I charge per hour for an electrician in Melbourne in 2026?' }
 };
 
-function saveData() {
-  localStorage.setItem('tradieai_profile', JSON.stringify(profile));
-  localStorage.setItem('tradieai_history', JSON.stringify(history.slice(0, 50)));
-  localStorage.setItem('tradieai_usage', usageCount.toString());
-}
-
-function showScreen(id) {
+// ── SCREEN NAV ──
+function goTo(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen-' + id).classList.add('active');
-  window.scrollTo(0, 0);
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
 }
 
-function showToast(msg) {
+function showToast(msg, isError=false) {
   const t = document.getElementById('toast');
   t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2800);
+  t.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.classList.add('show');
+}
+function hideError(id) { document.getElementById(id).classList.remove('show'); }
+
+function togglePw(id, btn) {
+  const inp = document.getElementById(id);
+  if (inp.type === 'password') { inp.type='text'; btn.innerHTML='<i class="ti ti-eye-off"></i>'; }
+  else { inp.type='password'; btn.innerHTML='<i class="ti ti-eye"></i>'; }
+}
+
+// ── AUTH ──
+async function doSignup() {
+  hideError('signup-error');
+  const email = document.getElementById('su-email').value.trim();
+  const pw = document.getElementById('su-password').value;
+  const confirm = document.getElementById('su-confirm').value;
+  if (!email || !pw) return showError('signup-error','Please enter your email and password.');
+  if (pw.length < 8) return showError('signup-error','Password must be at least 8 characters.');
+  if (pw !== confirm) return showError('signup-error','Passwords do not match.');
+  const btn = document.getElementById('signup-btn');
+  btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader"></i> Creating account...';
+  const { error } = await sb.auth.signUp({ email, password: pw });
+  btn.disabled = false; btn.innerHTML = '<i class="ti ti-user-plus"></i> Create account';
+  if (error) return showError('signup-error', error.message);
+  document.getElementById('verify-email-shown').textContent = email;
+  goTo('screen-verify');
+}
+
+async function resendVerification() {
+  const email = document.getElementById('su-email').value.trim();
+  if (!email) return showToast('Please enter your email first');
+  await sb.auth.resend({ type:'signup', email });
+  showToast('Verification email resent!');
+}
+
+async function doLogin() {
+  hideError('login-error');
+  const email = document.getElementById('li-email').value.trim();
+  const pw = document.getElementById('li-password').value;
+  if (!email || !pw) return showError('login-error','Please enter your email and password.');
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader"></i> Logging in...';
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+  btn.disabled = false; btn.innerHTML = '<i class="ti ti-login"></i> Log in';
+  if (error) return showError('login-error', error.message.includes('Email not confirmed') ? 'Please verify your email first. Check your inbox.' : 'Incorrect email or password.');
+  currentUser = data.user;
+  await loadProfile();
+}
+
+async function doForgot() {
+  const email = document.getElementById('fp-email').value.trim();
+  if (!email) return showError('forgot-error','Please enter your email.');
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+  if (error) return showError('forgot-error', error.message);
+  showToast('Reset link sent — check your inbox!');
+  goTo('screen-login');
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  currentUser = null; userProfile = null; localHistory = [];
+  goTo('screen-landing');
+}
+
+// ── PROFILE ──
+async function loadProfile() {
+  const { data, error } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  if (error || !data) { goTo('screen-onboard'); return; }
+  userProfile = data;
+  initHome();
+  goTo('screen-home');
+}
+
+async function saveProfile(profile) {
+  const { error } = await sb.from('profiles').upsert({ id: currentUser.id, email: currentUser.email, ...profile });
+  if (error) { showToast('Could not save profile — please try again', true); return false; }
+  userProfile = { ...userProfile, ...profile };
+  return true;
 }
 
 // ── ONBOARDING ──
-let obSelectedTrade = 'Electrician';
-let obSelectedState = 'Victoria (VIC)';
+let obTrade = 'Electrician';
+let obStep = 1;
 
 function selectTrade(el) {
-  document.querySelectorAll('#trade-opts .onboard-opt').forEach(o => o.classList.remove('selected'));
+  document.querySelectorAll('.trade-opt').forEach(o => o.classList.remove('selected'));
   el.classList.add('selected');
-  obSelectedTrade = el.dataset.val;
+  obTrade = el.dataset.val;
 }
 
-function selectState(el) {
-  document.querySelectorAll('#state-opts .onboard-opt').forEach(o => o.classList.remove('selected'));
-  el.classList.add('selected');
-  obSelectedState = el.dataset.val;
+function setObStep(n) {
+  [1,2,3].forEach(i => {
+    document.getElementById('ob-s'+i).style.display = i===n ? 'block' : 'none';
+    const dot = document.getElementById('ob-d'+(i-1));
+    dot.className = 'ob-dot' + (i<n?' done':i===n?' active':'');
+  });
+  const labels = ['Step 1 of 3 — Your details','Step 2 of 3 — Your trade','Step 3 of 3 — Business details'];
+  document.getElementById('ob-step-label').textContent = labels[n-1];
+  obStep = n;
 }
 
-function obNext(step) {
+async function obNext(step) {
   if (step === 1) {
-    document.getElementById('ob-step1').style.display = 'none';
-    document.getElementById('ob-step2').style.display = 'block';
-    document.getElementById('sdot0').classList.remove('active');
-    document.getElementById('sdot1').classList.add('active');
+    const first = document.getElementById('ob-firstname').value.trim();
+    const last = document.getElementById('ob-lastname').value.trim();
+    const phone = document.getElementById('ob-phone').value.trim();
+    if (!first) return showToast('Please enter your first name');
+    if (!phone) return showToast('Please enter your phone number');
+    setObStep(2);
   } else if (step === 2) {
-    const name = document.getElementById('ob-name').value.trim() || 'Tradie';
-    const biz = document.getElementById('ob-bizname').value.trim();
-    const lic = document.getElementById('ob-licence').value.trim();
-    const abn = document.getElementById('ob-abn').value.trim();
-    profile = { name, bizname: biz || name + "'s " + obSelectedTrade, licence: lic, abn, trade: obSelectedTrade, state: obSelectedState };
-    document.getElementById('ob-step2').style.display = 'none';
-    document.getElementById('ob-step3').style.display = 'block';
-    document.getElementById('sdot1').classList.remove('active');
-    document.getElementById('sdot2').classList.add('active');
+    setObStep(3);
   } else if (step === 3) {
-    profile.state = obSelectedState;
-    saveData();
-    initHome();
-    showScreen('home');
+    const biz = document.getElementById('ob-bizname').value.trim();
+    if (!biz) return showToast('Please enter your business name');
+    const profile = {
+      name: document.getElementById('ob-firstname').value.trim() + ' ' + document.getElementById('ob-lastname').value.trim(),
+      firstname: document.getElementById('ob-firstname').value.trim(),
+      phone: document.getElementById('ob-phone').value.trim(),
+      trade: obTrade,
+      bizname: biz,
+      state: document.getElementById('ob-state').value,
+      address: document.getElementById('ob-address').value.trim(),
+      licence: document.getElementById('ob-licence').value.trim(),
+      abn: document.getElementById('ob-abn').value.trim(),
+      terms: document.getElementById('ob-terms').value,
+      plan: 'free',
+      usage_count: 0,
+      usage_reset: new Date(new Date().getFullYear(), new Date().getMonth()+1, 1).toISOString()
+    };
+    const saved = await saveProfile(profile);
+    if (saved) { initHome(); goTo('screen-home'); }
   }
-}
-
-function resetOnboard() {
-  document.getElementById('ob-step1').style.display = 'block';
-  document.getElementById('ob-step2').style.display = 'none';
-  document.getElementById('ob-step3').style.display = 'none';
-  document.getElementById('sdot0').classList.add('active');
-  document.getElementById('sdot1').classList.remove('active');
-  document.getElementById('sdot2').classList.remove('active');
-  showScreen('onboard');
 }
 
 // ── HOME ──
 function initHome() {
-  if (!profile) return;
-  const initials = profile.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
-  document.getElementById('avatar-initials').textContent = initials;
-  document.getElementById('home-greeting').textContent = 'G\'day ' + profile.name + ' 👋';
-  updateUsageBar();
+  if (!userProfile) return;
+  const initials = (userProfile.firstname || userProfile.name || 'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('home-avatar').textContent = initials;
+  document.getElementById('home-greeting').textContent = 'G\'day ' + (userProfile.firstname || userProfile.name || '') + ' 👋';
+  updateUsage();
   renderRecent();
-  updateSettingsPage();
+  updateSettings();
 }
 
-function updateUsageBar() {
-  const pct = Math.min((usageCount / MSG_LIMIT) * 100, 100);
-  document.getElementById('usage-count').textContent = usageCount + ' / ' + MSG_LIMIT;
+function updateUsage() {
+  if (!userProfile) return;
+  const used = userProfile.usage_count || 0;
+  const limit = PLAN_LIMITS[userProfile.plan] || 50;
+  const pct = Math.min((used/limit)*100, 100);
+  document.getElementById('usage-count').textContent = used + ' / ' + limit;
   document.getElementById('usage-bar').style.width = pct + '%';
-  document.getElementById('s-usage').textContent = usageCount + ' / ' + MSG_LIMIT;
+  document.getElementById('s-usage').textContent = used + ' / ' + limit;
 }
 
 function renderRecent() {
   const list = document.getElementById('recent-list');
-  if (!history.length) {
-    list.innerHTML = '<div class="empty-recent">Your recent outputs will appear here</div>';
-    return;
-  }
-  const icons = { quote: 'ti-file-invoice', email: 'ti-mail', jobad: 'ti-briefcase', chat: 'ti-message-2' };
-  list.innerHTML = history.slice(0,5).map((h, i) => `
-    <div class="recent-item" onclick="viewHistory(${i})">
-      <div class="r-icon"><i class="ti ${icons[h.type] || 'ti-file'}"></i></div>
-      <div class="r-info">
-        <div class="r-title">${h.label}</div>
-        <div class="r-time">${h.time}</div>
-      </div>
-      <i class="ti ti-chevron-right r-arrow"></i>
+  if (!localHistory.length) { list.innerHTML = '<div class="empty-state">Your recent outputs will appear here</div>'; return; }
+  const icons = { quote:'ti-file-invoice', email:'ti-mail', jobad:'ti-briefcase', complaint:'ti-mood-angry', followup:'ti-clock', chat:'ti-message-2' };
+  list.innerHTML = localHistory.slice(0,5).map((h,i) => `
+    <div class="recent-item" onclick="viewResult(${i})">
+      <div class="r-icon"><i class="ti ${icons[h.type]||'ti-file'}"></i></div>
+      <div class="r-info"><div class="r-title">${h.label}</div><div class="r-time">${h.time}</div></div>
+      <i class="ti ti-chevron-right" style="font-size:16px;color:var(--border);"></i>
     </div>`).join('');
 }
 
-function updateSettingsPage() {
-  if (!profile) return;
-  document.getElementById('s-name').textContent = profile.name || '—';
-  document.getElementById('s-biz').textContent = profile.bizname || '—';
-  document.getElementById('s-trade').textContent = profile.trade || '—';
-  document.getElementById('s-state').textContent = profile.state || '—';
-  document.getElementById('s-licence').textContent = profile.licence || 'Not set';
-  document.getElementById('s-abn').textContent = profile.abn || 'Not set';
+function updateSettings() {
+  if (!userProfile) return;
+  document.getElementById('s-name').textContent = userProfile.name || '—';
+  document.getElementById('s-phone').textContent = userProfile.phone || '—';
+  document.getElementById('s-email').textContent = currentUser?.email || '—';
+  document.getElementById('s-biz').textContent = userProfile.bizname || '—';
+  document.getElementById('s-trade').textContent = userProfile.trade || '—';
+  document.getElementById('s-state').textContent = userProfile.state || '—';
+  document.getElementById('s-licence').textContent = userProfile.licence || 'Not set';
+  document.getElementById('s-abn').textContent = userProfile.abn || 'Not set';
+  document.getElementById('s-plan').textContent = (userProfile.plan || 'free').charAt(0).toUpperCase() + (userProfile.plan||'free').slice(1);
 }
 
 // ── TEMPLATE ──
 function openTemplate(type) {
-  if (type === 'chat') { showScreen('chat'); return; }
+  if (type === 'chat') { goTo('screen-chat'); return; }
   currentTemplate = type;
   const t = templates[type];
   document.getElementById('tpl-title').textContent = t.title;
   document.getElementById('tpl-hint').textContent = t.hint;
-  document.getElementById('tpl-input-label').textContent = t.inputLabel;
+  document.getElementById('tpl-label').textContent = t.label;
   document.getElementById('job-input').placeholder = t.placeholder;
   document.getElementById('job-input').value = '';
   document.getElementById('char-count').textContent = '0';
-  showScreen('template');
+  goTo('screen-template');
   setTimeout(() => document.getElementById('job-input').focus(), 300);
 }
 
-function updateChar() {
-  const len = document.getElementById('job-input').value.length;
-  document.getElementById('char-count').textContent = len;
-}
-
-function goBack() { showScreen('template'); }
+function updateChar() { document.getElementById('char-count').textContent = document.getElementById('job-input').value.length; }
 
 async function sendToAI() {
   const input = document.getElementById('job-input').value.trim();
-  if (!input) { showToast('Please describe the job first'); return; }
-  if (usageCount >= MSG_LIMIT) { goUpgrade(); return; }
-  lastInput = input;
+  if (!input) return showToast('Please describe the job first');
+  const limit = PLAN_LIMITS[userProfile?.plan] || 50;
+  if ((userProfile?.usage_count||0) >= limit) { goUpgrade(); return; }
   const t = templates[currentTemplate];
   document.getElementById('loading-type').textContent = t.loadingType;
-  document.getElementById('loading-msg').textContent = t.loadingMsg;
-  showScreen('loading');
-  const msgs = ['Pulling the right words together...', 'Making it sound professional...', 'Almost ready...'];
+  goTo('screen-loading');
+  const msgs = ['Getting the wording right...','Making it sound professional...','Almost ready...'];
   let mi = 0;
-  const interval = setInterval(() => { mi = (mi+1)%msgs.length; document.getElementById('loading-msg').textContent = msgs[mi]; }, 1800);
+  const interval = setInterval(() => { document.getElementById('loading-msg').textContent = msgs[mi=(mi+1)%msgs.length]; }, 1800);
   try {
     const res = await fetch(BACKEND_URL + '/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ template: currentTemplate, message: input, profile })
+      body: JSON.stringify({ template: currentTemplate, message: input, profile: userProfile })
     });
     clearInterval(interval);
-    if (!res.ok) throw new Error('API error ' + res.status);
+    if (!res.ok) throw new Error('error');
     const data = await res.json();
     const output = data.output;
-    usageCount++;
+    if (userProfile) userProfile.usage_count = (userProfile.usage_count||0) + 1;
     const now = new Date();
-    const label = input.length > 50 ? input.slice(0,47) + '...' : input;
-    const timeStr = now.toLocaleTimeString('en-AU', {hour:'2-digit', minute:'2-digit'}) + ', ' + now.toLocaleDateString('en-AU', {weekday:'short', day:'numeric', month:'short'});
-    history.unshift({ type: currentTemplate, label, time: timeStr, input, output });
-    saveData();
+    const label = input.length > 50 ? input.slice(0,47)+'...' : input;
+    const time = now.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}) + ', ' + now.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'});
+    localHistory.unshift({ type:currentTemplate, label, time, input, output });
     document.getElementById('result-doc').textContent = output;
-    document.getElementById('result-title').textContent = t.resultTitle;
+    document.getElementById('result-title').textContent = t.title;
     document.getElementById('result-badge').textContent = t.badge;
-    showScreen('result');
-    updateUsageBar();
+    goTo('screen-result');
+    updateUsage();
     renderRecent();
   } catch(e) {
     clearInterval(interval);
-    showToast('Something went wrong — please try again');
-    showScreen('template');
+    showToast('Something went wrong — please try again', true);
+    goTo('screen-template');
   }
+}
+
+function viewResult(i) {
+  const h = localHistory[i];
+  if (!h) return;
+  const t = templates[h.type];
+  document.getElementById('result-doc').textContent = h.output;
+  document.getElementById('result-title').textContent = t ? t.title : 'Result';
+  document.getElementById('result-badge').textContent = t ? t.badge : h.type;
+  goTo('screen-result');
 }
 
 function copyResult() {
   const text = document.getElementById('result-doc').textContent;
   navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard ✓')).catch(() => {
     const ta = document.createElement('textarea');
-    ta.value = text; document.body.appendChild(ta); ta.select();
+    ta.value=text; document.body.appendChild(ta); ta.select();
     document.execCommand('copy'); document.body.removeChild(ta);
     showToast('Copied ✓');
   });
@@ -740,95 +884,78 @@ function copyResult() {
 
 function shareResult() {
   const text = document.getElementById('result-doc').textContent;
-  if (navigator.share) navigator.share({ text });
-  else copyResult();
+  if (navigator.share) navigator.share({ text }); else copyResult();
 }
 
-// ── FREE CHAT ──
+// ── CHAT ──
 async function sendChat() {
   const input = document.getElementById('chat-input').value.trim();
   if (!input) return;
-  if (usageCount >= MSG_LIMIT) { goUpgrade(); return; }
+  const limit = PLAN_LIMITS[userProfile?.plan] || 50;
+  if ((userProfile?.usage_count||0) >= limit) { goUpgrade(); return; }
   document.getElementById('chat-input').value = '';
-  document.getElementById('chat-send-btn').disabled = true;
+  document.getElementById('chat-send').disabled = true;
   autoResize(document.getElementById('chat-input'));
   addChatMsg(input, 'user');
   const thinking = addChatMsg('...', 'ai');
-  chatHistory.push({ role: 'user', content: input });
+  chatHistory.push({ role:'user', content:input });
   try {
     const res = await fetch(BACKEND_URL + '/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: chatHistory.slice(-8), profile })
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ messages: chatHistory.slice(-10), profile: userProfile })
     });
     const data = await res.json();
     const reply = data.reply;
     thinking.textContent = reply;
-    chatHistory.push({ role: 'assistant', content: reply });
-    usageCount++;
-    saveData();
-    updateUsageBar();
-  } catch(e) {
-    thinking.textContent = 'Sorry, something went wrong. Please try again.';
-  }
-  document.getElementById('chat-send-btn').disabled = false;
+    chatHistory.push({ role:'assistant', content:reply });
+    if (userProfile) userProfile.usage_count = (userProfile.usage_count||0)+1;
+    updateUsage();
+  } catch(e) { thinking.textContent = 'Sorry, something went wrong. Please try again.'; }
+  document.getElementById('chat-send').disabled = false;
   scrollChat();
 }
 
 function addChatMsg(text, role) {
   const div = document.createElement('div');
-  div.className = 'msg msg-' + role;
-  div.textContent = text;
+  div.className = 'msg msg-'+role; div.textContent = text;
   document.getElementById('chat-messages').appendChild(div);
-  scrollChat();
-  return div;
+  scrollChat(); return div;
 }
+function scrollChat() { const c=document.getElementById('chat-messages'); c.scrollTop=c.scrollHeight; }
+function chatKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();} }
+function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
 
-function scrollChat() { const c = document.getElementById('chat-messages'); c.scrollTop = c.scrollHeight; }
-function chatKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } }
-function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
-
-// ── HISTORY ──
-function viewHistory(idx) {
-  const h = history[idx];
-  if (!h) return;
-  document.getElementById('result-doc').textContent = h.output;
-  const t = templates[h.type];
-  document.getElementById('result-title').textContent = t ? t.resultTitle : 'Result';
-  document.getElementById('result-badge').textContent = t ? t.badge : h.type;
-  showScreen('result');
-}
-
+// ── HISTORY PAGE ──
 function renderHistoryPage() {
   const body = document.getElementById('history-body');
-  if (!history.length) { body.innerHTML = '<div class="empty-recent" style="padding:40px 20px;text-align:center;color:var(--text-muted);">No history yet — generate something to get started</div>'; return; }
-  const icons = { quote: 'ti-file-invoice', email: 'ti-mail', jobad: 'ti-briefcase', chat: 'ti-message-2' };
-  body.innerHTML = '<div class="recent-list" style="margin:16px;">' + history.map((h,i) => `
-    <div class="recent-item" onclick="viewHistory(${i})">
+  if (!localHistory.length) { body.innerHTML='<div class="empty-state" style="padding:40px 20px;">No history yet — generate something first</div>'; return; }
+  const icons = { quote:'ti-file-invoice', email:'ti-mail', jobad:'ti-briefcase', complaint:'ti-mood-angry', followup:'ti-clock', chat:'ti-message-2' };
+  body.innerHTML = '<div class="recent-list" style="margin:16px;border-radius:14px;">' + localHistory.map((h,i) => `
+    <div class="recent-item" onclick="viewResult(${i})">
       <div class="r-icon"><i class="ti ${icons[h.type]||'ti-file'}"></i></div>
       <div class="r-info"><div class="r-title">${h.label}</div><div class="r-time">${h.time}</div></div>
-      <i class="ti ti-chevron-right r-arrow"></i>
+      <i class="ti ti-chevron-right" style="font-size:16px;color:var(--border);"></i>
     </div>`).join('') + '</div>';
 }
 
 // ── NAV ──
-function goHome() { showScreen('home'); updateNavActive('home'); }
-function goHistory() { renderHistoryPage(); showScreen('history'); updateNavActive('history'); }
-function goSettings() { showScreen('settings'); updateNavActive('settings'); }
-function goUpgrade() { showScreen('upgrade'); updateNavActive('upgrade'); }
-function updateNavActive(tab) {
-  const map = { home: 0, history: 1, settings: 2, upgrade: 3 };
-  document.querySelectorAll('.nav-btn').forEach((b,i) => b.classList.toggle('active', i === map[tab]));
-}
+function setActiveNav(id) { ['home','history','settings','upgrade'].forEach(n => document.getElementById('nav-'+n)?.classList.toggle('active',n===id)); }
+function goHome() { goTo('screen-home'); setActiveNav('home'); }
+function goHistory() { renderHistoryPage(); goTo('screen-history'); setActiveNav('history'); }
+function goSettings() { goTo('screen-settings'); setActiveNav('settings'); }
+function goUpgrade() { goTo('screen-upgrade'); setActiveNav('upgrade'); }
 
-function clearData() {
-  if (confirm('Clear all your Tradie AI data? This cannot be undone.')) {
-    localStorage.clear(); location.reload();
+// ── INIT — check if already logged in ──
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    await loadProfile();
+  } else {
+    goTo('screen-landing');
   }
-}
-
-// ── INIT ──
-if (profile) { initHome(); showScreen('home'); }
+})();
 </script>
 </body>
 </html>
