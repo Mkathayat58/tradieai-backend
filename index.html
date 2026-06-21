@@ -1389,6 +1389,8 @@ function viewJobDoc(id, type) {
 }
 
 async function updateJobStatus(status, btn) {
+  const confirmed = confirm('Change status to "' + status + '"?');
+  if (!confirmed) return;
   document.querySelectorAll('.status-select-btn').forEach(b => b.classList.remove('active-status'));
   btn.classList.add('active-status');
   await sb.from('jobs').update({ status, updated_at: new Date().toISOString() }).eq('id', currentJob.id);
