@@ -1381,7 +1381,7 @@ async function viewJob(id) {
       <div class="detail-section">${docsHtml}</div>
     </div>`;
   goTo('screen-job-detail');
-  await loadJobFiles();
+  loadJobFiles();
 }
 
 let jobDocId = null;
@@ -1468,7 +1468,8 @@ async function deleteJobFile(path) {
   showToast('File deleted ✓');
   await loadJobFiles();
 }
-  await loadJobs();
+  function goJobs() {
+  loadJobs();
   goTo('screen-jobs');
   setActiveNav('jobs');
 }
