@@ -750,9 +750,25 @@ async function loadProfile() {
   if (error || !data) { goTo('screen-onboard'); return; }
   userProfile = data;
   initHome();
+  await loadHistory();
   goTo('screen-home');
 }
-
+async function loadHistory() {
+  const { data, error } = await sb.from('history')
+    .select('*')
+    .eq('user_id', currentUser.id)
+    .order('created_at', { ascending: false })
+    .limit(20);
+  if (error || !data) return;
+  localHistory = data.map(h => ({
+    type: h.template,
+    label: h.input.length > 50 ? h.input.slice(0,47)+'...' : h.input,
+    time: new Date(h.created_at).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}) + ', ' + new Date(h.created_at).toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'}),
+    input: h.input,
+    output: h.output
+  }));
+  renderRecent();
+}
 async function saveProfile(profile) {
   const { error } = await sb.from('profiles').upsert({ id: currentUser.id, email: currentUser.email, ...profile });
   if (error) { showToast('Could not save profile — please try again', true); return false; }
