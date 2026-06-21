@@ -1508,7 +1508,8 @@ async function inviteStaff() {
   const email = document.getElementById('invite-email').value.trim();
   if (!name) return showToast('Please enter a name', true);
   if (!email) return showToast('Please enter an email', true);
-  const session = (await sb.auth.getSession()).data.session;
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return showToast('Please log in again', true);
   const res = await fetch(BACKEND_URL+'/api/team/invite', {
     method: 'POST',
     headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token },
@@ -1551,7 +1552,8 @@ async function confirmRemoveStaff(memberId) {
 }
 
 async function populateAssignDropdown() {
-  const session = (await sb.auth.getSession()).data.session;
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return;
   const res = await fetch(BACKEND_URL+'/api/team/members', {
     headers: { 'Authorization': 'Bearer '+session.access_token }
   });
