@@ -975,6 +975,7 @@ async function sendToAI() {
     document.getElementById('result-badge').textContent = t.badge;
     goTo('screen-result');
     updateUsage();
+    await new Promise(resolve => setTimeout(resolve, 1000));
     await loadHistory();
   } catch(e) {
     clearInterval(interval);
