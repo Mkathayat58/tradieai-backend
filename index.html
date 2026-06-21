@@ -131,7 +131,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 .empty-state{padding:24px;text-align:center;color:var(--text-muted);font-size:13px;}
 
 /* ── BOTTOM NAV ── */
-.bottom-nav{background:var(--surface);border-top:0.5px solid var(--border);display:flex;padding:8px 0 max(env(safe-area-inset-bottom),10px);}
+.bottom-nav{background:var(--surface);border-top:0.5px solid var(--border);display:flex;padding:8px 0 max(env(safe-area-inset-bottom),10px);flex-shrink:0;}
 .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;padding:4px 0;-webkit-tap-highlight-color:transparent;}
 .nav-btn i{font-size:24px;color:var(--border);}
 .nav-btn span{font-size:10px;font-weight:500;color:var(--text-muted);}
@@ -139,7 +139,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 .nav-btn.active span{color:var(--green);}
 
 /* ── TEMPLATE ── */
-.tpl-header{background:var(--green);padding:16px 20px;padding-top:max(env(safe-area-inset-top),16px);display:flex;align-items:center;gap:12px;}
+.tpl-header{background:var(--green);padding:16px 20px;padding-top:max(env(safe-area-inset-top),16px);display:flex;align-items:center;gap:12px;flex-shrink:0;}
 .back-btn{background:none;border:none;color:var(--green-mid);font-size:24px;cursor:pointer;padding:0;display:flex;align-items:center;-webkit-tap-highlight-color:transparent;}
 .tpl-header-title{font-size:17px;font-weight:600;color:#E1F5EE;}
 .tpl-body{flex:1;padding:20px 16px;overflow-y:auto;}
@@ -161,7 +161,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 .loading-text{font-size:15px;color:var(--text-muted);}
 
 /* ── RESULT ── */
-.result-header{background:var(--green);padding:16px 20px;padding-top:max(env(safe-area-inset-top),16px);display:flex;align-items:center;justify-content:space-between;}
+.result-header{background:var(--green);padding:16px 20px;padding-top:max(env(safe-area-inset-top),16px);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
 .result-badge{background:var(--green-dark);color:var(--green-mid);font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;}
 .result-body{flex:1;padding:20px 16px;overflow-y:auto;}
 .result-doc{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;font-size:14px;color:var(--text);line-height:1.8;white-space:pre-wrap;word-wrap:break-word;}
@@ -179,7 +179,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 .msg{max-width:85%;padding:12px 16px;font-size:14px;line-height:1.5;border-radius:18px;}
 .msg-user{background:var(--green);color:#fff;border-bottom-right-radius:4px;align-self:flex-end;}
 .msg-ai{background:var(--surface);border:0.5px solid var(--border);color:var(--text);border-bottom-left-radius:4px;align-self:flex-start;white-space:pre-wrap;}
-.chat-input-row{padding:10px 14px;border-top:0.5px solid var(--border);background:var(--surface);display:flex;gap:10px;align-items:flex-end;padding-bottom:max(env(safe-area-inset-bottom),10px);}
+.chat-input-row{padding:10px 14px;border-top:0.5px solid var(--border);background:var(--surface);display:flex;gap:10px;align-items:flex-end;padding-bottom:max(env(safe-area-inset-bottom),10px);flex-shrink:0;}
 .chat-textarea{flex:1;border:1.5px solid var(--border);border-radius:20px;padding:10px 16px;font-size:15px;font-family:inherit;resize:none;outline:none;line-height:1.4;max-height:120px;background:var(--surface2);}
 .chat-textarea:focus{border-color:var(--green);}
 .chat-send-btn{width:42px;height:42px;background:var(--green);border:none;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent;}
@@ -187,7 +187,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 .chat-send-btn:disabled{background:var(--border);}
 
 /* ── SETTINGS ── */
-.settings-header{background:var(--green);padding:20px;padding-top:max(env(safe-area-inset-top),20px);}
+.settings-header{background:var(--green);padding:20px;padding-top:max(env(safe-area-inset-top),20px);flex-shrink:0;}
 .settings-topbar{display:flex;align-items:center;gap:12px;margin-bottom:0;}
 .settings-title{font-size:18px;font-weight:700;color:#E1F5EE;}
 .settings-body{flex:1;padding:20px 16px;overflow-y:auto;}
@@ -202,7 +202,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 .settings-row-val{font-size:13px;color:var(--text-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
 /* ── UPGRADE ── */
-.upgrade-header{background:var(--green);padding:24px 20px 20px;text-align:center;padding-top:max(env(safe-area-inset-top),24px);}
+.upgrade-header{background:var(--green);padding:24px 20px 20px;text-align:center;padding-top:max(env(safe-area-inset-top),24px);flex-shrink:0;}
 .upgrade-back{display:flex;align-items:center;margin-bottom:16px;}
 .upgrade-title{font-size:22px;font-weight:700;color:#E1F5EE;margin-bottom:6px;}
 .upgrade-sub{font-size:13px;color:var(--green-mid);}
@@ -217,6 +217,56 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 .plan-features{list-style:none;display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
 .plan-feature{display:flex;gap:8px;font-size:13px;color:var(--text-mid);align-items:flex-start;}
 .plan-feature i{color:var(--green);font-size:16px;flex-shrink:0;margin-top:1px;}
+
+/* ── JOBS ── */
+.status-filter-btn{background:var(--green-dark);color:var(--green-mid);border:none;border-radius:20px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent;transition:all .15s;flex-shrink:0;}
+.status-filter-btn.active{background:#E1F5EE;color:var(--green-dark);}
+.job-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:10px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.job-card:active{opacity:.85;}
+.job-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.job-card-number{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;}
+.job-card-value{font-size:14px;font-weight:700;color:var(--green);}
+.job-card-customer{font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px;}
+.job-card-desc{font-size:13px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:8px;}
+.job-card-footer{display:flex;align-items:center;justify-content:space-between;}
+.job-status-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;display:inline-block;}
+.status-New{background:#E8F4FD;color:#1565C0;}
+.status-Quoted{background:#FFF8E1;color:#F57F17;}
+.status-Accepted{background:#E8F5E9;color:#2E7D32;}
+.status-Declined{background:#FCEBEB;color:var(--red);}
+.status-In-Progress{background:#F3E5F5;color:#6A1B9A;}
+.status-Completed{background:var(--green-light);color:var(--green-dark);}
+.status-Invoiced{background:#FFF3E0;color:#E65100;}
+.status-Paid{background:var(--green-light);color:var(--green-dark);}
+.job-due{font-size:11px;color:var(--text-muted);}
+.job-due.overdue{color:var(--red);font-weight:600;}
+.jd-section{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);margin-bottom:12px;overflow:hidden;}
+.jd-section-title{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;padding:12px 16px 0;}
+.jd-row{display:flex;align-items:flex-start;gap:10px;padding:10px 16px;border-bottom:0.5px solid var(--border);}
+.jd-row:last-child{border-bottom:none;}
+.jd-row i{font-size:16px;color:var(--text-muted);margin-top:2px;flex-shrink:0;}
+.jd-row-content{flex:1;}
+.jd-row-label{font-size:11px;color:var(--text-muted);margin-bottom:1px;}
+.jd-row-val{font-size:14px;color:var(--text);}
+.jd-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px;}
+.jd-action-btn{display:flex;align-items:center;justify-content:center;gap:6px;padding:14px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;border:none;-webkit-tap-highlight-color:transparent;}
+.jd-action-btn i{font-size:18px;}
+.jda-call{background:var(--green);color:#fff;}
+.jda-call:active{background:var(--green-dark);}
+.jda-quote{background:var(--green-light);color:var(--green-dark);border:0.5px solid var(--green-mid);}
+.jda-email{background:var(--surface2);color:var(--text-mid);border:0.5px solid var(--border);}
+.jda-followup{background:var(--surface2);color:var(--text-mid);border:0.5px solid var(--border);}
+.overdue-banner{background:var(--red-light);border-bottom:0.5px solid #F09595;padding:10px 16px;display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.overdue-banner i{color:var(--red);font-size:18px;flex-shrink:0;}
+.overdue-banner span{font-size:13px;color:var(--red);font-weight:500;}
+.confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:flex-end;}
+.confirm-sheet{background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px max(env(safe-area-inset-bottom),24px);width:100%;}
+.confirm-title{font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.confirm-sub{font-size:14px;color:var(--text-muted);margin-bottom:20px;line-height:1.5;}
+.confirm-btns{display:flex;flex-direction:column;gap:10px;}
+.jobs-filter-bar{padding:12px 16px;background:var(--green);display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-shrink:0;}
+.jobs-filter-bar::-webkit-scrollbar{display:none;}
+.pipeline-bar{padding:12px 16px;background:var(--green-dark);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
 </style>
 </head>
 <body>
@@ -228,10 +278,10 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     <div class="landing-tagline">Paperwork sorted in seconds</div>
     <div class="landing-sub">Write quotes, emails & job ads instantly.<br>Built for Australian tradies.</div>
     <div class="landing-features">
-      <div class="feature-row"><div class="feature-icon"><i class="ti ti-file-invoice" aria-hidden="true"></i></div><div class="feature-text">Professional quotes with GST in 30 seconds</div></div>
-      <div class="feature-row"><div class="feature-icon"><i class="ti ti-mail" aria-hidden="true"></i></div><div class="feature-text">Customer emails & complaint replies</div></div>
-      <div class="feature-row"><div class="feature-icon"><i class="ti ti-briefcase" aria-hidden="true"></i></div><div class="feature-text">Job ads ready for Seek or Gumtree</div></div>
-      <div class="feature-row"><div class="feature-icon"><i class="ti ti-device-mobile" aria-hidden="true"></i></div><div class="feature-text">Works on your phone — no desktop needed</div></div>
+      <div class="feature-row"><div class="feature-icon"><i class="ti ti-file-invoice"></i></div><div class="feature-text">Professional quotes with GST in 30 seconds</div></div>
+      <div class="feature-row"><div class="feature-icon"><i class="ti ti-mail"></i></div><div class="feature-text">Customer emails & complaint replies</div></div>
+      <div class="feature-row"><div class="feature-icon"><i class="ti ti-briefcase"></i></div><div class="feature-text">Job ads ready for Seek or Gumtree</div></div>
+      <div class="feature-row"><div class="feature-icon"><i class="ti ti-device-mobile"></i></div><div class="feature-text">Works on your phone — no desktop needed</div></div>
     </div>
     <div class="landing-btns">
       <button class="btn" onclick="goTo('screen-signup')"><i class="ti ti-user-plus"></i> Get started free</button>
@@ -270,7 +320,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 <!-- ═══════════ VERIFY EMAIL ═══════════ -->
 <div class="screen" id="screen-verify">
   <div class="verify-body">
-    <div class="verify-icon"><i class="ti ti-mail-check" aria-hidden="true"></i></div>
+    <div class="verify-icon"><i class="ti ti-mail-check"></i></div>
     <div class="verify-title">Check your email</div>
     <div class="verify-sub">We sent a verification link to<br><span class="verify-email-shown" id="verify-email-shown">your email</span><br><br>Click the link in the email to activate your account, then come back here and log in.</div>
     <button class="btn" onclick="goTo('screen-login')"><i class="ti ti-login"></i> Go to log in</button>
@@ -326,9 +376,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     </div>
     <div class="ob-step-label" id="ob-step-label">Step 1 of 3 — Your details</div>
   </div>
-  <div class="ob-body" id="ob-body">
-
-    <!-- STEP 1: Personal -->
+  <div class="ob-body">
     <div id="ob-s1">
       <div class="ob-title">Let's set up your profile</div>
       <div class="ob-sub">These details auto-fill into every quote and email you write.</div>
@@ -337,8 +385,6 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
       <div class="field"><label>Phone number</label><input type="tel" id="ob-phone" placeholder="e.g. 0412 345 678" autocomplete="tel"></div>
       <button class="btn" onclick="obNext(1)">Continue <i class="ti ti-arrow-right"></i></button>
     </div>
-
-    <!-- STEP 2: Trade -->
     <div id="ob-s2" style="display:none;">
       <div class="ob-title">What's your trade?</div>
       <div class="ob-sub">So we use the right language and standards in your documents.</div>
@@ -354,22 +400,13 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
       </div>
       <button class="btn" onclick="obNext(2)">Continue <i class="ti ti-arrow-right"></i></button>
     </div>
-
-    <!-- STEP 3: Business -->
     <div id="ob-s3" style="display:none;">
       <div class="ob-title">Your business details</div>
       <div class="ob-sub">These go on every quote you generate automatically.</div>
       <div class="field"><label>Business name</label><input type="text" id="ob-bizname" placeholder="e.g. Dave's Electrical Services"></div>
       <div class="field"><label>State</label>
         <select id="ob-state">
-          <option value="VIC">Victoria (VIC)</option>
-          <option value="NSW">New South Wales (NSW)</option>
-          <option value="QLD">Queensland (QLD)</option>
-          <option value="WA">Western Australia (WA)</option>
-          <option value="SA">South Australia (SA)</option>
-          <option value="TAS">Tasmania (TAS)</option>
-          <option value="ACT">ACT</option>
-          <option value="NT">Northern Territory (NT)</option>
+          <option value="VIC">Victoria (VIC)</option><option value="NSW">New South Wales (NSW)</option><option value="QLD">Queensland (QLD)</option><option value="WA">Western Australia (WA)</option><option value="SA">South Australia (SA)</option><option value="TAS">Tasmania (TAS)</option><option value="ACT">ACT</option><option value="NT">Northern Territory (NT)</option>
         </select>
       </div>
       <div class="field"><label>Business address</label><input type="text" id="ob-address" placeholder="e.g. 123 Smith St, Melbourne VIC 3000"></div>
@@ -377,11 +414,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
       <div class="field"><label>ABN <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label><input type="text" id="ob-abn" placeholder="e.g. 12 345 678 901"></div>
       <div class="field"><label>Payment terms <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label>
         <select id="ob-terms">
-          <option value="Payment due on completion">Payment due on completion</option>
-          <option value="Payment due within 7 days">Payment due within 7 days</option>
-          <option value="Payment due within 14 days">Payment due within 14 days</option>
-          <option value="Payment due within 30 days">Payment due within 30 days</option>
-          <option value="50% deposit required upfront">50% deposit required upfront</option>
+          <option value="Payment due on completion">Payment due on completion</option><option value="Payment due within 7 days">Payment due within 7 days</option><option value="Payment due within 14 days">Payment due within 14 days</option><option value="Payment due within 30 days">Payment due within 30 days</option><option value="50% deposit required upfront">50% deposit required upfront</option>
         </select>
       </div>
       <button class="btn" onclick="obNext(3)"><i class="ti ti-check"></i> Let's go!</button>
@@ -498,7 +531,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
       <span class="settings-title">History</span>
     </div>
   </div>
-  <div class="settings-body" id="history-body" style="flex:1;overflow-y:auto;"><div class="empty-state" style="padding:40px 20px;">No history yet</div></div>
+  <div class="settings-body" id="history-body"><div class="empty-state" style="padding:40px 20px;">No history yet</div></div>
   <nav class="bottom-nav">
     <button class="nav-btn" onclick="goHome()"><i class="ti ti-home"></i><span>Home</span></button>
     <button class="nav-btn" onclick="goJobs()"><i class="ti ti-briefcase"></i><span>Jobs</span></button>
@@ -522,8 +555,6 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
         <div class="settings-section-title" style="margin-bottom:0;">Your profile</div>
         <button class="btn btn-outline" id="edit-profile-btn" onclick="toggleEditProfile()" style="width:auto;padding:8px 16px;font-size:13px;margin-bottom:0;"><i class="ti ti-edit"></i> Edit</button>
       </div>
-
-      <!-- READ ONLY VIEW -->
       <div id="profile-view" class="settings-card">
         <div class="settings-row"><div class="settings-row-left"><i class="ti ti-user"></i><span class="settings-row-label">Name</span></div><span class="settings-row-val" id="sv-name">—</span></div>
         <div class="settings-row"><div class="settings-row-left"><i class="ti ti-phone"></i><span class="settings-row-label">Phone</span></div><span class="settings-row-val" id="sv-phone">—</span></div>
@@ -536,9 +567,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
         <div class="settings-row"><div class="settings-row-left"><i class="ti ti-receipt"></i><span class="settings-row-label">ABN</span></div><span class="settings-row-val" id="sv-abn">—</span></div>
         <div class="settings-row"><div class="settings-row-left"><i class="ti ti-clock"></i><span class="settings-row-label">Payment terms</span></div><span class="settings-row-val" id="sv-terms">—</span></div>
       </div>
-
-      <!-- EDIT FORM — hidden by default -->
-      <div id="profile-edit" style="display:none;">
+      <div id="profile-edit" style="display:none;margin-top:12px;">
         <div class="field"><label>First name</label><input type="text" id="s-firstname" placeholder="First name"></div>
         <div class="field"><label>Last name</label><input type="text" id="s-lastname" placeholder="Last name"></div>
         <div class="field"><label>Phone number</label><input type="tel" id="s-phone" placeholder="e.g. 0412 345 678"></div>
@@ -546,26 +575,12 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
         <div class="field"><label>Business name</label><input type="text" id="s-biz" placeholder="e.g. Dave's Electrical"></div>
         <div class="field"><label>Trade</label>
           <select id="s-trade">
-            <option value="Electrician">Electrician</option>
-            <option value="Plumber">Plumber</option>
-            <option value="Builder">Builder</option>
-            <option value="Cleaner">Cleaner</option>
-            <option value="Landscaper">Landscaper</option>
-            <option value="Painter">Painter</option>
-            <option value="Carpenter">Carpenter</option>
-            <option value="Other">Other</option>
+            <option value="Electrician">Electrician</option><option value="Plumber">Plumber</option><option value="Builder">Builder</option><option value="Cleaner">Cleaner</option><option value="Landscaper">Landscaper</option><option value="Painter">Painter</option><option value="Carpenter">Carpenter</option><option value="Other">Other</option>
           </select>
         </div>
         <div class="field"><label>State</label>
           <select id="s-state">
-            <option value="VIC">Victoria (VIC)</option>
-            <option value="NSW">New South Wales (NSW)</option>
-            <option value="QLD">Queensland (QLD)</option>
-            <option value="WA">Western Australia (WA)</option>
-            <option value="SA">South Australia (SA)</option>
-            <option value="TAS">Tasmania (TAS)</option>
-            <option value="ACT">ACT</option>
-            <option value="NT">Northern Territory (NT)</option>
+            <option value="VIC">Victoria (VIC)</option><option value="NSW">New South Wales (NSW)</option><option value="QLD">Queensland (QLD)</option><option value="WA">Western Australia (WA)</option><option value="SA">South Australia (SA)</option><option value="TAS">Tasmania (TAS)</option><option value="ACT">ACT</option><option value="NT">Northern Territory (NT)</option>
           </select>
         </div>
         <div class="field"><label>Business address</label><input type="text" id="s-address" placeholder="e.g. 123 Smith St, Melbourne VIC 3000"></div>
@@ -573,11 +588,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
         <div class="field"><label>ABN</label><input type="text" id="s-abn" placeholder="e.g. 12 345 678 901"></div>
         <div class="field"><label>Payment terms</label>
           <select id="s-terms">
-            <option value="Payment due on completion">Payment due on completion</option>
-            <option value="Payment due within 7 days">Payment due within 7 days</option>
-            <option value="Payment due within 14 days">Payment due within 14 days</option>
-            <option value="Payment due within 30 days">Payment due within 30 days</option>
-            <option value="50% deposit required upfront">50% deposit required upfront</option>
+            <option value="Payment due on completion">Payment due on completion</option><option value="Payment due within 7 days">Payment due within 7 days</option><option value="Payment due within 14 days">Payment due within 14 days</option><option value="Payment due within 30 days">Payment due within 30 days</option><option value="50% deposit required upfront">50% deposit required upfront</option>
           </select>
         </div>
         <button class="btn" onclick="saveProfileSettings()"><i class="ti ti-check"></i> Save changes</button>
@@ -648,6 +659,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
       </ul>
       <button class="btn btn-outline" onclick="showToast('Coming soon!')">Get Power — $29/mo</button>
     </div>
+  </div>
   <nav class="bottom-nav">
     <button class="nav-btn" onclick="goHome()"><i class="ti ti-home"></i><span>Home</span></button>
     <button class="nav-btn" onclick="goJobs()"><i class="ti ti-briefcase"></i><span>Jobs</span></button>
@@ -662,10 +674,10 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
   <div class="settings-header">
     <div class="settings-topbar" style="justify-content:space-between;">
       <span class="settings-title">Jobs</span>
-      <button onclick="goNewJob()" style="background:var(--green-light);border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--green);cursor:pointer;display:flex;align-items:center;gap:6px;"><i class="ti ti-plus" style="font-size:16px;"></i> New job</button>
+      <button onclick="goNewJob()" style="background:var(--green-light);border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--green);cursor:pointer;display:flex;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent;"><i class="ti ti-plus" style="font-size:16px;"></i> New job</button>
     </div>
   </div>
-  <div style="padding:12px 16px;background:var(--green);display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;">
+  <div class="jobs-filter-bar">
     <button class="status-filter-btn active" onclick="filterJobs('all',this)">All</button>
     <button class="status-filter-btn" onclick="filterJobs('New',this)">New</button>
     <button class="status-filter-btn" onclick="filterJobs('Quoted',this)">Quoted</button>
@@ -674,11 +686,11 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     <button class="status-filter-btn" onclick="filterJobs('Invoiced',this)">Invoiced</button>
     <button class="status-filter-btn" onclick="filterJobs('Paid',this)">Paid</button>
   </div>
-  <div style="padding:12px 16px;background:var(--green-dark);display:flex;justify-content:space-between;align-items:center;">
+  <div class="pipeline-bar">
     <span style="font-size:12px;color:var(--green-mid);">Pipeline value</span>
     <span style="font-size:16px;font-weight:700;color:#E1F5EE;" id="pipeline-value">$0</span>
   </div>
-  <div class="settings-body" id="jobs-list" style="padding:16px;flex:1;overflow-y:auto;"></div>
+  <div id="jobs-list" style="flex:1;overflow-y:auto;padding:16px;"></div>
   <nav class="bottom-nav">
     <button class="nav-btn" onclick="goHome()"><i class="ti ti-home"></i><span>Home</span></button>
     <button class="nav-btn active" onclick="goJobs()"><i class="ti ti-briefcase"></i><span>Jobs</span></button>
@@ -688,7 +700,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
   </nav>
 </div>
 
-<!-- ═══════════ NEW/EDIT JOB ═══════════ -->
+<!-- ═══════════ NEW / EDIT JOB ═══════════ -->
 <div class="screen" id="screen-new-job">
   <div class="tpl-header">
     <button class="back-btn" onclick="goJobs()"><i class="ti ti-arrow-left"></i></button>
@@ -703,14 +715,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     <div class="field"><label>Due date</label><input type="date" id="jf-due"></div>
     <div class="field"><label>Status</label>
       <select id="jf-status">
-        <option value="New">New</option>
-        <option value="Quoted">Quoted</option>
-        <option value="Accepted">Accepted</option>
-        <option value="Declined">Declined</option>
-        <option value="In Progress">In Progress</option>
-        <option value="Completed">Completed</option>
-        <option value="Invoiced">Invoiced</option>
-        <option value="Paid">Paid</option>
+        <option value="New">New</option><option value="Quoted">Quoted</option><option value="Accepted">Accepted</option><option value="Declined">Declined</option><option value="In Progress">In Progress</option><option value="Completed">Completed</option><option value="Invoiced">Invoiced</option><option value="Paid">Paid</option>
       </select>
     </div>
     <div class="field"><label>Notes</label><textarea class="job-input" id="jf-notes" placeholder="Any extra notes about this job..." style="min-height:70px;"></textarea></div>
@@ -732,9 +737,9 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
       <button class="back-btn" onclick="goJobs()"><i class="ti ti-arrow-left"></i></button>
       <span class="tpl-header-title" id="jd-number">JOB-0001</span>
     </div>
-    <button onclick="editCurrentJob()" style="background:none;border:none;color:var(--green-mid);font-size:13px;cursor:pointer;font-weight:500;">Edit</button>
+    <button onclick="editCurrentJob()" style="background:none;border:none;color:var(--green-mid);font-size:13px;cursor:pointer;font-weight:500;-webkit-tap-highlight-color:transparent;">Edit</button>
   </div>
-  <div class="settings-body" id="job-detail-body" style="flex:1;overflow-y:auto;"></div>
+  <div id="job-detail-body" style="flex:1;overflow-y:auto;padding:16px;"></div>
   <nav class="bottom-nav">
     <button class="nav-btn" onclick="goHome()"><i class="ti ti-home"></i><span>Home</span></button>
     <button class="nav-btn active" onclick="goJobs()"><i class="ti ti-briefcase"></i><span>Jobs</span></button>
@@ -748,6 +753,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 <div class="toast" id="toast"></div>
 
 <script>
+// ── CONFIG ──
 const SUPABASE_URL = 'https://lkporornrpyvgfvzvstr.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrcG9yb3JucnB5dmdmdnp2c3RyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5ODYxNjMsImV4cCI6MjA5NzU2MjE2M30.i2cNn9W-7OwOzCIj9H6uYXBbEaMLhguQransVCQ-Cjs';
 const BACKEND_URL = 'https://tradieai-backend.onrender.com';
@@ -755,30 +761,35 @@ const PLAN_LIMITS = { free:50, starter:100, pro:500, power:2000 };
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// ── STATE ──
 let currentUser = null;
 let userProfile = null;
 let currentTemplate = 'quote';
 let chatHistory = [];
 let localHistory = [];
+let allJobs = [];
+let currentJobFilter = 'all';
+let editingJobId = null;
+let currentJobId = null;
 
 // ── TEMPLATES CONFIG ──
 const templates = {
-  quote:     { title:'Write a quote',     badge:'Quote',     loadingType:'quote',     hint:'Describe the job in plain language — what needs doing, parts cost, and your total charge including GST.',                                  label:'Describe the job',       placeholder:'e.g. Replace 10 powerpoints and 3 light fittings in Footscray. Parts $180, charging $520 all up inc GST.' },
-  email:     { title:'Customer email',    badge:'Email',     loadingType:'email',     hint:'Tell me the situation — who is the customer, what happened, and what you want to say.',                                                   label:'What is the email about?', placeholder:'e.g. Customer unhappy the job took longer than expected. They want $100 off. Reply professionally without giving a discount.' },
-  jobad:     { title:'Job ad',            badge:'Job ad',    loadingType:'job ad',    hint:'Tell me the role, state, pay, and any requirements. I will write a Seek-ready ad.',                                                      label:'Describe the role',      placeholder:'e.g. 2nd year electrical apprentice, Melbourne, award rates, small friendly team, post to Seek.' },
-  complaint: { title:'Complaint reply',   badge:'Complaint', loadingType:'reply',     hint:'Tell me what the complaint is and the facts of the situation. I will write a calm, professional response.',                              label:'What is the complaint?', placeholder:'e.g. Customer says the bathroom tiles are uneven. We followed the spec they gave us. Help me reply professionally.' },
-  followup:  { title:'Follow up',         badge:'Follow-up', loadingType:'follow-up', hint:'Tell me what you quoted, how long ago, and any details. I will write a short confident follow-up.',                                     label:'What are you following up?', placeholder:'e.g. Sent a kitchen rewire quote 2 weeks ago for $1,800. No reply. Follow up without sounding desperate.' },
-  chat:      { title:'Free chat',         badge:'Chat',      loadingType:'answer',    hint:'Ask me anything — pricing advice, how to handle a situation, what to charge, business questions.',                                       label:'Your question',          placeholder:'e.g. What should I charge per hour for an electrician in Melbourne in 2026?' }
+  quote:     { title:'Write a quote',   badge:'Quote',     loadingType:'quote',     hint:'Describe the job in plain language — what needs doing, parts cost, and your total charge including GST.',         label:'Describe the job',         placeholder:'e.g. Replace 10 powerpoints and 3 light fittings in Footscray. Parts $180, charging $520 all up inc GST.' },
+  email:     { title:'Customer email',  badge:'Email',     loadingType:'email',     hint:'Tell me the situation — who is the customer, what happened, and what you want to say.',                          label:'What is the email about?',  placeholder:'e.g. Customer unhappy the job took longer than expected. They want $100 off. Reply professionally without giving a discount.' },
+  jobad:     { title:'Job ad',          badge:'Job ad',    loadingType:'job ad',    hint:'Tell me the role, state, pay, and any requirements. I will write a Seek-ready ad.',                             label:'Describe the role',         placeholder:'e.g. 2nd year electrical apprentice, Melbourne, award rates, small friendly team, post to Seek.' },
+  complaint: { title:'Complaint reply', badge:'Complaint', loadingType:'reply',     hint:'Tell me what the complaint is and the facts of the situation. I will write a calm, professional response.',     label:'What is the complaint?',    placeholder:'e.g. Customer says the bathroom tiles are uneven. We followed the spec they gave us. Help me reply professionally.' },
+  followup:  { title:'Follow up',       badge:'Follow-up', loadingType:'follow-up', hint:'Tell me what you quoted, how long ago, and any details. I will write a short confident follow-up.',             label:'What are you following up?', placeholder:'e.g. Sent a kitchen rewire quote 2 weeks ago for $1,800. No reply. Follow up without sounding desperate.' },
+  chat:      { title:'Free chat',       badge:'Chat',      loadingType:'answer',    hint:'Ask me anything — pricing advice, how to handle a situation, what to charge, business questions.',              label:'Your question',             placeholder:'e.g. What should I charge per hour for an electrician in Melbourne in 2026?' }
 };
 
 // ── SCREEN NAV ──
 function goTo(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  window.scrollTo(0,0);
+  window.scrollTo(0, 0);
 }
 
-function showToast(msg, isError=false) {
+function showToast(msg, isError = false) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.className = 'toast show' + (isError ? ' error' : '');
@@ -794,8 +805,8 @@ function hideError(id) { document.getElementById(id).classList.remove('show'); }
 
 function togglePw(id, btn) {
   const inp = document.getElementById(id);
-  if (inp.type === 'password') { inp.type='text'; btn.innerHTML='<i class="ti ti-eye-off"></i>'; }
-  else { inp.type='password'; btn.innerHTML='<i class="ti ti-eye"></i>'; }
+  if (inp.type === 'password') { inp.type = 'text'; btn.innerHTML = '<i class="ti ti-eye-off"></i>'; }
+  else { inp.type = 'password'; btn.innerHTML = '<i class="ti ti-eye"></i>'; }
 }
 
 // ── AUTH ──
@@ -804,9 +815,9 @@ async function doSignup() {
   const email = document.getElementById('su-email').value.trim();
   const pw = document.getElementById('su-password').value;
   const confirm = document.getElementById('su-confirm').value;
-  if (!email || !pw) return showError('signup-error','Please enter your email and password.');
-  if (pw.length < 8) return showError('signup-error','Password must be at least 8 characters.');
-  if (pw !== confirm) return showError('signup-error','Passwords do not match.');
+  if (!email || !pw) return showError('signup-error', 'Please enter your email and password.');
+  if (pw.length < 8) return showError('signup-error', 'Password must be at least 8 characters.');
+  if (pw !== confirm) return showError('signup-error', 'Passwords do not match.');
   const btn = document.getElementById('signup-btn');
   btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader"></i> Creating account...';
   const { error } = await sb.auth.signUp({ email, password: pw });
@@ -819,7 +830,7 @@ async function doSignup() {
 async function resendVerification() {
   const email = document.getElementById('su-email').value.trim();
   if (!email) return showToast('Please enter your email first');
-  await sb.auth.resend({ type:'signup', email });
+  await sb.auth.resend({ type: 'signup', email });
   showToast('Verification email resent!');
 }
 
@@ -827,7 +838,7 @@ async function doLogin() {
   hideError('login-error');
   const email = document.getElementById('li-email').value.trim();
   const pw = document.getElementById('li-password').value;
-  if (!email || !pw) return showError('login-error','Please enter your email and password.');
+  if (!email || !pw) return showError('login-error', 'Please enter your email and password.');
   const btn = document.getElementById('login-btn');
   btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader"></i> Logging in...';
   const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
@@ -839,7 +850,7 @@ async function doLogin() {
 
 async function doForgot() {
   const email = document.getElementById('fp-email').value.trim();
-  if (!email) return showError('forgot-error','Please enter your email.');
+  if (!email) return showError('forgot-error', 'Please enter your email.');
   const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
   if (error) return showError('forgot-error', error.message);
   showToast('Reset link sent — check your inbox!');
@@ -848,7 +859,7 @@ async function doForgot() {
 
 async function doLogout() {
   await sb.auth.signOut();
-  currentUser = null; userProfile = null; localHistory = [];
+  currentUser = null; userProfile = null; localHistory = []; allJobs = [];
   goTo('screen-landing');
 }
 
@@ -861,39 +872,7 @@ async function loadProfile() {
   await loadHistory();
   goTo('screen-home');
 }
-async function loadChatHistory() {
-  const { data, error } = await sb.from('history')
-    .select('*')
-    .eq('user_id', currentUser.id)
-    .eq('template', 'chat')
-    .order('created_at', { ascending: false })
-    .limit(10);
-  if (error || !data || !data.length) return;
-  const messages = document.getElementById('chat-messages');
-  messages.innerHTML = '';
-  data.reverse().forEach(h => {
-    addChatMsg(h.input, 'user');
-    addChatMsg(h.output, 'ai');
-    chatHistory.push({ role:'user', content:h.input });
-    chatHistory.push({ role:'assistant', content:h.output });
-  });
-}
-async function loadHistory() {
-  const { data, error } = await sb.from('history')
-    .select('*')
-    .eq('user_id', currentUser.id)
-    .order('created_at', { ascending: false })
-    .limit(20);
-  if (error || !data) return;
-  localHistory = data.map(h => ({
-    type: h.template,
-    label: h.input.length > 50 ? h.input.slice(0,47)+'...' : h.input,
-    time: new Date(h.created_at).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}) + ', ' + new Date(h.created_at).toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'}),
-    input: h.input,
-    output: h.output
-  }));
-  renderRecent();
-}
+
 async function saveProfile(profile) {
   const { error } = await sb.from('profiles').upsert({ id: currentUser.id, email: currentUser.email, ...profile });
   if (error) { showToast('Could not save profile — please try again', true); return false; }
@@ -903,7 +882,6 @@ async function saveProfile(profile) {
 
 // ── ONBOARDING ──
 let obTrade = 'Electrician';
-let obStep = 1;
 
 function selectTrade(el) {
   document.querySelectorAll('.trade-opt').forEach(o => o.classList.remove('selected'));
@@ -912,20 +890,18 @@ function selectTrade(el) {
 }
 
 function setObStep(n) {
-  [1,2,3].forEach(i => {
-    document.getElementById('ob-s'+i).style.display = i===n ? 'block' : 'none';
-    const dot = document.getElementById('ob-d'+(i-1));
-    dot.className = 'ob-dot' + (i<n?' done':i===n?' active':'');
+  [1, 2, 3].forEach(i => {
+    document.getElementById('ob-s' + i).style.display = i === n ? 'block' : 'none';
+    const dot = document.getElementById('ob-d' + (i - 1));
+    dot.className = 'ob-dot' + (i < n ? ' done' : i === n ? ' active' : '');
   });
-  const labels = ['Step 1 of 3 — Your details','Step 2 of 3 — Your trade','Step 3 of 3 — Business details'];
-  document.getElementById('ob-step-label').textContent = labels[n-1];
-  obStep = n;
+  const labels = ['Step 1 of 3 — Your details', 'Step 2 of 3 — Your trade', 'Step 3 of 3 — Business details'];
+  document.getElementById('ob-step-label').textContent = labels[n - 1];
 }
 
 async function obNext(step) {
   if (step === 1) {
     const first = document.getElementById('ob-firstname').value.trim();
-    const last = document.getElementById('ob-lastname').value.trim();
     const phone = document.getElementById('ob-phone').value.trim();
     if (!first) return showToast('Please enter your first name');
     if (!phone) return showToast('Please enter your phone number');
@@ -948,7 +924,7 @@ async function obNext(step) {
       terms: document.getElementById('ob-terms').value,
       plan: 'free',
       usage_count: 0,
-      usage_reset: new Date(new Date().getFullYear(), new Date().getMonth()+1, 1).toISOString()
+      usage_reset: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString()
     };
     const saved = await saveProfile(profile);
     if (saved) { initHome(); goTo('screen-home'); }
@@ -958,7 +934,7 @@ async function obNext(step) {
 // ── HOME ──
 function initHome() {
   if (!userProfile) return;
-  const initials = (userProfile.firstname || userProfile.name || 'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  const initials = (userProfile.firstname || userProfile.name || 'U').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
   document.getElementById('home-avatar').textContent = initials;
   document.getElementById('home-greeting').textContent = 'G\'day ' + (userProfile.firstname || userProfile.name || '') + ' 👋';
   updateUsage();
@@ -970,7 +946,7 @@ function updateUsage() {
   if (!userProfile) return;
   const used = userProfile.usage_count || 0;
   const limit = PLAN_LIMITS[userProfile.plan] || 50;
-  const pct = Math.min((used/limit)*100, 100);
+  const pct = Math.min((used / limit) * 100, 100);
   document.getElementById('usage-count').textContent = used + ' / ' + limit;
   document.getElementById('usage-bar').style.width = pct + '%';
   document.getElementById('s-usage').textContent = used + ' / ' + limit;
@@ -979,10 +955,10 @@ function updateUsage() {
 function renderRecent() {
   const list = document.getElementById('recent-list');
   if (!localHistory.length) { list.innerHTML = '<div class="empty-state">Your recent outputs will appear here</div>'; return; }
-  const icons = { quote:'ti-file-invoice', email:'ti-mail', jobad:'ti-briefcase', complaint:'ti-mood-angry', followup:'ti-clock', chat:'ti-message-2' };
-  list.innerHTML = localHistory.slice(0,5).map((h,i) => `
+  const icons = { quote: 'ti-file-invoice', email: 'ti-mail', jobad: 'ti-briefcase', complaint: 'ti-mood-angry', followup: 'ti-clock', chat: 'ti-message-2' };
+  list.innerHTML = localHistory.slice(0, 5).map((h, i) => `
     <div class="recent-item" onclick="viewResult(${i})">
-      <div class="r-icon"><i class="ti ${icons[h.type]||'ti-file'}"></i></div>
+      <div class="r-icon"><i class="ti ${icons[h.type] || 'ti-file'}"></i></div>
       <div class="r-info"><div class="r-title">${h.label}</div><div class="r-time">${h.time}</div></div>
       <i class="ti ti-chevron-right" style="font-size:16px;color:var(--border);"></i>
     </div>`).join('');
@@ -990,7 +966,7 @@ function renderRecent() {
 
 function updateSettings() {
   if (!userProfile) return;
-  const fullname = ((userProfile.firstname||'') + ' ' + (userProfile.lastname||'')).trim() || userProfile.name || '—';
+  const fullname = ((userProfile.firstname || '') + ' ' + (userProfile.lastname || '')).trim() || userProfile.name || '—';
   document.getElementById('sv-name').textContent = fullname;
   document.getElementById('sv-phone').textContent = userProfile.phone || '—';
   document.getElementById('sv-email').textContent = currentUser?.email || '—';
@@ -1001,8 +977,8 @@ function updateSettings() {
   document.getElementById('sv-licence').textContent = userProfile.licence || '—';
   document.getElementById('sv-abn').textContent = userProfile.abn || '—';
   document.getElementById('sv-terms').textContent = userProfile.terms || '—';
-  document.getElementById('s-plan').textContent = (userProfile.plan||'free').charAt(0).toUpperCase()+(userProfile.plan||'free').slice(1);
-  document.getElementById('s-usage').textContent = (userProfile.usage_count||0) + ' / ' + (PLAN_LIMITS[userProfile.plan]||50);
+  document.getElementById('s-plan').textContent = (userProfile.plan || 'free').charAt(0).toUpperCase() + (userProfile.plan || 'free').slice(1);
+  document.getElementById('s-usage').textContent = (userProfile.usage_count || 0) + ' / ' + (PLAN_LIMITS[userProfile.plan] || 50);
 }
 
 function toggleEditProfile() {
@@ -1052,6 +1028,45 @@ async function saveProfileSettings() {
   initHome();
 }
 
+// ── HISTORY ──
+async function loadHistory() {
+  const { data, error } = await sb.from('history').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false }).limit(20);
+  if (error || !data) return;
+  localHistory = data.map(h => ({
+    type: h.template,
+    label: h.input.length > 50 ? h.input.slice(0, 47) + '...' : h.input,
+    time: new Date(h.created_at).toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }) + ', ' + new Date(h.created_at).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' }),
+    input: h.input,
+    output: h.output
+  }));
+  renderRecent();
+}
+
+async function loadChatHistory() {
+  const { data, error } = await sb.from('history').select('*').eq('user_id', currentUser.id).eq('template', 'chat').order('created_at', { ascending: false }).limit(10);
+  if (error || !data || !data.length) return;
+  const messages = document.getElementById('chat-messages');
+  messages.innerHTML = '';
+  data.reverse().forEach(h => {
+    addChatMsg(h.input, 'user');
+    addChatMsg(h.output, 'ai');
+    chatHistory.push({ role: 'user', content: h.input });
+    chatHistory.push({ role: 'assistant', content: h.output });
+  });
+}
+
+function renderHistoryPage() {
+  const body = document.getElementById('history-body');
+  if (!localHistory.length) { body.innerHTML = '<div class="empty-state" style="padding:40px 20px;">No history yet — generate something first</div>'; return; }
+  const icons = { quote: 'ti-file-invoice', email: 'ti-mail', jobad: 'ti-briefcase', complaint: 'ti-mood-angry', followup: 'ti-clock', chat: 'ti-message-2' };
+  body.innerHTML = '<div class="recent-list" style="margin:0 0 20px;border-radius:14px;">' + localHistory.map((h, i) => `
+    <div class="recent-item" onclick="viewResult(${i})">
+      <div class="r-icon"><i class="ti ${icons[h.type] || 'ti-file'}"></i></div>
+      <div class="r-info"><div class="r-title">${h.label}</div><div class="r-time">${h.time}</div></div>
+      <i class="ti ti-chevron-right" style="font-size:16px;color:var(--border);"></i>
+    </div>`).join('') + '</div>';
+}
+
 // ── TEMPLATE ──
 function openTemplate(type) {
   if (type === 'chat') { loadChatHistory(); goTo('screen-chat'); return; }
@@ -1073,13 +1088,13 @@ async function sendToAI() {
   const input = document.getElementById('job-input').value.trim();
   if (!input) return showToast('Please describe the job first');
   const limit = PLAN_LIMITS[userProfile?.plan] || 50;
-  if ((userProfile?.usage_count||0) >= limit) { goUpgrade(); return; }
+  if ((userProfile?.usage_count || 0) >= limit) { goUpgrade(); return; }
   const t = templates[currentTemplate];
   document.getElementById('loading-type').textContent = t.loadingType;
   goTo('screen-loading');
-  const msgs = ['Getting the wording right...','Making it sound professional...','Almost ready...'];
+  const msgs = ['Getting the wording right...', 'Making it sound professional...', 'Almost ready...'];
   let mi = 0;
-  const interval = setInterval(() => { document.getElementById('loading-msg').textContent = msgs[mi=(mi+1)%msgs.length]; }, 1800);
+  const interval = setInterval(() => { document.getElementById('loading-msg').textContent = msgs[mi = (mi + 1) % msgs.length]; }, 1800);
   try {
     const res = await fetch(BACKEND_URL + '/api/generate', {
       method: 'POST',
@@ -1090,11 +1105,11 @@ async function sendToAI() {
     if (!res.ok) throw new Error('error');
     const data = await res.json();
     const output = data.output;
-    if (userProfile) userProfile.usage_count = (userProfile.usage_count||0) + 1;
+    if (userProfile) userProfile.usage_count = (userProfile.usage_count || 0) + 1;
     const now = new Date();
-    const label = input.length > 50 ? input.slice(0,47)+'...' : input;
-    const time = now.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'}) + ', ' + now.toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'});
-    localHistory.unshift({ type:currentTemplate, label, time, input, output });
+    const label = input.length > 50 ? input.slice(0, 47) + '...' : input;
+    const time = now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }) + ', ' + now.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+    localHistory.unshift({ type: currentTemplate, label, time, input, output });
     document.getElementById('result-doc').textContent = output;
     document.getElementById('result-title').textContent = t.title;
     document.getElementById('result-badge').textContent = t.badge;
@@ -1102,7 +1117,7 @@ async function sendToAI() {
     updateUsage();
     await new Promise(resolve => setTimeout(resolve, 1000));
     await loadHistory();
-  } catch(e) {
+  } catch (e) {
     clearInterval(interval);
     showToast('Something went wrong — please try again', true);
     goTo('screen-template');
@@ -1123,7 +1138,7 @@ function copyResult() {
   const text = document.getElementById('result-doc').textContent;
   navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard ✓')).catch(() => {
     const ta = document.createElement('textarea');
-    ta.value=text; document.body.appendChild(ta); ta.select();
+    ta.value = text; document.body.appendChild(ta); ta.select();
     document.execCommand('copy'); document.body.removeChild(ta);
     showToast('Copied ✓');
   });
@@ -1139,61 +1154,315 @@ async function sendChat() {
   const input = document.getElementById('chat-input').value.trim();
   if (!input) return;
   const limit = PLAN_LIMITS[userProfile?.plan] || 50;
-  if ((userProfile?.usage_count||0) >= limit) { goUpgrade(); return; }
+  if ((userProfile?.usage_count || 0) >= limit) { goUpgrade(); return; }
   document.getElementById('chat-input').value = '';
   document.getElementById('chat-send').disabled = true;
   autoResize(document.getElementById('chat-input'));
   addChatMsg(input, 'user');
   const thinking = addChatMsg('...', 'ai');
-  chatHistory.push({ role:'user', content:input });
+  chatHistory.push({ role: 'user', content: input });
   try {
     const res = await fetch(BACKEND_URL + '/api/chat', {
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer ' + (await sb.auth.getSession()).data.session?.access_token},
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (await sb.auth.getSession()).data.session?.access_token },
       body: JSON.stringify({ messages: chatHistory.slice(-10), profile: userProfile })
     });
     const data = await res.json();
     const reply = data.reply;
     thinking.textContent = reply;
-    chatHistory.push({ role:'assistant', content:reply });
-    if (userProfile) userProfile.usage_count = (userProfile.usage_count||0)+1;
+    chatHistory.push({ role: 'assistant', content: reply });
+    if (userProfile) userProfile.usage_count = (userProfile.usage_count || 0) + 1;
     updateUsage();
-  } catch(e) { thinking.textContent = 'Sorry, something went wrong. Please try again.'; }
+  } catch (e) { thinking.textContent = 'Sorry, something went wrong. Please try again.'; }
   document.getElementById('chat-send').disabled = false;
   scrollChat();
 }
 
 function addChatMsg(text, role) {
   const div = document.createElement('div');
-  div.className = 'msg msg-'+role; div.textContent = text;
+  div.className = 'msg msg-' + role; div.textContent = text;
   document.getElementById('chat-messages').appendChild(div);
   scrollChat(); return div;
 }
-function scrollChat() { const c=document.getElementById('chat-messages'); c.scrollTop=c.scrollHeight; }
-function chatKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();} }
-function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
+function scrollChat() { const c = document.getElementById('chat-messages'); c.scrollTop = c.scrollHeight; }
+function chatKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } }
+function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
 
-// ── HISTORY PAGE ──
-function renderHistoryPage() {
-  const body = document.getElementById('history-body');
-  if (!localHistory.length) { body.innerHTML='<div class="empty-state" style="padding:40px 20px;">No history yet — generate something first</div>'; return; }
-  const icons = { quote:'ti-file-invoice', email:'ti-mail', jobad:'ti-briefcase', complaint:'ti-mood-angry', followup:'ti-clock', chat:'ti-message-2' };
-  body.innerHTML = '<div class="recent-list" style="margin:16px;border-radius:14px;">' + localHistory.map((h,i) => `
-    <div class="recent-item" onclick="viewResult(${i})">
-      <div class="r-icon"><i class="ti ${icons[h.type]||'ti-file'}"></i></div>
-      <div class="r-info"><div class="r-title">${h.label}</div><div class="r-time">${h.time}</div></div>
-      <i class="ti ti-chevron-right" style="font-size:16px;color:var(--border);"></i>
-    </div>`).join('') + '</div>';
+// ── JOBS ──
+function goJobs() {
+  goTo('screen-jobs');
+  setActiveNav('jobs');
+  loadJobs();
+}
+
+function goNewJob() {
+  editingJobId = null;
+  document.getElementById('job-form-title').textContent = 'New job';
+  document.getElementById('jf-customer').value = '';
+  document.getElementById('jf-phone').value = '';
+  document.getElementById('jf-email').value = '';
+  document.getElementById('jf-description').value = '';
+  document.getElementById('jf-value').value = '';
+  document.getElementById('jf-due').value = '';
+  document.getElementById('jf-status').value = 'New';
+  document.getElementById('jf-notes').value = '';
+  document.getElementById('job-save-btn').disabled = false;
+  document.getElementById('job-save-btn').innerHTML = '<i class="ti ti-check"></i> Save job';
+  goTo('screen-new-job');
+}
+
+async function loadJobs() {
+  if (!currentUser) return;
+  const { data, error } = await sb.from('jobs').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+  if (error) { showToast('Could not load jobs', true); return; }
+  allJobs = data || [];
+  renderJobsList();
+  renderPipelineValue();
+}
+
+function renderJobsList() {
+  const container = document.getElementById('jobs-list');
+  // Remove any existing overdue banner
+  const existing = container.previousElementSibling;
+  if (existing && existing.classList.contains('overdue-banner')) existing.remove();
+
+  const filtered = currentJobFilter === 'all' ? allJobs : allJobs.filter(j => j.status === currentJobFilter);
+
+  // Overdue banner
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const overdueCount = allJobs.filter(j => {
+    if (!j.due_date || ['Completed', 'Paid', 'Declined'].includes(j.status)) return false;
+    return new Date(j.due_date) < today;
+  }).length;
+  if (overdueCount > 0) {
+    const banner = document.createElement('div');
+    banner.className = 'overdue-banner';
+    banner.innerHTML = `<i class="ti ti-alert-triangle"></i><span>${overdueCount} job${overdueCount > 1 ? 's' : ''} overdue — check your pipeline</span>`;
+    container.before(banner);
+  }
+
+  if (!filtered.length) {
+    container.innerHTML = '<div class="empty-state" style="padding:40px 20px;">No jobs yet — tap <strong>+ New job</strong> to get started</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(job => {
+    const statusKey = (job.status || 'New').replace(/\s+/g, '-');
+    let dueLabel = '';
+    let dueClass = 'job-due';
+    if (job.due_date) {
+      const due = new Date(job.due_date);
+      const diffDays = Math.ceil((due - today) / 86400000);
+      if (diffDays < 0) { dueLabel = 'Overdue by ' + Math.abs(diffDays) + 'd'; dueClass += ' overdue'; }
+      else if (diffDays === 0) { dueLabel = 'Due today'; dueClass += ' overdue'; }
+      else if (diffDays <= 3) { dueLabel = 'Due in ' + diffDays + 'd'; }
+      else { dueLabel = 'Due ' + due.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }); }
+    }
+    const value = job.value ? '$' + Number(job.value).toLocaleString('en-AU') : '';
+    return `
+      <div class="job-card" onclick="openJobDetail('${job.id}')">
+        <div class="job-card-top">
+          <span class="job-card-number">${job.job_number || 'JOB'}</span>
+          <span class="job-card-value">${value}</span>
+        </div>
+        <div class="job-card-customer">${job.customer_name || 'No name'}</div>
+        <div class="job-card-desc">${job.description || '—'}</div>
+        <div class="job-card-footer">
+          <span class="job-status-badge status-${statusKey}">${job.status || 'New'}</span>
+          ${dueLabel ? `<span class="${dueClass}"><i class="ti ti-calendar" style="font-size:11px;"></i> ${dueLabel}</span>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderPipelineValue() {
+  const activeStatuses = ['New', 'Quoted', 'Accepted', 'In Progress', 'Invoiced'];
+  const total = allJobs.filter(j => activeStatuses.includes(j.status) && j.value).reduce((sum, j) => sum + Number(j.value), 0);
+  document.getElementById('pipeline-value').textContent = '$' + total.toLocaleString('en-AU');
+}
+
+function filterJobs(status, btn) {
+  currentJobFilter = status;
+  document.querySelectorAll('.status-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderJobsList();
+}
+
+async function saveJob() {
+  const customer = document.getElementById('jf-customer').value.trim();
+  if (!customer) return showToast('Please enter a customer name');
+  const btn = document.getElementById('job-save-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader"></i> Saving...';
+
+  const jobData = {
+    user_id: currentUser.id,
+    customer_name: customer,
+    customer_phone: document.getElementById('jf-phone').value.trim(),
+    customer_email: document.getElementById('jf-email').value.trim(),
+    description: document.getElementById('jf-description').value.trim(),
+    value: document.getElementById('jf-value').value ? Number(document.getElementById('jf-value').value) : null,
+    due_date: document.getElementById('jf-due').value || null,
+    status: document.getElementById('jf-status').value,
+    notes: document.getElementById('jf-notes').value.trim(),
+    updated_at: new Date().toISOString()
+  };
+
+  if (editingJobId) {
+    const { error } = await sb.from('jobs').update(jobData).eq('id', editingJobId);
+    btn.disabled = false; btn.innerHTML = '<i class="ti ti-check"></i> Save job';
+    if (error) return showToast('Could not save — please try again', true);
+    showToast('Job updated ✓');
+    editingJobId = null;
+    await loadJobs();
+    goTo('screen-jobs');
+  } else {
+    // Generate job number
+    const { count } = await sb.from('jobs').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id);
+    jobData.job_number = 'JOB-' + String((count || 0) + 1).padStart(4, '0');
+    jobData.created_at = new Date().toISOString();
+    const { error } = await sb.from('jobs').insert([jobData]);
+    btn.disabled = false; btn.innerHTML = '<i class="ti ti-check"></i> Save job';
+    if (error) return showToast('Could not save — please try again', true);
+    showToast('Job created ✓');
+    await loadJobs();
+    goTo('screen-jobs');
+  }
+}
+
+function openJobDetail(jobId) {
+  const job = allJobs.find(j => j.id === jobId);
+  if (!job) return;
+  currentJobId = jobId;
+  document.getElementById('jd-number').textContent = job.job_number || 'Job';
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  let dueText = '—';
+  let dueOverdue = false;
+  if (job.due_date) {
+    const due = new Date(job.due_date);
+    dueOverdue = due < today && !['Completed', 'Paid'].includes(job.status);
+    dueText = due.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  const statusKey = (job.status || 'New').replace(/\s+/g, '-');
+
+  document.getElementById('job-detail-body').innerHTML = `
+    <div class="jd-section">
+      <div class="jd-section-title">Customer</div>
+      <div class="jd-row"><i class="ti ti-user"></i><div class="jd-row-content"><div class="jd-row-label">Name</div><div class="jd-row-val">${job.customer_name || '—'}</div></div></div>
+      <div class="jd-row"><i class="ti ti-phone"></i><div class="jd-row-content"><div class="jd-row-label">Phone</div><div class="jd-row-val">${job.customer_phone ? `<a href="tel:${job.customer_phone.replace(/\s/g,'')}" style="color:var(--green);text-decoration:none;">${job.customer_phone}</a>` : '—'}</div></div></div>
+      <div class="jd-row"><i class="ti ti-mail"></i><div class="jd-row-content"><div class="jd-row-label">Email</div><div class="jd-row-val">${job.customer_email ? `<a href="mailto:${job.customer_email}" style="color:var(--green);text-decoration:none;">${job.customer_email}</a>` : '—'}</div></div></div>
+    </div>
+    <div class="jd-section">
+      <div class="jd-section-title">Job details</div>
+      <div class="jd-row"><i class="ti ti-file-text"></i><div class="jd-row-content"><div class="jd-row-label">Description</div><div class="jd-row-val">${job.description || '—'}</div></div></div>
+      <div class="jd-row"><i class="ti ti-currency-dollar"></i><div class="jd-row-content"><div class="jd-row-label">Value</div><div class="jd-row-val" style="font-weight:700;color:var(--green);">${job.value ? '$' + Number(job.value).toLocaleString('en-AU') : '—'}</div></div></div>
+      <div class="jd-row"><i class="ti ti-calendar"></i><div class="jd-row-content"><div class="jd-row-label">Due date</div><div class="jd-row-val" style="${dueOverdue ? 'color:var(--red);font-weight:600;' : ''}">${dueText}${dueOverdue ? ' ⚠️' : ''}</div></div></div>
+      <div class="jd-row"><i class="ti ti-tag"></i><div class="jd-row-content"><div class="jd-row-label">Status</div><div class="jd-row-val"><span class="job-status-badge status-${statusKey}">${job.status || 'New'}</span></div></div></div>
+      ${job.notes ? `<div class="jd-row"><i class="ti ti-notes"></i><div class="jd-row-content"><div class="jd-row-label">Notes</div><div class="jd-row-val">${job.notes}</div></div></div>` : ''}
+    </div>
+    <div class="jd-section">
+      <div class="jd-section-title">Quick actions</div>
+      <div class="jd-actions">
+        ${job.customer_phone
+          ? `<button class="jd-action-btn jda-call" onclick="window.location.href='tel:${job.customer_phone.replace(/\s/g,'')}'"><i class="ti ti-phone"></i> Call</button>`
+          : `<button class="jd-action-btn jda-call" style="opacity:.4;cursor:default;" disabled><i class="ti ti-phone"></i> Call</button>`}
+        <button class="jd-action-btn jda-quote" onclick="openTemplateFromJob('quote','${job.id}')"><i class="ti ti-file-invoice"></i> Write quote</button>
+        <button class="jd-action-btn jda-email" onclick="openTemplateFromJob('email','${job.id}')"><i class="ti ti-mail"></i> Send email</button>
+        <button class="jd-action-btn jda-followup" onclick="openTemplateFromJob('followup','${job.id}')"><i class="ti ti-clock"></i> Follow up</button>
+      </div>
+    </div>
+    <div class="jd-section" style="margin-bottom:8px;">
+      <div class="jd-section-title">Update status</div>
+      <div style="padding:12px 16px;">
+        <select id="jd-status-select" onchange="confirmStatusChange('${job.id}',this.value,'${job.status || 'New'}')" style="width:100%;border:1.5px solid var(--green);border-radius:var(--radius-sm);padding:12px 14px;font-size:14px;font-weight:600;color:var(--green);background:var(--green-light);font-family:inherit;outline:none;-webkit-appearance:none;background-image:url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2712%27 height=%278%27 viewBox=%270 0 12 8%27%3E%3Cpath d=%27M1 1l5 5 5-5%27 stroke=%27%230F6E56%27 stroke-width=%271.5%27 fill=%27none%27 stroke-linecap=%27round%27/%3E%3C/svg%3E');background-repeat:no-repeat;background-position:right 14px center;padding-right:40px;">
+          <option value="New" ${job.status === 'New' ? 'selected' : ''}>New</option>
+          <option value="Quoted" ${job.status === 'Quoted' ? 'selected' : ''}>Quoted</option>
+          <option value="Accepted" ${job.status === 'Accepted' ? 'selected' : ''}>Accepted</option>
+          <option value="Declined" ${job.status === 'Declined' ? 'selected' : ''}>Declined</option>
+          <option value="In Progress" ${job.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+          <option value="Completed" ${job.status === 'Completed' ? 'selected' : ''}>Completed</option>
+          <option value="Invoiced" ${job.status === 'Invoiced' ? 'selected' : ''}>Invoiced</option>
+          <option value="Paid" ${job.status === 'Paid' ? 'selected' : ''}>Paid</option>
+        </select>
+      </div>
+    </div>`;
+
+  goTo('screen-job-detail');
+}
+
+function confirmStatusChange(jobId, newStatus, oldStatus) {
+  if (newStatus === oldStatus) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'confirm-overlay';
+  overlay.innerHTML = `
+    <div class="confirm-sheet">
+      <div class="confirm-title">Update status?</div>
+      <div class="confirm-sub">Change from <strong>${oldStatus}</strong> to <strong>${newStatus}</strong>?</div>
+      <div class="confirm-btns">
+        <button class="btn" onclick="applyStatusChange('${jobId}','${newStatus}');this.closest('.confirm-overlay').remove()"><i class="ti ti-check"></i> Yes, update</button>
+        <button class="btn btn-outline" onclick="this.closest('.confirm-overlay').remove();document.getElementById('jd-status-select').value='${oldStatus}'">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function applyStatusChange(jobId, newStatus) {
+  const { error } = await sb.from('jobs').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', jobId);
+  if (error) { showToast('Could not update status', true); return; }
+  const job = allJobs.find(j => j.id === jobId);
+  if (job) job.status = newStatus;
+  showToast('Status updated to ' + newStatus + ' ✓');
+  openJobDetail(jobId);
+  renderJobsList();
+  renderPipelineValue();
+}
+
+function editCurrentJob() {
+  const job = allJobs.find(j => j.id === currentJobId);
+  if (!job) return;
+  editingJobId = currentJobId;
+  document.getElementById('job-form-title').textContent = 'Edit job';
+  document.getElementById('jf-customer').value = job.customer_name || '';
+  document.getElementById('jf-phone').value = job.customer_phone || '';
+  document.getElementById('jf-email').value = job.customer_email || '';
+  document.getElementById('jf-description').value = job.description || '';
+  document.getElementById('jf-value').value = job.value || '';
+  document.getElementById('jf-due').value = job.due_date || '';
+  document.getElementById('jf-status').value = job.status || 'New';
+  document.getElementById('jf-notes').value = job.notes || '';
+  document.getElementById('job-save-btn').disabled = false;
+  document.getElementById('job-save-btn').innerHTML = '<i class="ti ti-check"></i> Save job';
+  goTo('screen-new-job');
+}
+
+function openTemplateFromJob(templateType, jobId) {
+  const job = allJobs.find(j => j.id === jobId);
+  if (!job) return;
+  const prefill = `Customer: ${job.customer_name || ''}${job.customer_phone ? ' | Phone: ' + job.customer_phone : ''}${job.description ? '\nJob: ' + job.description : ''}${job.value ? '\nValue: $' + job.value : ''}`;
+  currentTemplate = templateType;
+  const t = templates[templateType];
+  document.getElementById('tpl-title').textContent = t.title;
+  document.getElementById('tpl-hint').textContent = t.hint;
+  document.getElementById('tpl-label').textContent = t.label;
+  document.getElementById('job-input').placeholder = t.placeholder;
+  document.getElementById('job-input').value = prefill;
+  document.getElementById('char-count').textContent = prefill.length;
+  goTo('screen-template');
 }
 
 // ── NAV ──
-function setActiveNav(id) { ['home','jobs','history','settings','upgrade'].forEach(n => document.getElementById('nav-'+n)?.classList.toggle('active',n===id)); }
+function setActiveNav(id) {
+  ['home', 'jobs', 'history', 'settings', 'upgrade'].forEach(n => {
+    document.getElementById('nav-' + n)?.classList.toggle('active', n === id);
+  });
+}
 function goHome() { goTo('screen-home'); setActiveNav('home'); }
 function goHistory() { renderHistoryPage(); goTo('screen-history'); setActiveNav('history'); }
 function goSettings() { goTo('screen-settings'); setActiveNav('settings'); }
 function goUpgrade() { goTo('screen-upgrade'); setActiveNav('upgrade'); }
 
-// ── INIT — check if already logged in ──
+// ── INIT ──
 (async () => {
   const { data: { session } } = await sb.auth.getSession();
   if (session) {
