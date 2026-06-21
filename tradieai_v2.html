@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0F6E56">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Tradie AI — Paperwork sorted in seconds</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green: #0F6E56;
+    --green-dark: #085041;
+    --green-darker: #04342C;
+    --green-light: #E1F5EE;
+    --green-mid: #9FE1CB;
+    --green-bright: #5DCAA5;
+    --text: #1A1A1A;
+    --text-mid: #555550;
+    --text-muted: #888780;
+    --border: #E0DED8;
+    --bg: #F4F3EF;
+    --surface: #FFFFFF;
+    --surface2: #F8F7F4;
+    --amber: #854F0B;
+    --amber-light: #FAEEDA;
+    --red: #A32D2D;
+    --red-light: #FCEBEB;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+
+  html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 16px; line-height: 1.5; }
+
+  /* ── SCREENS ── */
+  .screen { display: none; min-height: 100vh; flex-direction: column; }
+  .screen.active { display: flex; }
+
+  /* ── HOME SCREEN ── */
+  .home-header { background: var(--green); padding: 20px 20px 0; }
+  .home-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .logo { font-size: 20px; font-weight: 600; color: #E1F5EE; letter-spacing: -.01em; }
+  .avatar-btn { width: 34px; height: 34px; border-radius: 50%; background: var(--green-dark); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--green-mid); border: none; cursor: pointer; }
+  .home-greeting { font-size: 15px; font-weight: 500; color: #E1F5EE; margin-bottom: 3px; }
+  .home-sub { font-size: 13px; color: var(--green-mid); margin-bottom: 14px; }
+  .usage-pill { background: var(--green-dark); border-radius: var(--radius-sm); padding: 9px 12px; margin-bottom: 16px; }
+  .usage-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .usage-lbl { font-size: 11px; color: var(--green-mid); }
+  .usage-val { font-size: 11px; color: var(--green-bright); font-weight: 500; }
+  .usage-track { height: 4px; background: var(--green-darker); border-radius: 2px; overflow: hidden; }
+  .usage-fill { height: 100%; background: var(--green-bright); border-radius: 2px; transition: width .3s; }
+
+  .home-body { flex: 1; padding: 20px 16px; overflow-y: auto; }
+  .section-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+
+  .tpl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px; }
+  .tpl-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px 12px 14px; text-align: center; cursor: pointer; transition: transform .1s, box-shadow .1s; -webkit-tap-highlight-color: transparent; }
+  .tpl-card:active { transform: scale(0.97); }
+  .tpl-card:hover { box-shadow: var(--shadow); border-color: var(--green-mid); }
+  .tpl-icon { font-size: 26px; color: var(--green); margin-bottom: 7px; display: block; }
+  .tpl-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+  .tpl-desc { font-size: 11px; color: var(--text-muted); }
+
+  .recent-list { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; }
+  .recent-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-bottom: 0.5px solid var(--border); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .recent-item:last-child { border-bottom: none; }
+  .recent-item:active { background: var(--surface2); }
+  .r-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--green-light); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .r-icon i { font-size: 16px; color: var(--green); }
+  .r-info { flex: 1; min-width: 0; }
+  .r-title { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .r-time { font-size: 11px; color: var(--text-muted); }
+  .r-arrow { font-size: 16px; color: var(--border); }
+  .empty-recent { padding: 20px; text-align: center; font-size: 13px; color: var(--text-muted); }
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav { background: var(--surface); border-top: 0.5px solid var(--border); display: flex; padding: 8px 0 max(env(safe-area-inset-bottom), 10px); }
+  .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; cursor: pointer; padding: 4px 0; -webkit-tap-highlight-color: transparent; }
+  .nav-btn i { font-size: 22px; color: var(--border); }
+  .nav-btn span { font-size: 10px; font-weight: 500; color: var(--text-muted); }
+  .nav-btn.active i { color: var(--green); }
+  .nav-btn.active span { color: var(--green); }
+
+  /* ── TEMPLATE SCREEN ── */
+  .tpl-screen-header { background: var(--green); padding: 16px 16px 16px; display: flex; align-items: center; gap: 12px; padding-top: max(env(safe-area-inset-top), 16px); }
+  .back-btn { background: none; border: none; color: var(--green-mid); font-size: 22px; cursor: pointer; padding: 4px; display: flex; align-items: center; -webkit-tap-highlight-color: transparent; }
+  .tpl-screen-title { font-size: 16px; font-weight: 600; color: #E1F5EE; }
+  .tpl-screen-body { flex: 1; padding: 20px 16px; overflow-y: auto; }
+
+  .prompt-hint { background: var(--green-light); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 18px; display: flex; gap: 10px; }
+  .prompt-hint i { font-size: 16px; color: var(--green); flex-shrink: 0; margin-top: 2px; }
+  .prompt-hint p { font-size: 13px; color: var(--green-dark); line-height: 1.5; }
+
+  .input-label { font-size: 13px; font-weight: 500; color: var(--text-mid); margin-bottom: 8px; display: block; }
+  .job-input { width: 100%; border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; font-size: 14px; color: var(--text); background: var(--surface); resize: none; font-family: inherit; line-height: 1.5; outline: none; min-height: 120px; transition: border-color .15s; }
+  .job-input:focus { border-color: var(--green); }
+  .job-input::placeholder { color: var(--text-muted); }
+  .char-count { font-size: 11px; color: var(--text-muted); text-align: right; margin-top: 6px; margin-bottom: 18px; }
+  .send-btn { width: 100%; background: var(--green); color: #fff; border: none; border-radius: var(--radius); padding: 15px; font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background .15s; -webkit-tap-highlight-color: transparent; }
+  .send-btn:hover { background: var(--green-dark); }
+  .send-btn:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; }
+  .send-btn i { font-size: 18px; }
+
+  /* ── RESULT SCREEN ── */
+  .result-header { background: var(--green); padding: 16px; display: flex; align-items: center; justify-content: space-between; padding-top: max(env(safe-area-inset-top), 16px); }
+  .result-header-left { display: flex; align-items: center; gap: 12px; }
+  .result-badge { background: var(--green-dark); color: var(--green-mid); font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; }
+  .result-body { flex: 1; padding: 20px 16px; overflow-y: auto; }
+  .result-doc { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 16px; font-size: 14px; color: var(--text); line-height: 1.7; white-space: pre-wrap; word-wrap: break-word; }
+  .result-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .act-btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 13px; border-radius: var(--radius); font-size: 14px; font-weight: 500; cursor: pointer; border: none; -webkit-tap-highlight-color: transparent; }
+  .act-btn i { font-size: 18px; }
+  .act-copy { background: var(--green); color: #fff; grid-column: 1 / -1; }
+  .act-copy:active { background: var(--green-dark); }
+  .act-share { background: var(--green-light); color: var(--green-dark); border: 0.5px solid var(--green-mid); }
+  .act-redo { background: var(--surface2); color: var(--text-mid); border: 0.5px solid var(--border); }
+  .new-btn { width: 100%; background: none; border: 0.5px solid var(--border); border-radius: var(--radius); padding: 13px; font-size: 14px; color: var(--text-mid); cursor: pointer; font-weight: 500; -webkit-tap-highlight-color: transparent; }
+
+  /* ── LOADING STATE ── */
+  .loading-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; padding: 40px 20px; gap: 16px; }
+  .loading-dots { display: flex; gap: 8px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green-mid); animation: bounce 1.2s infinite; }
+  .dot:nth-child(2) { animation-delay: .2s; }
+  .dot:nth-child(3) { animation-delay: .4s; }
+  @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-10px)} }
+  .loading-text { font-size: 14px; color: var(--text-muted); }
+
+  /* ── TOAST ── */
+  .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: var(--text); color: #fff; border-radius: 20px; padding: 10px 20px; font-size: 13px; font-weight: 500; opacity: 0; transition: opacity .2s; pointer-events: none; white-space: nowrap; z-index: 999; }
+  .toast.show { opacity: 1; }
+
+  /* ── ONBOARDING SCREEN ── */
+  .onboard-body { flex: 1; padding: 32px 20px; display: flex; flex-direction: column; }
+  .onboard-logo { font-size: 28px; font-weight: 700; color: var(--green); margin-bottom: 6px; }
+  .onboard-tagline { font-size: 14px; color: var(--text-muted); margin-bottom: 32px; }
+  .onboard-q { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .onboard-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+  .onboard-opts { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+  .onboard-opt { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; background: var(--surface); -webkit-tap-highlight-color: transparent; transition: border-color .15s, background .15s; }
+  .onboard-opt.selected { border-color: var(--green); background: var(--green-light); }
+  .onboard-opt i { font-size: 22px; color: var(--text-muted); }
+  .onboard-opt.selected i { color: var(--green); }
+  .onboard-opt span { font-size: 14px; font-weight: 500; color: var(--text); }
+  .field-group { margin-bottom: 18px; }
+  .field-label { font-size: 13px; font-weight: 500; color: var(--text-mid); margin-bottom: 7px; display: block; }
+  .field-input { width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 14px; color: var(--text); background: var(--surface); font-family: inherit; outline: none; transition: border-color .15s; }
+  .field-input:focus { border-color: var(--green); }
+  .onboard-next { width: 100%; background: var(--green); color: #fff; border: none; border-radius: var(--radius); padding: 15px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: auto; }
+  .onboard-step { font-size: 12px; color: var(--text-muted); margin-bottom: 24px; }
+  .step-dots { display: flex; gap: 6px; margin-bottom: 28px; }
+  .step-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
+  .step-dot.active { background: var(--green); width: 18px; border-radius: 3px; }
+
+  /* ── SETTINGS ── */
+  .settings-header { background: var(--green); padding: 20px 16px; }
+  .settings-title { font-size: 18px; font-weight: 600; color: #E1F5EE; }
+  .settings-body { flex: 1; padding: 20px 16px; overflow-y: auto; }
+  .settings-section { margin-bottom: 24px; }
+  .settings-section-title { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+  .settings-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-bottom: 0.5px solid var(--border); }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-row-label { font-size: 14px; color: var(--text); }
+  .settings-row-val { font-size: 14px; color: var(--text-muted); }
+  .settings-edit { font-size: 13px; color: var(--green); font-weight: 500; cursor: pointer; border: none; background: none; }
+
+  /* ── UPGRADE SCREEN ── */
+  .upgrade-header { background: var(--green); padding: 24px 20px 20px; text-align: center; }
+  .upgrade-title { font-size: 20px; font-weight: 700; color: #E1F5EE; margin-bottom: 6px; }
+  .upgrade-sub { font-size: 13px; color: var(--green-mid); }
+  .upgrade-body { flex: 1; padding: 20px 16px; overflow-y: auto; }
+  .plan-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 12px; }
+  .plan-card.featured { border: 2px solid var(--green); }
+  .plan-badge { font-size: 11px; font-weight: 600; background: var(--green); color: #fff; padding: 3px 10px; border-radius: 20px; display: inline-block; margin-bottom: 10px; }
+  .plan-name { font-size: 17px; font-weight: 700; color: var(--text); }
+  .plan-price { font-size: 28px; font-weight: 700; color: var(--green); margin: 4px 0; }
+  .plan-price span { font-size: 14px; font-weight: 400; color: var(--text-muted); }
+  .plan-msgs { font-size: 13px; color: var(--text-muted); margin-bottom: 14px; }
+  .plan-features { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+  .plan-feature { display: flex; gap: 8px; font-size: 13px; color: var(--text-mid); align-items: flex-start; }
+  .plan-feature i { color: var(--green); font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+  .plan-btn { width: 100%; background: var(--green); color: #fff; border: none; border-radius: var(--radius-sm); padding: 13px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 16px; }
+  .plan-btn.outline { background: none; color: var(--green); border: 1px solid var(--green); }
+
+  /* FREE CHAT */
+  .chat-messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+  .msg { max-width: 85%; padding: 10px 14px; font-size: 14px; line-height: 1.5; }
+  .msg-user { background: var(--green); color: #fff; border-radius: 16px 16px 4px 16px; align-self: flex-end; }
+  .msg-ai { background: var(--surface); border: 0.5px solid var(--border); color: var(--text); border-radius: 16px 16px 16px 4px; align-self: flex-start; white-space: pre-wrap; }
+  .chat-input-row { padding: 10px 12px; border-top: 0.5px solid var(--border); background: var(--surface); display: flex; gap: 10px; align-items: flex-end; padding-bottom: max(env(safe-area-inset-bottom), 10px); }
+  .chat-textarea { flex: 1; border: 1px solid var(--border); border-radius: 20px; padding: 10px 16px; font-size: 14px; font-family: inherit; resize: none; outline: none; line-height: 1.4; max-height: 120px; background: var(--surface2); }
+  .chat-textarea:focus { border-color: var(--green); }
+  .chat-send-btn { width: 38px; height: 38px; background: var(--green); border: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+  .chat-send-btn i { font-size: 18px; color: #fff; }
+  .chat-send-btn:disabled { background: var(--border); }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════ ONBOARDING ═══════════════════════════════ -->
+<div class="screen active" id="screen-onboard">
+  <div class="onboard-body">
+    <div class="onboard-logo">Tradie AI</div>
+    <div class="onboard-tagline">Paperwork sorted in seconds</div>
+    <div class="step-dots">
+      <div class="step-dot active" id="sdot0"></div>
+      <div class="step-dot" id="sdot1"></div>
+      <div class="step-dot" id="sdot2"></div>
+    </div>
+
+    <!-- Step 1: Trade -->
+    <div id="ob-step1">
+      <div class="onboard-q">What kind of work do you do?</div>
+      <div class="onboard-sub">So we can get the language right for your quotes and emails.</div>
+      <div class="onboard-opts" id="trade-opts">
+        <div class="onboard-opt selected" data-val="Electrician" onclick="selectTrade(this)"><i class="ti ti-bolt"></i><span>Electrician</span></div>
+        <div class="onboard-opt" data-val="Plumber" onclick="selectTrade(this)"><i class="ti ti-droplet"></i><span>Plumber</span></div>
+        <div class="onboard-opt" data-val="Builder / Carpenter" onclick="selectTrade(this)"><i class="ti ti-hammer"></i><span>Builder / Carpenter</span></div>
+        <div class="onboard-opt" data-val="Cleaner" onclick="selectTrade(this)"><i class="ti ti-sparkles"></i><span>Cleaner</span></div>
+        <div class="onboard-opt" data-val="Landscaper / Gardener" onclick="selectTrade(this)"><i class="ti ti-plant"></i><span>Landscaper / Gardener</span></div>
+        <div class="onboard-opt" data-val="Painter" onclick="selectTrade(this)"><i class="ti ti-paint"></i><span>Painter</span></div>
+        <div class="onboard-opt" data-val="Other trade" onclick="selectTrade(this)"><i class="ti ti-tool"></i><span>Other trade</span></div>
+      </div>
+      <button class="onboard-next" onclick="obNext(1)">Continue</button>
+    </div>
+
+    <!-- Step 2: Business details -->
+    <div id="ob-step2" style="display:none;">
+      <div class="onboard-q">Your business details</div>
+      <div class="onboard-sub">These go into every quote you write automatically.</div>
+      <div class="field-group">
+        <label class="field-label">Your first name</label>
+        <input class="field-input" id="ob-name" type="text" placeholder="e.g. Dave" autocomplete="given-name">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Business name (or your name if sole trader)</label>
+        <input class="field-input" id="ob-bizname" type="text" placeholder="e.g. Dave's Electrical" autocomplete="organization">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Licence / registration number (optional)</label>
+        <input class="field-input" id="ob-licence" type="text" placeholder="e.g. 123456">
+      </div>
+      <div class="field-group">
+        <label class="field-label">ABN (optional)</label>
+        <input class="field-input" id="ob-abn" type="text" placeholder="e.g. 12 345 678 901">
+      </div>
+      <button class="onboard-next" onclick="obNext(2)">Continue</button>
+    </div>
+
+    <!-- Step 3: State -->
+    <div id="ob-step3" style="display:none;">
+      <div class="onboard-q">Which state are you in?</div>
+      <div class="onboard-sub">So we use the right wording for local rules and regulations.</div>
+      <div class="onboard-opts" id="state-opts">
+        <div class="onboard-opt selected" data-val="Victoria (VIC)" onclick="selectState(this)"><i class="ti ti-map-pin"></i><span>Victoria (VIC)</span></div>
+        <div class="onboard-opt" data-val="New South Wales (NSW)" onclick="selectState(this)"><i class="ti ti-map-pin"></i><span>New South Wales (NSW)</span></div>
+        <div class="onboard-opt" data-val="Queensland (QLD)" onclick="selectState(this)"><i class="ti ti-map-pin"></i><span>Queensland (QLD)</span></div>
+        <div class="onboard-opt" data-val="Western Australia (WA)" onclick="selectState(this)"><i class="ti ti-map-pin"></i><span>Western Australia (WA)</span></div>
+        <div class="onboard-opt" data-val="South Australia (SA)" onclick="selectState(this)"><i class="ti ti-map-pin"></i><span>South Australia (SA)</span></div>
+        <div class="onboard-opt" data-val="Tasmania (TAS)" onclick="selectState(this)"><i class="ti ti-map-pin"></i><span>Tasmania (TAS)</span></div>
+        <div class="onboard-opt" data-val="ACT / NT" onclick="selectState(this)"><i class="ti ti-map-pin"></i><span>ACT / NT</span></div>
+      </div>
+      <button class="onboard-next" onclick="obNext(3)">Get started</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ HOME ═══════════════════════════════ -->
+<div class="screen" id="screen-home">
+  <div class="home-header">
+    <div class="home-topbar">
+      <span class="logo">Tradie AI</span>
+      <button class="avatar-btn" onclick="goSettings()" id="avatar-initials">DK</button>
+    </div>
+    <div class="home-greeting" id="home-greeting">G'day Dave 👋</div>
+    <div class="home-sub">What do you need sorted today?</div>
+    <div class="usage-pill">
+      <div class="usage-row">
+        <span class="usage-lbl">Messages this month</span>
+        <span class="usage-val" id="usage-count">0 / 50</span>
+      </div>
+      <div class="usage-track"><div class="usage-fill" id="usage-bar" style="width:0%"></div></div>
+    </div>
+  </div>
+  <div class="home-body">
+    <div class="section-label">What do you need?</div>
+    <div class="tpl-grid">
+      <div class="tpl-card" onclick="openTemplate('quote')">
+        <i class="ti ti-file-invoice tpl-icon"></i>
+        <div class="tpl-name">Write a quote</div>
+        <div class="tpl-desc">Parts, labour & GST</div>
+      </div>
+      <div class="tpl-card" onclick="openTemplate('email')">
+        <i class="ti ti-mail tpl-icon"></i>
+        <div class="tpl-name">Customer email</div>
+        <div class="tpl-desc">Reply or follow up</div>
+      </div>
+      <div class="tpl-card" onclick="openTemplate('jobad')">
+        <i class="ti ti-briefcase tpl-icon"></i>
+        <div class="tpl-name">Job ad</div>
+        <div class="tpl-desc">Seek or Gumtree</div>
+      </div>
+      <div class="tpl-card" onclick="openTemplate('chat')">
+        <i class="ti ti-message-2 tpl-icon"></i>
+        <div class="tpl-name">Free chat</div>
+        <div class="tpl-desc">Ask me anything</div>
+      </div>
+    </div>
+    <div class="section-label">Recent</div>
+    <div class="recent-list" id="recent-list">
+      <div class="empty-recent">Your recent outputs will appear here</div>
+    </div>
+  </div>
+  <nav class="bottom-nav">
+    <button class="nav-btn active" onclick="goHome()"><i class="ti ti-home"></i><span>Home</span></button>
+    <button class="nav-btn" onclick="goHistory()"><i class="ti ti-clock"></i><span>History</span></button>
+    <button class="nav-btn" onclick="goSettings()"><i class="ti ti-settings"></i><span>Settings</span></button>
+    <button class="nav-btn" onclick="goUpgrade()"><i class="ti ti-crown"></i><span>Upgrade</span></button>
+  </nav>
+</div>
+
+<!-- ═══════════════════════════════ TEMPLATE INPUT ═══════════════════════════════ -->
+<div class="screen" id="screen-template">
+  <div class="tpl-screen-header">
+    <button class="back-btn" onclick="goHome()"><i class="ti ti-arrow-left"></i></button>
+    <span class="tpl-screen-title" id="tpl-title">Write a quote</span>
+  </div>
+  <div class="tpl-screen-body">
+    <div class="prompt-hint">
+      <i class="ti ti-bulb"></i>
+      <p id="tpl-hint">Describe the job in your own words — parts, total price including GST. Tradie AI handles the rest.</p>
+    </div>
+    <label class="input-label" id="tpl-input-label">Describe the job</label>
+    <textarea class="job-input" id="job-input" placeholder="" rows="5" oninput="updateChar()"></textarea>
+    <div class="char-count"><span id="char-count">0</span> characters</div>
+    <button class="send-btn" id="send-btn" onclick="sendToAI()">
+      <i class="ti ti-sparkles"></i> Generate
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ LOADING ═══════════════════════════════ -->
+<div class="screen" id="screen-loading">
+  <div class="tpl-screen-header">
+    <button class="back-btn" onclick="goHome()"><i class="ti ti-x"></i></button>
+    <span class="tpl-screen-title">Writing your <span id="loading-type">quote</span>...</span>
+  </div>
+  <div class="loading-wrap">
+    <div class="loading-dots">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+    <div class="loading-text" id="loading-msg">Getting the wording right...</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ RESULT ═══════════════════════════════ -->
+<div class="screen" id="screen-result">
+  <div class="result-header">
+    <div class="result-header-left">
+      <button class="back-btn" onclick="goHome()"><i class="ti ti-arrow-left"></i></button>
+      <span class="tpl-screen-title" id="result-title">Your quote</span>
+    </div>
+    <span class="result-badge" id="result-badge">Quote</span>
+  </div>
+  <div class="result-body">
+    <div class="result-doc" id="result-doc"></div>
+    <div class="result-actions">
+      <button class="act-btn act-copy" onclick="copyResult()"><i class="ti ti-copy"></i> Copy to clipboard</button>
+      <button class="act-btn act-share" onclick="shareResult()"><i class="ti ti-share"></i> Share</button>
+      <button class="act-btn act-redo" onclick="goBack()"><i class="ti ti-edit"></i> Edit</button>
+    </div>
+    <button class="new-btn" onclick="goHome()">Start something new</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ FREE CHAT ═══════════════════════════════ -->
+<div class="screen" id="screen-chat">
+  <div class="tpl-screen-header">
+    <button class="back-btn" onclick="goHome()"><i class="ti ti-arrow-left"></i></button>
+    <span class="tpl-screen-title">Free chat</span>
+  </div>
+  <div class="chat-messages" id="chat-messages">
+    <div class="msg msg-ai">G'day! I'm Tradie AI. Ask me anything — I'm here to help with your business. 🤙</div>
+  </div>
+  <div class="chat-input-row">
+    <textarea class="chat-textarea" id="chat-input" placeholder="Ask me anything..." rows="1" onkeydown="chatKey(event)" oninput="autoResize(this)"></textarea>
+    <button class="chat-send-btn" id="chat-send-btn" onclick="sendChat()"><i class="ti ti-arrow-up"></i></button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ SETTINGS ═══════════════════════════════ -->
+<div class="screen" id="screen-settings">
+  <div class="settings-header">
+    <div class="home-topbar" style="margin-bottom:0;">
+      <button class="back-btn" style="color:#9FE1CB;padding:0;" onclick="goHome()"><i class="ti ti-arrow-left"></i></button>
+      <span class="settings-title">Settings</span>
+      <div style="width:34px;"></div>
+    </div>
+  </div>
+  <div class="settings-body">
+    <div class="settings-section">
+      <div class="settings-section-title">Your profile</div>
+      <div class="settings-card">
+        <div class="settings-row"><span class="settings-row-label">Name</span><span class="settings-row-val" id="s-name">—</span></div>
+        <div class="settings-row"><span class="settings-row-label">Business</span><span class="settings-row-val" id="s-biz">—</span></div>
+        <div class="settings-row"><span class="settings-row-label">Trade</span><span class="settings-row-val" id="s-trade">—</span></div>
+        <div class="settings-row"><span class="settings-row-label">State</span><span class="settings-row-val" id="s-state">—</span></div>
+        <div class="settings-row"><span class="settings-row-label">Licence No.</span><span class="settings-row-val" id="s-licence">—</span></div>
+        <div class="settings-row"><span class="settings-row-label">ABN</span><span class="settings-row-val" id="s-abn">—</span></div>
+      </div>
+      <button style="margin-top:10px;width:100%;background:none;border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:11px;font-size:13px;color:var(--green);cursor:pointer;font-weight:500;" onclick="resetOnboard()">Edit profile details</button>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">Plan</div>
+      <div class="settings-card">
+        <div class="settings-row"><span class="settings-row-label">Current plan</span><span class="settings-row-val" style="color:var(--green);font-weight:500;">Starter (Free)</span></div>
+        <div class="settings-row"><span class="settings-row-label">Messages used</span><span class="settings-row-val" id="s-usage">0 / 50</span></div>
+      </div>
+      <button style="margin-top:10px;width:100%;background:var(--green);border:none;border-radius:var(--radius-sm);padding:13px;font-size:14px;color:#fff;cursor:pointer;font-weight:600;" onclick="goUpgrade()">Upgrade plan</button>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">About</div>
+      <div class="settings-card">
+        <div class="settings-row"><span class="settings-row-label">Version</span><span class="settings-row-val">1.0 MVP</span></div>
+        <div class="settings-row"><span class="settings-row-label">Built for</span><span class="settings-row-val">Australian tradies</span></div>
+      </div>
+    </div>
+    <button style="width:100%;background:none;border:0.5px solid #F09595;border-radius:var(--radius-sm);padding:13px;font-size:14px;color:var(--red);cursor:pointer;font-weight:500;margin-bottom:20px;" onclick="clearData()">Clear all data</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ HISTORY ═══════════════════════════════ -->
+<div class="screen" id="screen-history">
+  <div class="settings-header">
+    <div class="home-topbar" style="margin-bottom:0;">
+      <button class="back-btn" style="color:#9FE1CB;padding:0;" onclick="goHome()"><i class="ti ti-arrow-left"></i></button>
+      <span class="settings-title">History</span>
+      <div style="width:34px;"></div>
+    </div>
+  </div>
+  <div class="settings-body" id="history-body"></div>
+</div>
+
+<!-- ═══════════════════════════════ UPGRADE ═══════════════════════════════ -->
+<div class="screen" id="screen-upgrade">
+  <div class="upgrade-header">
+    <button class="back-btn" style="color:#9FE1CB;margin-bottom:12px;" onclick="goHome()"><i class="ti ti-arrow-left"></i></button>
+    <div class="upgrade-title">Unlock more messages</div>
+    <div class="upgrade-sub">Pick the plan that suits your workload</div>
+  </div>
+  <div class="upgrade-body">
+    <div class="plan-card">
+      <div class="plan-name">Starter</div>
+      <div class="plan-price">Free</div>
+      <div class="plan-msgs">50 messages/month</div>
+      <ul class="plan-features">
+        <li class="plan-feature"><i class="ti ti-check"></i>All 4 templates</li>
+        <li class="plan-feature"><i class="ti ti-check"></i>Quote, email, job ad, free chat</li>
+        <li class="plan-feature"><i class="ti ti-check"></i>Save history</li>
+      </ul>
+      <button class="plan-btn outline">Current plan</button>
+    </div>
+    <div class="plan-card featured">
+      <div class="plan-badge">Most popular</div>
+      <div class="plan-name">Pro</div>
+      <div class="plan-price">$15<span>/month</span></div>
+      <div class="plan-msgs">500 messages/month</div>
+      <ul class="plan-features">
+        <li class="plan-feature"><i class="ti ti-check"></i>Everything in Starter</li>
+        <li class="plan-feature"><i class="ti ti-check"></i>Access to all AI models</li>
+        <li class="plan-feature"><i class="ti ti-check"></i>Priority response speed</li>
+        <li class="plan-feature"><i class="ti ti-check"></i>Complaint reply template</li>
+        <li class="plan-feature"><i class="ti ti-check"></i>Follow-up template</li>
+      </ul>
+      <button class="plan-btn" onclick="showToast('Stripe coming soon — email hello@tradieai.com.au to join the waitlist!')">Get Pro — $15/mo</button>
+    </div>
+    <div class="plan-card">
+      <div class="plan-name">Power</div>
+      <div class="plan-price">$29<span>/month</span></div>
+      <div class="plan-msgs">2,000 messages/month</div>
+      <ul class="plan-features">
+        <li class="plan-feature"><i class="ti ti-check"></i>Everything in Pro</li>
+        <li class="plan-feature"><i class="ti ti-check"></i>Priority support</li>
+        <li class="plan-feature"><i class="ti ti-check"></i>Custom templates</li>
+        <li class="plan-feature"><i class="ti ti-check"></i>Team access (coming soon)</li>
+      </ul>
+      <button class="plan-btn outline" onclick="showToast('Coming soon!')">Get Power — $29/mo</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+const BACKEND_URL = 'https://tradieai-backend.onrender.com';
+const MSG_LIMIT = 50;
+
+let profile = JSON.parse(localStorage.getItem('tradieai_profile') || 'null');
+let history = JSON.parse(localStorage.getItem('tradieai_history') || '[]');
+let usageCount = parseInt(localStorage.getItem('tradieai_usage') || '0');
+let currentTemplate = 'quote';
+let lastInput = '';
+let chatHistory = [];
+
+const templates = {
+  quote: {
+    title: 'Write a quote',
+    badge: 'Quote',
+    hint: 'Describe the job in plain language — what needs doing, parts cost, and your total charge including GST. Tradie AI formats it professionally.',
+    inputLabel: 'Describe the job',
+    placeholder: 'e.g. Replace 10 powerpoints and 3 light fittings in a house in Footscray. Parts cost me $180. Charging $520 all up including GST.',
+    loadingMsg: 'Formatting your quote...',
+    loadingType: 'quote',
+    resultTitle: 'Your quote',
+    systemPrompt: (p) => `You are Tradie AI, a professional assistant for Australian tradies. Write a clean, professional trade quote in Australian English.
+Business: ${p.bizname || p.name}${p.licence ? ` | Licence: ${p.licence}` : ''}${p.abn ? ` | ABN: ${p.abn}` : ''}
+Trade: ${p.trade} | State: ${p.state}
+Rules: Always include GST breakdown (price ex GST + 10% GST = total inc GST). Reference relevant Australian standards where appropriate (e.g. AS/NZS 3000 for electrical). Include "Quote valid for 30 days" and "Payment due on completion." Use Australian English. Keep it professional but not overly corporate. Output the quote text only, no extra commentary.`
+  },
+  email: {
+    title: 'Customer email',
+    badge: 'Email',
+    hint: 'Tell me the situation — who is the customer, what happened, and what you want to say. I will write a professional reply.',
+    inputLabel: 'What is the email about?',
+    placeholder: 'e.g. Customer is angry saying the job took longer than quoted. They want $100 off. The extra time was due to old wiring we found. Help me reply professionally without giving a discount.',
+    loadingMsg: 'Writing your email...',
+    loadingType: 'email',
+    resultTitle: 'Your email',
+    systemPrompt: (p) => `You are Tradie AI, helping an Australian tradie write professional customer emails.
+Business: ${p.bizname || p.name} | Trade: ${p.trade} | State: ${p.state}
+Rules: Write in Australian English. Tone should be professional but warm — like a confident business owner, not a corporate robot. No grovelling or excessive apologising. Be firm but fair. Output the email text only, with subject line if appropriate.`
+  },
+  jobad: {
+    title: 'Job ad',
+    badge: 'Job ad',
+    hint: 'Tell me what role you need, what state, and any key requirements. I will write a Seek-ready job ad that attracts good applicants.',
+    inputLabel: 'Describe the role',
+    placeholder: 'e.g. Need a 2nd year electrical apprentice, Melbourne. Must have cert 2. Pay award rates. Small team, good culture. Post it for Seek.',
+    loadingMsg: 'Writing your job ad...',
+    loadingType: 'job ad',
+    resultTitle: 'Your job ad',
+    systemPrompt: (p) => `You are Tradie AI, helping an Australian tradie write an effective job advertisement.
+Business: ${p.bizname || p.name} | Trade: ${p.trade} | State: ${p.state}
+Rules: Write in Australian English. Comply with Fair Work requirements — no discriminatory language, accurate pay information. Write in an approachable tone that attracts good applicants. Include sections for: role overview, what you will be doing, what we are looking for, what we offer. Output the job ad text only, ready to paste into Seek or Gumtree.`
+  }
+};
+
+function saveData() {
+  localStorage.setItem('tradieai_profile', JSON.stringify(profile));
+  localStorage.setItem('tradieai_history', JSON.stringify(history.slice(0, 50)));
+  localStorage.setItem('tradieai_usage', usageCount.toString());
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── ONBOARDING ──
+let obSelectedTrade = 'Electrician';
+let obSelectedState = 'Victoria (VIC)';
+
+function selectTrade(el) {
+  document.querySelectorAll('#trade-opts .onboard-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  obSelectedTrade = el.dataset.val;
+}
+
+function selectState(el) {
+  document.querySelectorAll('#state-opts .onboard-opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  obSelectedState = el.dataset.val;
+}
+
+function obNext(step) {
+  if (step === 1) {
+    document.getElementById('ob-step1').style.display = 'none';
+    document.getElementById('ob-step2').style.display = 'block';
+    document.getElementById('sdot0').classList.remove('active');
+    document.getElementById('sdot1').classList.add('active');
+  } else if (step === 2) {
+    const name = document.getElementById('ob-name').value.trim() || 'Tradie';
+    const biz = document.getElementById('ob-bizname').value.trim();
+    const lic = document.getElementById('ob-licence').value.trim();
+    const abn = document.getElementById('ob-abn').value.trim();
+    profile = { name, bizname: biz || name + "'s " + obSelectedTrade, licence: lic, abn, trade: obSelectedTrade, state: obSelectedState };
+    document.getElementById('ob-step2').style.display = 'none';
+    document.getElementById('ob-step3').style.display = 'block';
+    document.getElementById('sdot1').classList.remove('active');
+    document.getElementById('sdot2').classList.add('active');
+  } else if (step === 3) {
+    profile.state = obSelectedState;
+    saveData();
+    initHome();
+    showScreen('home');
+  }
+}
+
+function resetOnboard() {
+  document.getElementById('ob-step1').style.display = 'block';
+  document.getElementById('ob-step2').style.display = 'none';
+  document.getElementById('ob-step3').style.display = 'none';
+  document.getElementById('sdot0').classList.add('active');
+  document.getElementById('sdot1').classList.remove('active');
+  document.getElementById('sdot2').classList.remove('active');
+  showScreen('onboard');
+}
+
+// ── HOME ──
+function initHome() {
+  if (!profile) return;
+  const initials = profile.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('avatar-initials').textContent = initials;
+  document.getElementById('home-greeting').textContent = 'G\'day ' + profile.name + ' 👋';
+  updateUsageBar();
+  renderRecent();
+  updateSettingsPage();
+}
+
+function updateUsageBar() {
+  const pct = Math.min((usageCount / MSG_LIMIT) * 100, 100);
+  document.getElementById('usage-count').textContent = usageCount + ' / ' + MSG_LIMIT;
+  document.getElementById('usage-bar').style.width = pct + '%';
+  document.getElementById('s-usage').textContent = usageCount + ' / ' + MSG_LIMIT;
+}
+
+function renderRecent() {
+  const list = document.getElementById('recent-list');
+  if (!history.length) {
+    list.innerHTML = '<div class="empty-recent">Your recent outputs will appear here</div>';
+    return;
+  }
+  const icons = { quote: 'ti-file-invoice', email: 'ti-mail', jobad: 'ti-briefcase', chat: 'ti-message-2' };
+  list.innerHTML = history.slice(0,5).map((h, i) => `
+    <div class="recent-item" onclick="viewHistory(${i})">
+      <div class="r-icon"><i class="ti ${icons[h.type] || 'ti-file'}"></i></div>
+      <div class="r-info">
+        <div class="r-title">${h.label}</div>
+        <div class="r-time">${h.time}</div>
+      </div>
+      <i class="ti ti-chevron-right r-arrow"></i>
+    </div>`).join('');
+}
+
+function updateSettingsPage() {
+  if (!profile) return;
+  document.getElementById('s-name').textContent = profile.name || '—';
+  document.getElementById('s-biz').textContent = profile.bizname || '—';
+  document.getElementById('s-trade').textContent = profile.trade || '—';
+  document.getElementById('s-state').textContent = profile.state || '—';
+  document.getElementById('s-licence').textContent = profile.licence || 'Not set';
+  document.getElementById('s-abn').textContent = profile.abn || 'Not set';
+}
+
+// ── TEMPLATE ──
+function openTemplate(type) {
+  if (type === 'chat') { showScreen('chat'); return; }
+  currentTemplate = type;
+  const t = templates[type];
+  document.getElementById('tpl-title').textContent = t.title;
+  document.getElementById('tpl-hint').textContent = t.hint;
+  document.getElementById('tpl-input-label').textContent = t.inputLabel;
+  document.getElementById('job-input').placeholder = t.placeholder;
+  document.getElementById('job-input').value = '';
+  document.getElementById('char-count').textContent = '0';
+  showScreen('template');
+  setTimeout(() => document.getElementById('job-input').focus(), 300);
+}
+
+function updateChar() {
+  const len = document.getElementById('job-input').value.length;
+  document.getElementById('char-count').textContent = len;
+}
+
+function goBack() { showScreen('template'); }
+
+async function sendToAI() {
+  const input = document.getElementById('job-input').value.trim();
+  if (!input) { showToast('Please describe the job first'); return; }
+  if (usageCount >= MSG_LIMIT) { goUpgrade(); return; }
+  lastInput = input;
+  const t = templates[currentTemplate];
+  document.getElementById('loading-type').textContent = t.loadingType;
+  document.getElementById('loading-msg').textContent = t.loadingMsg;
+  showScreen('loading');
+  const msgs = ['Pulling the right words together...', 'Making it sound professional...', 'Almost ready...'];
+  let mi = 0;
+  const interval = setInterval(() => { mi = (mi+1)%msgs.length; document.getElementById('loading-msg').textContent = msgs[mi]; }, 1800);
+  try {
+    const res = await fetch(BACKEND_URL + '/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ template: currentTemplate, message: input, profile })
+    });
+    clearInterval(interval);
+    if (!res.ok) throw new Error('API error ' + res.status);
+    const data = await res.json();
+    const output = data.output;
+    usageCount++;
+    const now = new Date();
+    const label = input.length > 50 ? input.slice(0,47) + '...' : input;
+    const timeStr = now.toLocaleTimeString('en-AU', {hour:'2-digit', minute:'2-digit'}) + ', ' + now.toLocaleDateString('en-AU', {weekday:'short', day:'numeric', month:'short'});
+    history.unshift({ type: currentTemplate, label, time: timeStr, input, output });
+    saveData();
+    document.getElementById('result-doc').textContent = output;
+    document.getElementById('result-title').textContent = t.resultTitle;
+    document.getElementById('result-badge').textContent = t.badge;
+    showScreen('result');
+    updateUsageBar();
+    renderRecent();
+  } catch(e) {
+    clearInterval(interval);
+    showToast('Something went wrong — please try again');
+    showScreen('template');
+  }
+}
+
+function copyResult() {
+  const text = document.getElementById('result-doc').textContent;
+  navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard ✓')).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('Copied ✓');
+  });
+}
+
+function shareResult() {
+  const text = document.getElementById('result-doc').textContent;
+  if (navigator.share) navigator.share({ text });
+  else copyResult();
+}
+
+// ── FREE CHAT ──
+async function sendChat() {
+  const input = document.getElementById('chat-input').value.trim();
+  if (!input) return;
+  if (usageCount >= MSG_LIMIT) { goUpgrade(); return; }
+  document.getElementById('chat-input').value = '';
+  document.getElementById('chat-send-btn').disabled = true;
+  autoResize(document.getElementById('chat-input'));
+  addChatMsg(input, 'user');
+  const thinking = addChatMsg('...', 'ai');
+  chatHistory.push({ role: 'user', content: input });
+  try {
+    const res = await fetch(BACKEND_URL + '/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: chatHistory.slice(-8), profile })
+    });
+    const data = await res.json();
+    const reply = data.reply;
+    thinking.textContent = reply;
+    chatHistory.push({ role: 'assistant', content: reply });
+    usageCount++;
+    saveData();
+    updateUsageBar();
+  } catch(e) {
+    thinking.textContent = 'Sorry, something went wrong. Please try again.';
+  }
+  document.getElementById('chat-send-btn').disabled = false;
+  scrollChat();
+}
+
+function addChatMsg(text, role) {
+  const div = document.createElement('div');
+  div.className = 'msg msg-' + role;
+  div.textContent = text;
+  document.getElementById('chat-messages').appendChild(div);
+  scrollChat();
+  return div;
+}
+
+function scrollChat() { const c = document.getElementById('chat-messages'); c.scrollTop = c.scrollHeight; }
+function chatKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } }
+function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
+
+// ── HISTORY ──
+function viewHistory(idx) {
+  const h = history[idx];
+  if (!h) return;
+  document.getElementById('result-doc').textContent = h.output;
+  const t = templates[h.type];
+  document.getElementById('result-title').textContent = t ? t.resultTitle : 'Result';
+  document.getElementById('result-badge').textContent = t ? t.badge : h.type;
+  showScreen('result');
+}
+
+function renderHistoryPage() {
+  const body = document.getElementById('history-body');
+  if (!history.length) { body.innerHTML = '<div class="empty-recent" style="padding:40px 20px;text-align:center;color:var(--text-muted);">No history yet — generate something to get started</div>'; return; }
+  const icons = { quote: 'ti-file-invoice', email: 'ti-mail', jobad: 'ti-briefcase', chat: 'ti-message-2' };
+  body.innerHTML = '<div class="recent-list" style="margin:16px;">' + history.map((h,i) => `
+    <div class="recent-item" onclick="viewHistory(${i})">
+      <div class="r-icon"><i class="ti ${icons[h.type]||'ti-file'}"></i></div>
+      <div class="r-info"><div class="r-title">${h.label}</div><div class="r-time">${h.time}</div></div>
+      <i class="ti ti-chevron-right r-arrow"></i>
+    </div>`).join('') + '</div>';
+}
+
+// ── NAV ──
+function goHome() { showScreen('home'); updateNavActive('home'); }
+function goHistory() { renderHistoryPage(); showScreen('history'); updateNavActive('history'); }
+function goSettings() { showScreen('settings'); updateNavActive('settings'); }
+function goUpgrade() { showScreen('upgrade'); updateNavActive('upgrade'); }
+function updateNavActive(tab) {
+  const map = { home: 0, history: 1, settings: 2, upgrade: 3 };
+  document.querySelectorAll('.nav-btn').forEach((b,i) => b.classList.toggle('active', i === map[tab]));
+}
+
+function clearData() {
+  if (confirm('Clear all your Tradie AI data? This cannot be undone.')) {
+    localStorage.clear(); location.reload();
+  }
+}
+
+// ── INIT ──
+if (profile) { initHome(); showScreen('home'); }
+</script>
+</body>
+</html>
