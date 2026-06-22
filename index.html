@@ -1380,17 +1380,30 @@ async function viewJob(id) {
 
     if (updatedJob) {
       const statusChanged = updatedJob.status !== currentJob.status;
-      // Update currentJob FIRST before any render
       currentJob = updatedJob;
       allJobs = allJobs.map(j => j.id === id ? updatedJob : j);
-      
-      // Now render with fresh data
-      await renderJobDetail();
-      await loadActivityLog(id);
-      
-      if (statusChanged) {
-        showToast('Job updated');
+
+      // Update status badge directly
+      const badge = document.querySelector('#job-detail-body .job-status-badge');
+      if (badge) {
+        badge.textContent = updatedJob.status;
+        badge.className = 'job-status-badge status-'+updatedJob.status.replace(' ', '-');
+        badge.style.cssText = 'font-size:13px;padding:5px 14px;';
       }
+
+      // Update status buttons directly
+      document.querySelectorAll('#job-detail-body .status-select-btn').forEach(btn => {
+        btn.classList.toggle('active-status', btn.textContent.trim() === updatedJob.status);
+      });
+
+      // Update documents directly
+      const {data: docs} = await sb.from('job_documents').select('*').eq('job_id', id).order('created_at',{ascending:false});
+      if (docs) renderDocsList(docs);
+
+      // Update activity log directly
+      await loadActivityLog(id);
+
+      if (statusChanged) showToast('Status updated to '+updatedJob.status);
     }
   }, 5000);
 }
