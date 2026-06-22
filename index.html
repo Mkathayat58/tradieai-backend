@@ -1373,16 +1373,29 @@ async function viewJob(id) {
     }
     // Check for job status changes
     const {data: updatedJob} = await sb.from('jobs').select('*').eq('id', id).single();
-    if (updatedJob && updatedJob.status !== currentJob.status) {
+    if (updatedJob) {
+      const statusChanged = updatedJob.status !== currentJob.status;
       currentJob = {...currentJob, ...updatedJob};
       allJobs = allJobs.map(j => j.id === id ? {...j, ...updatedJob} : j);
-      await renderJobDetail();
-      showToast('Status updated to '+updatedJob.status+' by team member');
+      // Always update status badge
+      const statusBadge = document.querySelector('#job-detail-body .job-status-badge');
+      if (statusBadge) {
+        statusBadge.textContent = updatedJob.status;
+        statusBadge.className = 'job-status-badge status-'+updatedJob.status.replace(' ','-');
+        statusBadge.style.cssText = 'font-size:13px;padding:5px 14px;';
+      }
+      // Update status buttons
+      document.querySelectorAll('#job-detail-body .status-select-btn').forEach(btn => {
+        btn.classList.toggle('active-status', btn.textContent.trim() === updatedJob.status);
+      });
+      if (statusChanged) {
+        showToast('Status updated to '+updatedJob.status);
+      }
     }
-    // Refresh activity log and documents
+    // Always refresh activity log and documents
     await loadActivityLog(id);
     const {data: docs} = await sb.from('job_documents').select('*').eq('job_id', id).order('created_at',{ascending:false});
-    renderDocsList(docs);
+    if (docs) renderDocsList(docs);
   }, 5000);
 }
 
