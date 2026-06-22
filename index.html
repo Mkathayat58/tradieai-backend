@@ -1853,11 +1853,11 @@ async function viewStaffJob(id) {
   goTo('screen-job-detail');
   await loadActivityLog(currentJob.id);
   // Fix back button for staff
-  const backBtn = document.querySelector('#screen-job-detail .back-btn');
-  if (backBtn) backBtn.setAttribute('onclick', 'goTo("screen-staff-home")');
+  const staffBackBtn = document.querySelector('#screen-job-detail .back-btn');
+  if (staffBackBtn) staffBackBtn.setAttribute('onclick', 'goTo(\'screen-staff-home\')');
   // Hide edit button for staff
-  const editBtn = document.querySelector('#screen-job-detail button[onclick="editCurrentJob()"]');
-  if (editBtn) editBtn.style.display = 'none';
+  const staffEditBtn = document.querySelector('#screen-job-detail button[onclick="editCurrentJob()"]');
+  if (staffEditBtn) staffEditBtn.style.display = 'none';
 }
 
 async function staffStatusUpdate(status) {
