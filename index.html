@@ -1351,7 +1351,7 @@ async function saveJob() {
   showToast('Job saved ✓');
   viewJob(currentJob.id);
 }
-let jobDetailChannel = null;
+let jobPollInterval = null;
 
 async function viewJob(id) {
   currentJob = allJobs.find(j => j.id===id);
@@ -1361,42 +1361,29 @@ async function viewJob(id) {
   goTo('screen-job-detail');
   await loadActivityLog(currentJob.id);
 
-  // Subscribe to real-time updates for this specific job
-  if (jobDetailChannel) sb.removeChannel(jobDetailChannel);
-  jobDetailChannel = sb.channel('job-detail-'+id)
-    .on('postgres_changes', {
-      event: 'UPDATE',
-      schema: 'public',
-      table: 'jobs',
-      }, async (payload) => {
-      if (payload.new.id !== id) return;
-      // Update currentJob with new data from database
-      currentJob = {...currentJob, ...payload.new};
-      // Update allJobs array too
-      allJobs = allJobs.map(j => j.id === currentJob.id ? {...j, ...payload.new} : j);
-      // Re-render full job detail with new status
+  // Clear any existing poll
+  if (jobPollInterval) clearInterval(jobPollInterval);
+
+  // Poll every 5 seconds for updates
+  jobPollInterval = setInterval(async () => {
+    // Only poll if job detail screen is active
+    if (!document.getElementById('screen-job-detail').classList.contains('active')) {
+      clearInterval(jobPollInterval);
+      return;
+    }
+    // Check for job status changes
+    const {data: updatedJob} = await sb.from('jobs').select('*').eq('id', id).single();
+    if (updatedJob && updatedJob.status !== currentJob.status) {
+      currentJob = {...currentJob, ...updatedJob};
+      allJobs = allJobs.map(j => j.id === id ? {...j, ...updatedJob} : j);
       await renderJobDetail();
-      await loadActivityLog(currentJob.id);
-      showToast('Status updated to '+payload.new.status+' by team member');
-    })
-    .on('postgres_changes', {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'job_activity',
-      }, async (payload) => {
-      if (payload.new.job_id !== id) return;
-      await loadActivityLog(id);
-    })
-    .on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'job_documents'
-    }, async (payload) => {
-      if (payload.new?.job_id !== id && payload.old?.job_id !== id) return;
-      const {data: docs} = await sb.from('job_documents').select('*').eq('job_id', id).order('created_at',{ascending:false});
-      renderDocsList(docs);
-    })
-    .subscribe();
+      showToast('Status updated to '+updatedJob.status+' by team member');
+    }
+    // Refresh activity log and documents
+    await loadActivityLog(id);
+    const {data: docs} = await sb.from('job_documents').select('*').eq('job_id', id).order('created_at',{ascending:false});
+    renderDocsList(docs);
+  }, 5000);
 }
 
 async function renderJobDetail() {
@@ -1597,24 +1584,24 @@ function openTemplateForJob(type) {
   document.getElementById('char-count').textContent = currentJob.description.length;
   goTo('screen-template');
 }
-let jobsRealtimeChannel = null;
+let jobsListPollInterval = null;
 
 async function goJobs() {
   await loadJobs();
   goTo('screen-jobs');
   setActiveNav('jobs');
 
-  // Subscribe to real-time job updates
-  if (jobsRealtimeChannel) sb.removeChannel(jobsRealtimeChannel);
-  jobsRealtimeChannel = sb.channel('jobs-changes')
-    .on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'jobs'
-    }, async (payload) => {
-      await loadJobs();
-    })
-    .subscribe();
+  // Clear any existing poll
+  if (jobsListPollInterval) clearInterval(jobsListPollInterval);
+
+  // Poll every 5 seconds for job list updates
+  jobsListPollInterval = setInterval(async () => {
+    if (!document.getElementById('screen-jobs').classList.contains('active')) {
+      clearInterval(jobsListPollInterval);
+      return;
+    }
+    await loadJobs();
+  }, 5000);
 }
 
 // NAV
