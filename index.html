@@ -1884,16 +1884,6 @@ async function staffStatusUpdate(status) {
   if (session) {
     currentUser = session.user;
     await loadProfile();
-    const roleData = await checkRole();
-    if (roleData?.role === 'staff') {
-      // Activate member if first login
-      const activateRes = await fetch(BACKEND_URL+'/api/team/activate', {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer '+session.access_token }
-      });
-      await loadStaffHome();
-      goTo('screen-staff-home');
-    }
   } else {
     goTo('screen-landing');
   }
