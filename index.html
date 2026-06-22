@@ -1395,7 +1395,16 @@ async function viewJob(id) {
     // Always refresh activity log and documents
     await loadActivityLog(id);
     const {data: docs} = await sb.from('job_documents').select('*').eq('job_id', id).order('created_at',{ascending:false});
-    if (docs) renderDocsList(docs);
+    if (docs) {
+      const docsList = document.getElementById('docs-list');
+      if (docsList) {
+        renderDocsList(docs);
+      } else {
+        // docs-list not found, do full re-render
+        await renderJobDetail();
+        await loadActivityLog(id);
+      }
+    }
   }, 5000);
 }
 
