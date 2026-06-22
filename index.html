@@ -1852,6 +1852,12 @@ async function viewStaffJob(id) {
 
   goTo('screen-job-detail');
   await loadActivityLog(currentJob.id);
+  // Fix back button for staff
+  const backBtn = document.querySelector('#screen-job-detail .back-btn');
+  if (backBtn) backBtn.setAttribute('onclick', 'goTo("screen-staff-home")');
+  // Hide edit button for staff
+  const editBtn = document.querySelector('#screen-job-detail button[onclick="editCurrentJob()"]');
+  if (editBtn) editBtn.style.display = 'none';
 }
 
 async function staffStatusUpdate(status) {
@@ -1861,6 +1867,9 @@ async function staffStatusUpdate(status) {
   currentJob.status = status;
   showToast('Status updated to '+status+' ✓');
   await viewStaffJob(currentJob.id);
+  // Re-fix back button after re-render
+  const backBtn = document.querySelector('#screen-job-detail .back-btn');
+  if (backBtn) backBtn.setAttribute('onclick', 'goTo("screen-staff-home")');
 }
 // INIT
 (async () => {
