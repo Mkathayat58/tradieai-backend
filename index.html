@@ -1505,7 +1505,29 @@ function renderDocsList(docs) {
       </button>
     </div>`).join('');
 }
+async function deleteStaffDoc(docId) {
+  const overlay = document.createElement('div');
+  overlay.id = 'delete-staff-doc-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:flex-end;';
+  overlay.innerHTML = `
+    <div style="background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px max(env(safe-area-inset-bottom),24px);width:100%;">
+      <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;">Delete document?</div>
+      <div style="font-size:14px;color:var(--text-muted);margin-bottom:20px;line-height:1.5;">This cannot be undone.</div>
+      <button class="btn btn-danger" style="margin-bottom:12px;" onclick="confirmDeleteStaffDoc('${docId}')"><i class="ti ti-trash"></i> Yes, delete</button>
+      <button class="btn btn-outline" style="margin-bottom:0;" onclick="document.getElementById('delete-staff-doc-overlay').remove()"><i class="ti ti-x"></i> Cancel</button>
+    </div>`;
+  document.body.appendChild(overlay);
+}
 
+async function confirmDeleteStaffDoc(docId) {
+  const overlay = document.getElementById('delete-staff-doc-overlay');
+  if (overlay) overlay.remove();
+  await sb.from('job_documents').delete().eq('id', docId);
+  showToast('Document deleted ✓');
+  await viewStaffJob(currentJob.id);
+  const backBtn = document.querySelector('#screen-job-detail .back-btn');
+  if (backBtn) backBtn.setAttribute('onclick', 'goTo("screen-staff-home")');
+}
 async function deleteDoc(docId) {
   const overlay = document.createElement('div');
   overlay.id = 'delete-doc-overlay';
