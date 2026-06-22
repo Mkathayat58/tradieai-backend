@@ -1366,10 +1366,17 @@ async function renderJobDetail() {
   const statusClass = 'status-'+currentJob.status.replace(' ','-');
   const {data: docs} = await sb.from('job_documents').select('*').eq('job_id', currentJob.id).order('created_at',{ascending:false});
   const docsHtml = docs?.length ? docs.map(d => `
-    <div class="doc-item" onclick="viewJobDoc('${d.id}','${d.type}')">
-      <div class="r-icon"><i class="ti ${d.type==='photo'?'ti-photo':'ti-file-text'}"></i></div>
-      <div><div class="r-title" style="font-size:13px;font-weight:500;">${d.input}</div>
-      <div class="r-time" style="font-size:11px;">${new Date(d.created_at).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'})}</div></div>
+    <div class="doc-item" style="justify-content:space-between;">
+      <div style="display:flex;align-items:flex-start;gap:10px;flex:1;min-width:0;" onclick="viewJobDoc('${d.id}','${d.type}')">
+        <div class="r-icon"><i class="ti ${d.type==='photo'?'ti-photo':'ti-file-text'}"></i></div>
+        <div style="min-width:0;">
+          <div class="r-title" style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${d.input}</div>
+          <div class="r-time" style="font-size:11px;">${new Date(d.created_at).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'})}</div>
+        </div>
+      </div>
+      <button onclick="deleteDoc('${d.id}')" style="background:none;border:none;padding:4px 4px 4px 12px;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent;">
+        <i class="ti ti-x" style="font-size:18px;color:var(--text-muted);"></i>
+      </button>
     </div>`).join('') : '<div class="empty-state" style="padding:16px;">No documents yet</div>';
 
   document.getElementById('job-detail-body').innerHTML = `
@@ -1862,10 +1869,17 @@ async function viewStaffJob(id) {
   const statusClass = 'status-'+currentJob.status.replace(' ','-');
   const {data: docs} = await sb.from('job_documents').select('*').eq('job_id', currentJob.id).order('created_at',{ascending:false});
   const docsHtml = docs?.length ? docs.map(d => `
-    <div class="doc-item">
-      <div class="r-icon"><i class="ti ${d.type==='photo'?'ti-photo':'ti-file-text'}"></i></div>
-      <div><div class="r-title" style="font-size:13px;font-weight:500;">${d.input}</div>
-      <div class="r-time" style="font-size:11px;">${new Date(d.created_at).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'})}</div></div>
+    <div class="doc-item" style="justify-content:space-between;">
+      <div style="display:flex;align-items:flex-start;gap:10px;flex:1;min-width:0;" onclick="viewStaffDoc('${d.output}','${d.type}','${d.input}')">
+        <div class="r-icon"><i class="ti ${d.type==='photo'?'ti-photo':'ti-file-text'}"></i></div>
+        <div style="min-width:0;">
+          <div class="r-title" style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${d.input}</div>
+          <div class="r-time" style="font-size:11px;">${new Date(d.created_at).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'})}</div>
+        </div>
+      </div>
+      <button onclick="deleteStaffDoc('${d.id}')" style="background:none;border:none;padding:4px 4px 4px 12px;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent;">
+        <i class="ti ti-x" style="font-size:18px;color:var(--text-muted);"></i>
+      </button>
     </div>`).join('') : '<div class="empty-state" style="padding:16px;">No documents yet</div>';
 
   document.getElementById('job-detail-body').innerHTML = `
