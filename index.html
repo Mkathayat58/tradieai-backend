@@ -1518,7 +1518,6 @@ function goHome() { goTo('screen-home'); setActiveNav('home'); }
 function goHistory() { renderHistoryPage(); goTo('screen-history'); setActiveNav('history'); }
 function goSettings() { goTo('screen-settings'); setActiveNav('settings'); }
 function goUpgrade() { goTo('screen-upgrade'); setActiveNav('upgrade'); }
-function goTeam() { goTo('screen-team'); loadTeamMembers(); populateAssignDropdown(); }
 // ── STAFF PASSWORD SETUP ──
 async function staffSetPassword() {
   const pw = document.getElementById('staff-pw').value;
@@ -1557,6 +1556,11 @@ async function staffSetPassword() {
   // Clear stored token
   sessionStorage.removeItem('invite_token');
   sessionStorage.removeItem('invite_name');
+  sessionStorage.removeItem('invite_email');
+
+  await loadProfile();
+}
+
 // ── TEAM & ROLE ──
 let myRole = 'owner';
 let staffContext = null;
