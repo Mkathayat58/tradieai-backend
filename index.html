@@ -1387,6 +1387,15 @@ async function viewJob(id) {
       if (payload.new.job_id !== id) return;
       await loadActivityLog(id);
     })
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'job_documents'
+    }, async (payload) => {
+      if (payload.new?.job_id !== id && payload.old?.job_id !== id) return;
+      const {data: docs} = await sb.from('job_documents').select('*').eq('job_id', id).order('created_at',{ascending:false});
+      renderDocsList(docs);
+    })
     .subscribe();
 }
 
