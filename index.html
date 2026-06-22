@@ -1527,19 +1527,36 @@ async function staffSetPassword() {
   if (pw !== confirm) return showError('staff-pw-error', 'Passwords do not match.');
   hideError('staff-pw-error');
 
-  const { error } = await sb.auth.updateUser({ password: pw });
-  if (error) return showError('staff-pw-error', error.message);
+  const inviteToken = sessionStorage.getItem('invite_token');
+  const inviteEmail = sessionStorage.getItem('invite_email');
 
-  // Activate team member record
-  const session = (await sb.auth.getSession()).data.session;
+  if (!inviteEmail) return showError('staff-pw-error', 'Something went wrong — please use the invite link again.');
+
+  // Sign up with email and password
+  const { error: signUpError } = await sb.auth.signUp({ email: inviteEmail, password: pw });
+  if (signUpError && !signUpError.message.includes('already registered')) {
+    return showError('staff-pw-error', signUpError.message);
+  }
+
+  // Sign in immediately
+  const { data: signInData, error: signInError } = await sb.auth.signInWithPassword({
+    email: inviteEmail,
+    password: pw
+  });
+  if (signInError) return showError('staff-pw-error', signInError.message);
+
+  currentUser = signInData.user;
+
+  // Activate team membership using token
   await fetch(BACKEND_URL+'/api/team/activate', {
     method: 'POST',
-    headers: { 'Authorization': 'Bearer '+session.access_token }
+    headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+signInData.session.access_token },
+    body: JSON.stringify({ invite_token: inviteToken })
   });
 
-  currentUser = session.user;
-  await loadProfile();
-}
+  // Clear stored token
+  sessionStorage.removeItem('invite_token');
+  sessionStorage.removeItem('invite_name');
 // ── TEAM & ROLE ──
 let myRole = 'owner';
 let staffContext = null;
@@ -1602,12 +1619,48 @@ async function inviteStaff() {
     body: JSON.stringify({ name, email })
   });
   const data = await res.json();
-  if (!res.ok) return showToast(data.error || 'Could not send invite', true);
+  if (!res.ok) return showToast(data.error || 'Could not create invite', true);
   document.getElementById('invite-name').value = '';
   document.getElementById('invite-email').value = '';
-  showToast('Invite sent to '+email+' ✓');
   await loadTeamMembers();
   await populateAssignDropdown();
+  showInviteLinkPopup(data.link, name);
+}
+
+function showInviteLinkPopup(link, name) {
+  const existing = document.getElementById('invite-link-overlay');
+  if (existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'invite-link-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:flex-end;';
+  overlay.innerHTML = `
+    <div style="background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px max(env(safe-area-inset-bottom),24px);width:100%;">
+      <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;">Invite link ready!</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.5;">Share this link with <strong>${name}</strong> via WhatsApp or SMS. They tap it, set a password, and they're in.</div>
+      <div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-size:11px;color:var(--text);word-break:break-all;margin-bottom:16px;">${link}</div>
+      <button class="btn" onclick="copyInviteLink('${link}')"><i class="ti ti-copy"></i> Copy link</button>
+      <button class="btn btn-outline" style="margin-bottom:8px;" onclick="shareInviteLink('${link}','${name}')"><i class="ti ti-share"></i> Share via WhatsApp / SMS</button>
+      <button class="btn btn-outline" style="margin-bottom:0;" onclick="document.getElementById('invite-link-overlay').remove()"><i class="ti ti-x"></i> Close</button>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function copyInviteLink(link) {
+  navigator.clipboard.writeText(link)
+    .then(() => showToast('Invite link copied ✓'))
+    .catch(() => showToast('Copy failed — please copy manually', true));
+}
+
+function shareInviteLink(link, name) {
+  if (navigator.share) {
+    navigator.share({
+      title: 'Join my team on Tradie AI',
+      text: 'Hi '+name+', tap this link to join my team on Tradie AI:',
+      url: link
+    });
+  } else {
+    copyInviteLink(link);
+  }
 }
 
 async function removeStaff(memberId, name) {
@@ -1805,24 +1858,26 @@ async function staffStatusUpdate(status) {
 }
 // INIT
 (async () => {
-  // Detect Supabase magic link / invite callback in URL hash
-  const hash = window.location.hash;
-  if (hash && hash.includes('access_token') && hash.includes('type=invite')) {
-    const params = new URLSearchParams(hash.replace('#', ''));
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
-    if (accessToken) {
-      const { data, error } = await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-      if (!error && data.session) {
-        currentUser = data.session.user;
-        // Show staff set password screen
-        document.getElementById('staff-invite-email').value = currentUser.email;
-        document.getElementById('staff-invite-greeting').textContent = 'Hi ' + (currentUser.user_metadata?.name || '') + '! You\'ve been invited.';
-        history.replaceState(null, '', window.location.pathname);
-        goTo('screen-staff-setpassword');
-        return;
-      }
+  // Check for invite token in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const inviteToken = urlParams.get('invite');
+
+  if (inviteToken) {
+    const tokenRes = await fetch(BACKEND_URL+'/api/team/invite/'+inviteToken);
+    if (tokenRes.ok) {
+      const tokenData = await tokenRes.json();
+      sessionStorage.setItem('invite_token', inviteToken);
+      sessionStorage.setItem('invite_name', tokenData.name);
+      sessionStorage.setItem('invite_email', tokenData.email);
+      history.replaceState(null, '', window.location.pathname);
+      document.getElementById('staff-invite-email').value = tokenData.email;
+      document.getElementById('staff-invite-greeting').textContent = 'Hi '+tokenData.name+'! You\'ve been invited.';
+      goTo('screen-staff-setpassword');
+    } else {
+      showToast('Invalid or expired invite link', true);
+      goTo('screen-landing');
     }
+    return;
   }
 
   const {data:{session}} = await sb.auth.getSession();
