@@ -786,7 +786,29 @@ const SUPABASE_URL = 'https://lkporornrpyvgfvzvstr.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrcG9yb3JucnB5dmdmdnp2c3RyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5ODYxNjMsImV4cCI6MjA5NzU2MjE2M30.i2cNn9W-7OwOzCIj9H6uYXBbEaMLhguQransVCQ-Cjs';
 const BACKEND_URL = 'https://tradieai-backend.onrender.com';
 const PLAN_LIMITS = { free:50, starter:100, pro:500, power:2000 };
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  }
+});
+
+// Auto handle token refresh and session expiry
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+    if (event === 'SIGNED_OUT') {
+      currentUser = null;
+      userProfile = null;
+      localHistory = [];
+      allJobs = [];
+      currentJob = null;
+      goTo('screen-landing');
+    } else if (event === 'TOKEN_REFRESHED' && session) {
+      currentUser = session.user;
+    }
+  }
+});
 
 let currentUser = null;
 let userProfile = null;
@@ -805,7 +827,14 @@ const templates = {
   followup:  { title:'Follow up',       badge:'Follow-up', loadingType:'follow-up', hint:'Tell me what you quoted, how long ago, and any details. I will write a short confident follow-up.',         label:'What are you following up?', placeholder:'e.g. Sent a kitchen rewire quote 2 weeks ago for $1,800. No reply. Follow up without sounding desperate.' },
   chat:      { title:'Free chat',       badge:'Chat',      loadingType:'answer',    hint:'Ask me anything — pricing advice, how to handle a situation, what to charge, business questions.',          label:'Your question',              placeholder:'e.g. What should I charge per hour for an electrician in Melbourne in 2026?' }
 };
-
+async function getToken() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    goTo('screen-landing');
+    return null;
+  }
+  return session.access_token;
+}
 function goTo(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
