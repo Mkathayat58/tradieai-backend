@@ -373,7 +373,6 @@ app.post('/api/team/invite', requireAuth, async (req, res) => {
   const team = await getOrCreateTeam(req.user.id);
   if (!team) return res.status(500).json({ error: 'Could not create team' });
 
-  // Check not already invited
   const { data: existing } = await supabase
     .from('team_members')
     .select('id')
@@ -382,27 +381,29 @@ app.post('/api/team/invite', requireAuth, async (req, res) => {
     .single();
   if (existing) return res.status(400).json({ error: 'This person has already been invited' });
 
-  // Invite via Supabase auth
-  const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
-    data: { name, team_id: team.id, role: 'staff' },
-    redirectTo: `${process.env.FRONTEND_URL || 'https://tradieai-backend.onrender.com'}/index.html`
-  });
-  if (inviteError) return res.status(400).json({ error: inviteError.message });
+  const crypto = require('crypto');
+  const inviteToken = crypto.randomBytes(32).toString('hex');
 
-  // Save to team_members
-  const { data: member, error: memberError } = await supabase.from('team_members').insert({
-    team_id: team.id,
-    user_id: inviteData.user?.id || null,
-    name,
-    email,
-    role: 'staff',
-    status: 'pending'
-  }).select().single();
+  const { data: member, error: memberError } = await supabase
+    .from('team_members')
+    .insert({
+      team_id: team.id,
+      user_id: null,
+      name,
+      email,
+      role: 'staff',
+      status: 'pending',
+      invite_token: inviteToken
+    })
+    .select()
+    .single();
   if (memberError) return res.status(400).json({ error: memberError.message });
 
-  res.json({ success: true, member });
-});
+  const frontendUrl = process.env.FRONTEND_URL || 'https://tradieai-frontend.onrender.com';
+  const inviteLink = `${frontendUrl}?invite=${inviteToken}`;
 
+  res.json({ success: true, member, link: inviteLink });
+});
 // ── TEAM: LIST MEMBERS ──
 app.get('/api/team/members', requireAuth, async (req, res) => {
   const team = await getOrCreateTeam(req.user.id);
@@ -431,18 +432,33 @@ app.delete('/api/team/members/:id', requireAuth, async (req, res) => {
   res.json({ success: true });
 });
 
-// ── TEAM: ACTIVATE MEMBER (called when staff completes signup) ──
+// ── TEAM: ACTIVATE MEMBER VIA TOKEN ──
 app.post('/api/team/activate', requireAuth, async (req, res) => {
-  const { data: member, error } = await supabase
-    .from('team_members')
-    .update({ status: 'active', user_id: req.user.id, joined_at: new Date().toISOString() })
-    .eq('email', req.user.email)
-    .eq('status', 'pending')
-    .select()
-    .single();
-  if (error || !member) return res.status(404).json({ error: 'No pending invite found for this email' });
+  const { invite_token } = req.body;
 
-  // Create a minimal profile for the staff member if not exists
+  let member;
+
+  if (invite_token) {
+    const { data, error } = await supabase
+      .from('team_members')
+      .update({ status: 'active', user_id: req.user.id, joined_at: new Date().toISOString() })
+      .eq('invite_token', invite_token)
+      .select('*, teams(owner_user_id)')
+      .single();
+    if (error || !data) return res.status(404).json({ error: 'Invalid invite token' });
+    member = data;
+  } else {
+    const { data, error } = await supabase
+      .from('team_members')
+      .update({ status: 'active', user_id: req.user.id, joined_at: new Date().toISOString() })
+      .eq('email', req.user.email)
+      .eq('status', 'pending')
+      .select('*, teams(owner_user_id)')
+      .single();
+    if (error || !data) return res.status(404).json({ error: 'No pending invite found' });
+    member = data;
+  }
+
   const { data: existingProfile } = await supabase.from('profiles').select('id').eq('id', req.user.id).single();
   if (!existingProfile) {
     await supabase.from('profiles').insert({
@@ -545,4 +561,16 @@ app.post('/api/team/resend-invite', requireAuth, async (req, res) => {
 
   res.json({ success: true });
 });
+// ── TEAM: VALIDATE INVITE TOKEN (public) ──
+app.get('/api/team/invite/:token', async (req, res) => {
+  const { data, error } = await supabase
+    .from('team_members')
+    .select('name, email, status')
+    .eq('invite_token', req.params.token)
+    .single();
+  if (error || !data) return res.status(404).json({ error: 'Invalid or expired invite link' });
+  if (data.status === 'active') return res.status(400).json({ error: 'This invite has already been used' });
+  res.json({ name: data.name, email: data.email });
+});
+
 app.listen(PORT, () => console.log(`Tradie AI backend running on port ${PORT}`));
