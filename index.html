@@ -1536,6 +1536,7 @@ async function confirmDeleteStaffDoc(docId) {
   const overlay = document.getElementById('delete-staff-doc-overlay');
   if (overlay) overlay.remove();
   await sb.from('job_documents').delete().eq('id', docId);
+  await logActivity(currentJob.id, 'deleted a document');
   showToast('Document deleted ✓');
   await viewStaffJob(currentJob.id);
   const backBtn = document.querySelector('#screen-job-detail .back-btn');
@@ -1559,6 +1560,7 @@ async function confirmDeleteDoc(docId) {
   const overlay = document.getElementById('delete-doc-overlay');
   if (overlay) overlay.remove();
   await sb.from('job_documents').delete().eq('id', docId);
+  await logActivity(currentJob.id, 'deleted a document');
   showToast('Document deleted ✓');
   const {data: docs} = await sb.from('job_documents').select('*').eq('job_id', currentJob.id).order('created_at',{ascending:false});
   renderDocsList(docs);
@@ -1584,6 +1586,7 @@ async function handleDocUpload(event) {
   });
   event.target.value = '';
   showToast('Uploaded ✓');
+  await logActivity(currentJob.id, 'uploaded ' + file.name);
   const {data: docs} = await sb.from('job_documents').select('*').eq('job_id', currentJob.id).order('created_at',{ascending:false});
   const docsList = document.getElementById('docs-list');
   if (docsList) {
