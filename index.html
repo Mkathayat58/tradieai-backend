@@ -1352,6 +1352,7 @@ async function saveJob() {
   viewJob(currentJob.id);
 }
 let jobPollInterval = null;
+var _pollJobId = null;
 
 async function viewJob(id) {
   currentJob = allJobs.find(j => j.id===id);
@@ -1361,48 +1362,45 @@ async function viewJob(id) {
   goTo('screen-job-detail');
   await loadActivityLog(currentJob.id);
 
-  // Clear any existing poll
+  _pollJobId = id;
   if (jobPollInterval) clearInterval(jobPollInterval);
+  jobPollInterval = setInterval(pollJobUpdates, 5000);
+}
 
-  // Poll every 5 seconds for updates
-  jobPollInterval = setInterval(async () => {
-    // Only poll if job detail screen is active
+async function pollJobUpdates() {
+  try {
     if (!document.getElementById('screen-job-detail').classList.contains('active')) {
       clearInterval(jobPollInterval);
       return;
     }
-
-    // Fetch latest job data
-    const {data: updatedJob} = await sb.from('jobs').select('*').eq('id', id).single();
-
-    if (updatedJob) {
-      const statusChanged = updatedJob.status !== currentJob.status;
-      currentJob = updatedJob;
-      allJobs = allJobs.map(j => j.id === id ? updatedJob : j);
-
-      // Update status badge directly
-      const badge = document.querySelector('#job-detail-body .job-status-badge');
+    var jobRes = await sb.from('jobs').select('*').eq('id', _pollJobId).single();
+    var docRes = await sb.from('job_documents').select('*').eq('job_id', _pollJobId).order('created_at',{ascending:false});
+    if (jobRes.data) {
+      var fresh = jobRes.data;
+      var changed = fresh.status !== currentJob.status;
+      currentJob = fresh;
+      allJobs = allJobs.map(function(j){ return j.id === _pollJobId ? fresh : j; });
+      var badge = document.querySelector('#job-detail-body .job-status-badge');
       if (badge) {
-        badge.textContent = updatedJob.status;
-        badge.className = 'job-status-badge status-'+updatedJob.status.replace(' ', '-');
-        badge.style.cssText = 'font-size:13px;padding:5px 14px;';
+        badge.textContent = fresh.status;
+        badge.className = 'job-status-badge status-' + fresh.status.replace(' ','-');
+        badge.setAttribute('style','font-size:13px;padding:5px 14px;');
       }
-
-      // Update status buttons directly
-      document.querySelectorAll('#job-detail-body .status-select-btn').forEach(btn => {
-        btn.classList.toggle('active-status', btn.textContent.trim() === updatedJob.status);
-      });
-
-      // Update documents directly
-      const {data: docs} = await sb.from('job_documents').select('*').eq('job_id', id).order('created_at',{ascending:false});
-      if (docs) renderDocsList(docs);
-
-      // Update activity log directly
-      await loadActivityLog(id);
-
-      if (statusChanged) showToast('Status updated to '+updatedJob.status);
+      var btns = document.querySelectorAll('#job-detail-body .status-select-btn');
+      for (var i = 0; i < btns.length; i++) {
+        if (btns[i].textContent.trim() === fresh.status) {
+          btns[i].classList.add('active-status');
+        } else {
+          btns[i].classList.remove('active-status');
+        }
+      }
+      if (docRes.data) renderDocsList(docRes.data);
+      await loadActivityLog(_pollJobId);
+      if (changed) showToast('Status updated to ' + fresh.status);
     }
-  }, 5000);
+  } catch(err) {
+    console.error('Poll error:', err);
+  }
 }
 
 async function renderJobDetail() {
