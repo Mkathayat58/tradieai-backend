@@ -1869,14 +1869,29 @@ async function viewStaffJob(id) {
   if (staffEditBtn) staffEditBtn.style.display = 'none';
 }
 
-async function staffStatusUpdate(status) {
+function staffStatusUpdate(status) {
   if (status === currentJob.status) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'staff-status-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:flex-end;';
+  overlay.innerHTML = `
+    <div style="background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px max(env(safe-area-inset-bottom),24px);width:100%;">
+      <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;">Update status?</div>
+      <div style="font-size:14px;color:var(--text-muted);margin-bottom:20px;line-height:1.5;">Change from <strong>${currentJob.status}</strong> to <strong>${status}</strong>?</div>
+      <button class="btn" onclick="applyStaffStatusUpdate('${status}')"><i class="ti ti-check"></i> Yes, update</button>
+      <button class="btn btn-outline" style="margin-bottom:0;" onclick="document.getElementById('staff-status-overlay').remove()"><i class="ti ti-x"></i> Cancel</button>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function applyStaffStatusUpdate(status) {
+  const overlay = document.getElementById('staff-status-overlay');
+  if (overlay) overlay.remove();
   await sb.from('jobs').update({status, updated_at: new Date().toISOString()}).eq('id', currentJob.id);
   await logActivity(currentJob.id, 'marked '+status);
   currentJob.status = status;
   showToast('Status updated to '+status+' ✓');
   await viewStaffJob(currentJob.id);
-  // Re-fix back button after re-render
   const backBtn = document.querySelector('#screen-job-detail .back-btn');
   if (backBtn) backBtn.setAttribute('onclick', 'goTo("screen-staff-home")');
 }
