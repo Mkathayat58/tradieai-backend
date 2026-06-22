@@ -1339,8 +1339,8 @@ async function viewJob(id) {
       event: 'UPDATE',
       schema: 'public',
       table: 'jobs',
-      filter: `id=eq.${id}`
-    }, async (payload) => {
+      }, async (payload) => {
+      if (payload.new.id !== id) return;
       // Update currentJob with new data from database
       currentJob = {...currentJob, ...payload.new};
       // Update allJobs array too
@@ -1354,8 +1354,8 @@ async function viewJob(id) {
       event: 'INSERT',
       schema: 'public',
       table: 'job_activity',
-      filter: `job_id=eq.${id}`
-    }, async () => {
+      }, async (payload) => {
+      if (payload.new.job_id !== id) return;
       await loadActivityLog(id);
     })
     .subscribe();
