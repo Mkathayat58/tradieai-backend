@@ -1523,12 +1523,7 @@ async function handleDocUpload(event) {
   const {data: docs} = await sb.from('job_documents').select('*').eq('job_id', currentJob.id).order('created_at',{ascending:false});
   const docsList = document.getElementById('docs-list');
   if (docsList) {
-    docsList.innerHTML = docs.map(d => `
-      <div class="doc-item" onclick="viewJobDoc('${d.id}','${d.type}')">
-        <div class="r-icon"><i class="ti ${d.type==='photo'?'ti-photo':'ti-file-text'}"></i></div>
-        <div><div class="r-title" style="font-size:13px;font-weight:500;">${d.input}</div>
-        <div class="r-time" style="font-size:11px;">${new Date(d.created_at).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'})}</div></div>
-      </div>`).join('');
+    renderDocsList(docs);
   }
 }
 function openTemplateForJob(type) {
