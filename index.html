@@ -1791,7 +1791,6 @@ async function loadStaffHome() {
       <div class="job-customer">${j.customer_name}</div>
       <div class="job-desc">${j.description}</div>
       <div class="job-card-bottom">
-        <span class="job-value">${j.value ? '$'+parseFloat(j.value).toLocaleString('en-AU') : ''}</span>
         ${dueText ? `<span class="job-due ${isOverdue?'overdue':''}">${isOverdue?'⚠ Overdue: ':'Due: '}${dueText}</span>` : ''}
       </div>
     </div>`;
@@ -1830,7 +1829,10 @@ async function viewStaffJob(id) {
         ${currentJob.customer_email ? `<div class="detail-row"><span class="detail-label"><i class="ti ti-mail"></i>Email</span><span class="detail-val">${currentJob.customer_email}</span></div>` : ''}
         <div class="detail-row"><span class="detail-label"><i class="ti ti-file-description"></i>Description</span><span class="detail-val" style="max-width:200px;white-space:normal;text-align:right;">${currentJob.description}</span></div>
         ${currentJob.due_date ? `<div class="detail-row"><span class="detail-label"><i class="ti ti-calendar"></i>Due date</span><span class="detail-val ${isOverdue?'overdue':''}">${new Date(currentJob.due_date).toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'long'})}</span></div>` : ''}
+        ${currentJob.notes ? `<div class="detail-row"><span class="detail-label"><i class="ti ti-notes"></i>Notes</span><span class="detail-val" style="max-width:200px;white-space:normal;text-align:right;">${currentJob.notes}</span></div>` : ''}
       </div>
+      <div class="section-label">Activity</div>
+      <div class="activity-log" id="activity-log"><div class="empty-state" style="padding:16px;">Loading...</div></div>
       <div class="section-label">Update status</div>
       <div class="status-select-grid">
         ${['In Progress','Completed'].map(s => `
