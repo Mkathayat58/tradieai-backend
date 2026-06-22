@@ -1322,6 +1322,8 @@ async function saveJob() {
   showToast('Job saved ✓');
   viewJob(currentJob.id);
 }
+let jobDetailChannel = null;
+
 async function viewJob(id) {
   currentJob = allJobs.find(j => j.id===id);
   if (!currentJob) return;
@@ -1329,6 +1331,34 @@ async function viewJob(id) {
   await renderJobDetail();
   goTo('screen-job-detail');
   await loadActivityLog(currentJob.id);
+
+  // Subscribe to real-time updates for this specific job
+  if (jobDetailChannel) sb.removeChannel(jobDetailChannel);
+  jobDetailChannel = sb.channel('job-detail-'+id)
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'jobs',
+      filter: `id=eq.${id}`
+    }, async (payload) => {
+      // Update currentJob with new data from database
+      currentJob = {...currentJob, ...payload.new};
+      // Update allJobs array too
+      allJobs = allJobs.map(j => j.id === currentJob.id ? {...j, ...payload.new} : j);
+      // Re-render full job detail with new status
+      await renderJobDetail();
+      await loadActivityLog(currentJob.id);
+      showToast('Status updated to '+payload.new.status+' by team member');
+    })
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'job_activity',
+      filter: `job_id=eq.${id}`
+    }, async () => {
+      await loadActivityLog(id);
+    })
+    .subscribe();
 }
 
 async function renderJobDetail() {
@@ -1505,10 +1535,26 @@ function openTemplateForJob(type) {
   document.getElementById('char-count').textContent = currentJob.description.length;
   goTo('screen-template');
 }
+let jobsRealtimeChannel = null;
+
 async function goJobs() {
   await loadJobs();
   goTo('screen-jobs');
   setActiveNav('jobs');
+
+  // Subscribe to real-time job updates
+  if (jobsRealtimeChannel) sb.removeChannel(jobsRealtimeChannel);
+  jobsRealtimeChannel = sb.channel('jobs-changes')
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'jobs',
+      filter: `user_id=eq.${currentUser.id}`
+    }, async (payload) => {
+      await loadJobs();
+      showToast('Job updated by team member');
+    })
+    .subscribe();
 }
 
 // NAV
