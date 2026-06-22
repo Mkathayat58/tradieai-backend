@@ -1374,9 +1374,6 @@ async function viewJob(id) {
 
     // Fetch latest job data
     const {data: updatedJob} = await sb.from('jobs').select('*').eq('id', id).single();
-    
-    // Fetch latest documents
-    const {data: docs} = await sb.from('job_documents').select('*').eq('job_id', id).order('created_at',{ascending:false});
 
     if (updatedJob) {
       const statusChanged = updatedJob.status !== currentJob.status;
