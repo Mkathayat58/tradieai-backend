@@ -1380,15 +1380,16 @@ async function viewJob(id) {
 
     if (updatedJob) {
       const statusChanged = updatedJob.status !== currentJob.status;
-      currentJob = {...currentJob, ...updatedJob};
-      allJobs = allJobs.map(j => j.id === id ? {...j, ...updatedJob} : j);
+      // Update currentJob FIRST before any render
+      currentJob = updatedJob;
+      allJobs = allJobs.map(j => j.id === id ? updatedJob : j);
       
-      // Do a full re-render to update everything at once
+      // Now render with fresh data
       await renderJobDetail();
       await loadActivityLog(id);
       
       if (statusChanged) {
-        showToast('Job updated by team member');
+        showToast('Job updated');
       }
     }
   }, 5000);
