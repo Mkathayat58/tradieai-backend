@@ -1550,11 +1550,9 @@ async function goJobs() {
     .on('postgres_changes', {
       event: '*',
       schema: 'public',
-      table: 'jobs',
-      filter: `user_id=eq.${currentUser.id}`
+      table: 'jobs'
     }, async (payload) => {
       await loadJobs();
-      showToast('Job updated by team member');
     })
     .subscribe();
 }
