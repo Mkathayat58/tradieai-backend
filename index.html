@@ -1977,6 +1977,7 @@ async function loadStaffHome() {
   document.getElementById('staff-avatar').textContent = initials;
   document.getElementById('staff-greeting').textContent = 'G\'day '+(userProfile?.firstname||userProfile?.name||'')+' 👋';
   document.getElementById('staff-role-label').textContent = 'Your assigned jobs';
+  populateStaffProfile();
 
   const res = await fetch(BACKEND_URL+'/api/jobs/assigned', {
     headers: { 'Authorization': 'Bearer '+session.access_token }
@@ -2008,6 +2009,7 @@ async function loadStaffHome() {
 function goStaffHome() {
   if (myRole === 'supervisor') { goSupervisorHome(); return; }
   loadStaffHome();
+  populateStaffProfile();
   goTo('screen-staff-home');
 }
 
