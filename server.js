@@ -80,7 +80,7 @@ async function requireAuth(req, res, next) {
 
 // Health check
 app.get('/', (req, res) => {
-  res.json({ status: 'Tradie AI backend running', version: '1.0.0' });
+  res.json({ status: 'Tradie AI backend running', version: '2.0.0' });
 });
 
 // ── AUTH: SIGNUP ──
@@ -88,13 +88,11 @@ app.post('/api/auth/signup', async (req, res) => {
   const { email, password, profile } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
 
-  // Create auth user
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
     email, password, email_confirm: true
   });
   if (authError) return res.status(400).json({ error: authError.message });
 
-  // Create profile
   const { error: profileError } = await supabase.from('profiles').insert({
     id: authData.user.id,
     email,
@@ -159,16 +157,50 @@ app.put('/api/profile', requireAuth, async (req, res) => {
   res.json(data);
 });
 
+// ── STAFF PROFILE: SELF-EDIT (limited fields) ──
+app.put('/api/staff/profile', requireAuth, async (req, res) => {
+  const { phone, emergency_contact_name, emergency_contact_phone, license_number } = req.body;
+  
+  // Only allow staff to edit these specific fields
+  const updateData = {};
+  if (phone !== undefined) updateData.phone = phone;
+  if (emergency_contact_name !== undefined) updateData.emergency_contact_name = emergency_contact_name;
+  if (emergency_contact_phone !== undefined) updateData.emergency_contact_phone = emergency_contact_phone;
+  if (license_number !== undefined) updateData.license_number = license_number;
+  updateData.updated_at = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .update(updateData)
+    .eq('id', req.user.id)
+    .select()
+    .single();
+  if (error) return res.status(400).json({ error: error.message });
+
+  // Also update the team_members record if phone changed
+  if (phone !== undefined) {
+    await supabase.from('team_members').update({ phone }).eq('user_id', req.user.id);
+  }
+
+  res.json(data);
+});
+
 // ── AI: GENERATE ──
 app.post('/api/generate', requireAuth, async (req, res) => {
   const { template, message } = req.body;
   if (!template || !message) return res.status(400).json({ error: 'Template and message required' });
 
-  // Get user profile + check usage
+  // Check if user is a supervisor — if so, use the owner's profile for AI context
+  let profileUserId = req.user.id;
+  const staffCtx = await getStaffMember(req.user.id);
+  if (staffCtx && staffCtx.role === 'supervisor') {
+    profileUserId = staffCtx.teams.owner_user_id;
+  }
+
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('*')
-    .eq('id', req.user.id)
+    .eq('id', profileUserId)
     .single();
   if (profileError) return res.status(404).json({ error: 'Profile not found' });
 
@@ -177,11 +209,10 @@ app.post('/api/generate', requireAuth, async (req, res) => {
   const resetDate = new Date(profile.usage_reset);
   if (now >= resetDate) {
     const nextReset = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
-    await supabase.from('profiles').update({ usage_count: 0, usage_reset: nextReset }).eq('id', req.user.id);
+    await supabase.from('profiles').update({ usage_count: 0, usage_reset: nextReset }).eq('id', profileUserId);
     profile.usage_count = 0;
   }
 
-  // Check limit
   const limit = PLAN_LIMITS[profile.plan] || PLAN_LIMITS.free;
   if (profile.usage_count >= limit) {
     return res.status(429).json({
@@ -192,7 +223,6 @@ app.post('/api/generate', requireAuth, async (req, res) => {
     });
   }
 
-  // Call DeepSeek
   try {
     const systemPrompt = getSystemPrompt(template, profile);
     const deepseekRes = await fetch(DEEPSEEK_URL, {
@@ -221,13 +251,11 @@ app.post('/api/generate', requireAuth, async (req, res) => {
     const output = aiData.choices[0].message.content;
     const tokensUsed = aiData.usage?.total_tokens || 0;
 
-    // Increment usage
     const newCount = profile.usage_count + 1;
-    await supabase.from('profiles').update({ usage_count: newCount }).eq('id', req.user.id);
+    await supabase.from('profiles').update({ usage_count: newCount }).eq('id', profileUserId);
 
-    // Save to history
     const { data: historyItem } = await supabase.from('history').insert({
-      user_id: req.user.id,
+      user_id: profileUserId,
       template,
       input: message,
       output,
@@ -253,7 +281,14 @@ app.post('/api/chat', requireAuth, async (req, res) => {
   const { messages } = req.body;
   if (!messages || !Array.isArray(messages)) return res.status(400).json({ error: 'Messages array required' });
 
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', req.user.id).single();
+  // Supervisor uses owner's profile for context
+  let profileUserId = req.user.id;
+  const staffCtx = await getStaffMember(req.user.id);
+  if (staffCtx && staffCtx.role === 'supervisor') {
+    profileUserId = staffCtx.teams.owner_user_id;
+  }
+
+  const { data: profile } = await supabase.from('profiles').select('*').eq('id', profileUserId).single();
   if (!profile) return res.status(404).json({ error: 'Profile not found' });
 
   const limit = PLAN_LIMITS[profile.plan] || PLAN_LIMITS.free;
@@ -284,7 +319,7 @@ app.post('/api/chat', requireAuth, async (req, res) => {
     const aiData = await deepseekRes.json();
     const reply = aiData.choices[0].message.content;
 
-    await supabase.from('profiles').update({ usage_count: profile.usage_count + 1 }).eq('id', req.user.id);
+    await supabase.from('profiles').update({ usage_count: profile.usage_count + 1 }).eq('id', profileUserId);
 
     res.json({ reply, usage: { used: profile.usage_count + 1, limit, plan: profile.plan } });
 
@@ -342,7 +377,10 @@ app.get('/api/usage', requireAuth, async (req, res) => {
   res.json({ plan: data.plan, used: data.usage_count, limit, reset: data.usage_reset });
 });
 
-// ── START ──
+// ══════════════════════════════════════════════════
+// ── TEAM MANAGEMENT ──
+// ══════════════════════════════════════════════════
+
 // ── TEAM: GET OR CREATE TEAM FOR OWNER ──
 async function getOrCreateTeam(userId) {
   let { data: team } = await supabase.from('teams').select('*').eq('owner_user_id', userId).single();
@@ -353,22 +391,30 @@ async function getOrCreateTeam(userId) {
   return team;
 }
 
-// ── TEAM: CHECK IF USER IS STAFF ──
-async function getStaffContext(userId) {
+// ── TEAM: GET STAFF MEMBER CONTEXT (works for both supervisor and team_member) ──
+async function getStaffMember(userId) {
   const { data } = await supabase
     .from('team_members')
     .select('*, teams(owner_user_id)')
     .eq('user_id', userId)
     .eq('status', 'active')
-    .eq('role', 'staff')
+    .in('role', ['supervisor', 'team_member'])
     .single();
   return data || null;
 }
 
+// Legacy alias
+async function getStaffContext(userId) {
+  return getStaffMember(userId);
+}
+
 // ── TEAM: INVITE STAFF ──
 app.post('/api/team/invite', requireAuth, async (req, res) => {
-  const { name, email } = req.body;
+  const { name, email, role } = req.body;
   if (!name || !email) return res.status(400).json({ error: 'Name and email required' });
+
+  // Validate role — default to team_member if not provided
+  const memberRole = (role === 'supervisor') ? 'supervisor' : 'team_member';
 
   const team = await getOrCreateTeam(req.user.id);
   if (!team) return res.status(500).json({ error: 'Could not create team' });
@@ -391,7 +437,7 @@ app.post('/api/team/invite', requireAuth, async (req, res) => {
       user_id: null,
       name,
       email,
-      role: 'staff',
+      role: memberRole,
       status: 'pending',
       invite_token: inviteToken
     })
@@ -404,9 +450,19 @@ app.post('/api/team/invite', requireAuth, async (req, res) => {
 
   res.json({ success: true, member, link: inviteLink });
 });
+
 // ── TEAM: LIST MEMBERS ──
 app.get('/api/team/members', requireAuth, async (req, res) => {
-  const team = await getOrCreateTeam(req.user.id);
+  // Check if user is a supervisor — if so, get their team
+  const staffCtx = await getStaffMember(req.user.id);
+  let team;
+  if (staffCtx && staffCtx.role === 'supervisor') {
+    // Supervisor can view team members (read-only)
+    const { data } = await supabase.from('teams').select('*').eq('owner_user_id', staffCtx.teams.owner_user_id).single();
+    team = data;
+  } else {
+    team = await getOrCreateTeam(req.user.id);
+  }
   if (!team) return res.json([]);
 
   const { data, error } = await supabase
@@ -418,7 +474,7 @@ app.get('/api/team/members', requireAuth, async (req, res) => {
   res.json(data || []);
 });
 
-// ── TEAM: REMOVE MEMBER ──
+// ── TEAM: REMOVE MEMBER (owner only) ──
 app.delete('/api/team/members/:id', requireAuth, async (req, res) => {
   const team = await getOrCreateTeam(req.user.id);
   if (!team) return res.status(404).json({ error: 'Team not found' });
@@ -430,6 +486,27 @@ app.delete('/api/team/members/:id', requireAuth, async (req, res) => {
     .eq('team_id', team.id);
   if (error) return res.status(400).json({ error: error.message });
   res.json({ success: true });
+});
+
+// ── TEAM: UPDATE MEMBER ROLE (owner only) ──
+app.put('/api/team/members/:id/role', requireAuth, async (req, res) => {
+  const { role } = req.body;
+  if (!role || !['supervisor', 'team_member'].includes(role)) {
+    return res.status(400).json({ error: 'Invalid role. Must be supervisor or team_member.' });
+  }
+
+  const team = await getOrCreateTeam(req.user.id);
+  if (!team) return res.status(404).json({ error: 'Team not found' });
+
+  const { data, error } = await supabase
+    .from('team_members')
+    .update({ role })
+    .eq('id', req.params.id)
+    .eq('team_id', team.id)
+    .select()
+    .single();
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
 });
 
 // ── TEAM: ACTIVATE MEMBER VIA TOKEN ──
@@ -477,12 +554,12 @@ app.post('/api/team/activate', requireAuth, async (req, res) => {
 // ── TEAM: GET MY ROLE ──
 app.get('/api/team/my-role', requireAuth, async (req, res) => {
   // Check by user_id first (already activated)
-  const staffContext = await getStaffContext(req.user.id);
+  const staffContext = await getStaffMember(req.user.id);
   if (staffContext) {
-    return res.json({ role: 'staff', owner_id: staffContext.teams.owner_user_id, member: staffContext });
+    return res.json({ role: staffContext.role, owner_id: staffContext.teams.owner_user_id, member: staffContext });
   }
 
-  // Check by email (pending — first login via magic link)
+  // Check by email (pending — first login)
   const { data: pendingMember } = await supabase
     .from('team_members')
     .select('*, teams(owner_user_id)')
@@ -491,12 +568,91 @@ app.get('/api/team/my-role', requireAuth, async (req, res) => {
     .single();
 
   if (pendingMember) {
-    return res.json({ role: 'staff', owner_id: pendingMember.teams.owner_user_id, member: pendingMember });
+    return res.json({ role: pendingMember.role, owner_id: pendingMember.teams.owner_user_id, member: pendingMember });
   }
 
   // They are an owner
   const { data: team } = await supabase.from('teams').select('id').eq('owner_user_id', req.user.id).single();
   res.json({ role: 'owner', team_id: team?.id || null });
+});
+
+// ── JOBS: GET ALL TEAM JOBS (for supervisors) ──
+app.get('/api/team/jobs', requireAuth, async (req, res) => {
+  const staffCtx = await getStaffMember(req.user.id);
+  if (!staffCtx || staffCtx.role !== 'supervisor') {
+    return res.status(403).json({ error: 'Supervisors only' });
+  }
+
+  const ownerId = staffCtx.teams.owner_user_id;
+  const { data, error } = await supabase
+    .from('jobs')
+    .select('*')
+    .eq('user_id', ownerId)
+    .order('created_at', { ascending: false });
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data || []);
+});
+
+// ── JOBS: SUPERVISOR ASSIGN JOB ──
+app.put('/api/team/jobs/:id/assign', requireAuth, async (req, res) => {
+  const { assigned_to } = req.body;
+  const staffCtx = await getStaffMember(req.user.id);
+  if (!staffCtx || staffCtx.role !== 'supervisor') {
+    return res.status(403).json({ error: 'Supervisors only' });
+  }
+
+  const ownerId = staffCtx.teams.owner_user_id;
+  const { data, error } = await supabase
+    .from('jobs')
+    .update({ assigned_to: assigned_to || null, updated_at: new Date().toISOString() })
+    .eq('id', req.params.id)
+    .eq('user_id', ownerId)
+    .select()
+    .single();
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+
+// ── JOBS: SUPERVISOR UPDATE STATUS ──
+app.put('/api/team/jobs/:id/status', requireAuth, async (req, res) => {
+  const { status } = req.body;
+  const staffCtx = await getStaffMember(req.user.id);
+  if (!staffCtx || staffCtx.role !== 'supervisor') {
+    return res.status(403).json({ error: 'Supervisors only' });
+  }
+
+  const validStatuses = ['New', 'Quoted', 'Accepted', 'Declined', 'In Progress', 'Completed', 'Invoiced', 'Paid'];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ error: 'Invalid status' });
+  }
+
+  const ownerId = staffCtx.teams.owner_user_id;
+  const { data, error } = await supabase
+    .from('jobs')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', req.params.id)
+    .eq('user_id', ownerId)
+    .select()
+    .single();
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data);
+});
+
+// ── TEAM: GET CUSTOMERS (for supervisors) ──
+app.get('/api/team/customers', requireAuth, async (req, res) => {
+  const staffCtx = await getStaffMember(req.user.id);
+  if (!staffCtx || staffCtx.role !== 'supervisor') {
+    return res.status(403).json({ error: 'Supervisors only' });
+  }
+
+  const ownerId = staffCtx.teams.owner_user_id;
+  const { data, error } = await supabase
+    .from('customers')
+    .select('*')
+    .eq('user_id', ownerId)
+    .order('created_at', { ascending: false });
+  if (error) return res.status(400).json({ error: error.message });
+  res.json(data || []);
 });
 
 // ── JOBS: GET FOR STAFF (only assigned jobs) ──
@@ -535,6 +691,7 @@ app.get('/api/jobs/:id/activity', requireAuth, async (req, res) => {
   if (error) return res.status(400).json({ error: error.message });
   res.json(data || []);
 });
+
 // ── TEAM: RESEND INVITE ──
 app.post('/api/team/resend-invite', requireAuth, async (req, res) => {
   const { email } = req.body;
@@ -545,7 +702,6 @@ app.post('/api/team/resend-invite', requireAuth, async (req, res) => {
   });
 
   if (error) {
-    // If rate limited, generate a magic link instead
     const { data: users } = await supabase.auth.admin.listUsers();
     const user = users?.users?.find(u => u.email === email);
     if (user) {
@@ -561,16 +717,17 @@ app.post('/api/team/resend-invite', requireAuth, async (req, res) => {
 
   res.json({ success: true });
 });
+
 // ── TEAM: VALIDATE INVITE TOKEN (public) ──
 app.get('/api/team/invite/:token', async (req, res) => {
   const { data, error } = await supabase
     .from('team_members')
-    .select('name, email, status')
+    .select('name, email, status, role')
     .eq('invite_token', req.params.token)
     .single();
   if (error || !data) return res.status(404).json({ error: 'Invalid or expired invite link' });
   if (data.status === 'active') return res.status(400).json({ error: 'This invite has already been used' });
-  res.json({ name: data.name, email: data.email });
+  res.json({ name: data.name, email: data.email, role: data.role });
 });
 
 app.listen(PORT, () => console.log(`Tradie AI backend running on port ${PORT}`));

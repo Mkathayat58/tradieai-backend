@@ -17,6 +17,7 @@
   --text:#1A1A1A;--text-mid:#555550;--text-muted:#888780;
   --border:#E0DED8;--bg:#F4F3EF;--surface:#FFFFFF;--surface2:#F8F7F4;
   --red:#A32D2D;--red-light:#FCEBEB;--amber:#854F0B;--amber-light:#FAEEDA;
+  --blue:#0C447C;--blue-light:#E6F1FB;
   --radius:14px;--radius-sm:10px;--radius-xs:6px;
 }
 html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased;}
@@ -234,6 +235,9 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 .team-status-badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;flex-shrink:0;}
 .team-status-pending{background:var(--amber-light);color:var(--amber);}
 .team-status-active{background:var(--green-light);color:var(--green-dark);}
+.team-role-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0;}
+.team-role-supervisor{background:var(--blue-light);color:var(--blue);}
+.team-role-team_member{background:var(--surface2);color:var(--text-muted);}
 .activity-log{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:12px;}
 .activity-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-bottom:0.5px solid var(--border);}
 .activity-item:last-child{border-bottom:none;}
@@ -557,7 +561,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
       </div>
       <div style="margin-top:10px;"><button class="btn" onclick="goUpgrade()"><i class="ti ti-crown"></i> Upgrade plan</button></div>
     </div>
-  <div class="settings-section">
+    <div class="settings-section">
       <div class="settings-section-title">Team</div>
       <div class="settings-card">
         <div class="settings-row" onclick="goTeam()" style="cursor:pointer;">
@@ -637,7 +641,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
   <div class="settings-header">
     <div class="settings-topbar" style="justify-content:space-between;">
       <span class="settings-title">Jobs</span>
-      <button onclick="goNewJob()" style="background:var(--green-light);border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--green);cursor:pointer;display:flex;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent;"><i class="ti ti-plus" style="font-size:16px;"></i> New job</button>
+      <button id="new-job-btn" onclick="goNewJob()" style="background:var(--green-light);border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--green);cursor:pointer;display:flex;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent;"><i class="ti ti-plus" style="font-size:16px;"></i> New job</button>
     </div>
   </div>
   <div style="padding:12px 16px;background:var(--green);display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-shrink:0;">
@@ -654,7 +658,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     <span style="font-size:16px;font-weight:700;color:#E1F5EE;" id="pipeline-value">$0</span>
   </div>
   <div id="jobs-list" style="flex:1;overflow-y:auto;padding:16px;"></div>
-  <nav class="bottom-nav">
+  <nav class="bottom-nav" id="jobs-bottom-nav">
     <button class="nav-btn" onclick="goHome()"><i class="ti ti-home"></i><span>Home</span></button>
     <button class="nav-btn active" onclick="goJobs()"><i class="ti ti-briefcase"></i><span>Jobs</span></button>
     <button class="nav-btn" onclick="goHistory()"><i class="ti ti-clock"></i><span>History</span></button>
@@ -702,10 +706,10 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
       <button class="back-btn" onclick="goJobs()"><i class="ti ti-arrow-left"></i></button>
       <span class="tpl-header-title" id="jd-number">JOB-0001</span>
     </div>
-    <button onclick="editCurrentJob()" style="background:none;border:none;color:var(--green-mid);font-size:13px;cursor:pointer;font-weight:500;-webkit-tap-highlight-color:transparent;">Edit</button>
+    <button id="jd-edit-btn" onclick="editCurrentJob()" style="background:none;border:none;color:var(--green-mid);font-size:13px;cursor:pointer;font-weight:500;-webkit-tap-highlight-color:transparent;">Edit</button>
   </div>
   <div id="job-detail-body" style="flex:1;overflow-y:auto;"></div>
-  <nav class="bottom-nav">
+  <nav class="bottom-nav" id="jd-bottom-nav">
     <button class="nav-btn" onclick="goHome()"><i class="ti ti-home"></i><span>Home</span></button>
     <button class="nav-btn active" onclick="goJobs()"><i class="ti ti-briefcase"></i><span>Jobs</span></button>
     <button class="nav-btn" onclick="goHistory()"><i class="ti ti-clock"></i><span>History</span></button>
@@ -713,6 +717,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     <button class="nav-btn" onclick="goUpgrade()"><i class="ti ti-crown"></i><span>Upgrade</span></button>
   </nav>
 </div>
+
 <!-- TEAM MANAGEMENT (owner) -->
 <div class="screen" id="screen-team">
   <div class="settings-header">
@@ -722,11 +727,17 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     </div>
   </div>
   <div class="settings-body">
-    <div class="settings-section">
+    <div class="settings-section" id="invite-section">
       <div class="settings-section-title">Invite a staff member</div>
       <div class="settings-card" style="padding:16px;">
         <div class="field" style="margin-bottom:12px;"><label>Full name</label><input type="text" id="invite-name" placeholder="e.g. Dave Smith"></div>
         <div class="field" style="margin-bottom:12px;"><label>Email address</label><input type="email" id="invite-email" placeholder="e.g. dave@email.com"></div>
+        <div class="field" style="margin-bottom:12px;"><label>Role</label>
+          <select id="invite-role">
+            <option value="team_member">Team Member — sees assigned jobs only</option>
+            <option value="supervisor">Supervisor — sees all jobs, can assign & use AI</option>
+          </select>
+        </div>
         <button class="btn" style="margin-bottom:0;" onclick="inviteStaff()"><i class="ti ti-send"></i> Send invite</button>
       </div>
     </div>
@@ -736,6 +747,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     </div>
   </div>
 </div>
+
 <!-- STAFF SET PASSWORD -->
 <div class="screen" id="screen-staff-setpassword">
   <div class="auth-header">
@@ -747,7 +759,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
       <i class="ti ti-user-check" style="font-size:20px;color:var(--green);flex-shrink:0;"></i>
       <div>
         <div style="font-size:13px;font-weight:600;color:var(--green-dark);margin-bottom:2px;" id="staff-invite-greeting">You've been invited!</div>
-        <div style="font-size:12px;color:var(--green-dark);line-height:1.4;">Set your password below to access your assigned jobs.</div>
+        <div style="font-size:12px;color:var(--green-dark);line-height:1.4;" id="staff-invite-role-hint">Set your password below to access your assigned jobs.</div>
       </div>
     </div>
     <div class="field"><label>Your email</label><input type="email" id="staff-invite-email" disabled style="opacity:0.6;background:var(--surface2);"></div>
@@ -761,23 +773,88 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     <button class="btn" onclick="staffSetPassword()"><i class="ti ti-check"></i> Set password & join team</button>
   </div>
 </div>
-<!-- STAFF HOME -->
+
+<!-- STAFF HOME (Team Member) -->
 <div class="screen" id="screen-staff-home">
   <div class="staff-home-header">
     <div class="home-topbar">
       <span class="home-logo">Tradie AI</span>
-      <button class="avatar-btn" id="staff-avatar">DK</button>
+      <button class="avatar-btn" id="staff-avatar" onclick="goTo('screen-staff-profile')">DK</button>
     </div>
     <div class="home-greeting" id="staff-greeting">G'day 👋</div>
-    <div class="home-sub">Your assigned jobs</div>
+    <div class="home-sub" id="staff-role-label">Your assigned jobs</div>
   </div>
   <div style="flex:1;overflow-y:auto;padding:16px;" id="staff-jobs-list">
     <div class="empty-state" style="padding:40px 20px;text-align:center;color:var(--text-muted);">No jobs assigned yet</div>
   </div>
-  <div style="background:var(--surface);border-top:0.5px solid var(--border);padding:14px 20px max(env(safe-area-inset-bottom),14px);flex-shrink:0;">
-    <button class="btn btn-danger" style="margin-bottom:0;" onclick="doLogout()"><i class="ti ti-logout"></i> Log out</button>
+  <nav class="bottom-nav" id="staff-bottom-nav">
+    <button class="nav-btn active" onclick="goStaffHome()"><i class="ti ti-briefcase"></i><span>My Jobs</span></button>
+    <button class="nav-btn" onclick="goTo('screen-staff-profile')"><i class="ti ti-user"></i><span>My Profile</span></button>
+  </nav>
+</div>
+
+<!-- SUPERVISOR HOME -->
+<div class="screen" id="screen-supervisor-home">
+  <div class="home-header">
+    <div class="home-topbar">
+      <span class="home-logo">Tradie AI</span>
+      <button class="avatar-btn" id="sup-avatar" onclick="goTo('screen-staff-profile')">DK</button>
+    </div>
+    <div class="home-greeting" id="sup-greeting">G'day 👋</div>
+    <div class="home-sub"><span style="background:var(--green-dark);padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600;">SUPERVISOR</span></div>
+    <div class="usage-pill">
+      <div class="usage-row"><span class="usage-lbl">Team messages this month</span><span class="usage-val" id="sup-usage-count">0 / 50</span></div>
+      <div class="usage-track"><div class="usage-fill" id="sup-usage-bar" style="width:0%"></div></div>
+    </div>
+  </div>
+  <div class="home-body">
+    <div class="section-label">What do you need?</div>
+    <div class="tpl-grid">
+      <div class="tpl-card" onclick="openTemplate('quote')"><i class="ti ti-file-invoice tpl-icon"></i><div class="tpl-name">Write a quote</div><div class="tpl-desc">Parts, labour & GST</div></div>
+      <div class="tpl-card" onclick="openTemplate('email')"><i class="ti ti-mail tpl-icon"></i><div class="tpl-name">Customer email</div><div class="tpl-desc">Reply or follow up</div></div>
+      <div class="tpl-card" onclick="openTemplate('complaint')"><i class="ti ti-mood-angry tpl-icon"></i><div class="tpl-name">Complaint reply</div><div class="tpl-desc">Stay professional</div></div>
+      <div class="tpl-card" onclick="openTemplate('chat')"><i class="ti ti-message-2 tpl-icon"></i><div class="tpl-name">Free chat</div><div class="tpl-desc">Ask me anything</div></div>
+    </div>
+  </div>
+  <nav class="bottom-nav">
+    <button class="nav-btn active" onclick="goSupervisorHome()"><i class="ti ti-home"></i><span>Home</span></button>
+    <button class="nav-btn" onclick="goSupervisorJobs()"><i class="ti ti-briefcase"></i><span>Jobs</span></button>
+    <button class="nav-btn" onclick="goSupervisorTeam()"><i class="ti ti-users"></i><span>Team</span></button>
+    <button class="nav-btn" onclick="goTo('screen-staff-profile')"><i class="ti ti-user"></i><span>Profile</span></button>
+  </nav>
+</div>
+
+<!-- STAFF PROFILE (self-edit for both team_member and supervisor) -->
+<div class="screen" id="screen-staff-profile">
+  <div class="settings-header">
+    <div class="settings-topbar">
+      <button class="back-btn" onclick="goStaffHome()"><i class="ti ti-arrow-left"></i></button>
+      <span class="settings-title">My Profile</span>
+    </div>
+  </div>
+  <div class="settings-body">
+    <div class="settings-section">
+      <div class="settings-section-title">Your details</div>
+      <div class="settings-card">
+        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-user"></i><span class="settings-row-label">Name</span></div><span class="settings-row-val" id="sp-name">—</span></div>
+        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-mail"></i><span class="settings-row-label">Email</span></div><span class="settings-row-val" id="sp-email">—</span></div>
+        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-shield"></i><span class="settings-row-label">Role</span></div><span class="settings-row-val" id="sp-role" style="text-transform:capitalize;">—</span></div>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">Editable details</div>
+      <div class="field"><label>Phone number</label><input type="tel" id="sp-phone" placeholder="e.g. 0412 345 678"></div>
+      <div class="field"><label>Emergency contact name</label><input type="text" id="sp-ec-name" placeholder="e.g. Jane Smith"></div>
+      <div class="field"><label>Emergency contact phone</label><input type="tel" id="sp-ec-phone" placeholder="e.g. 0400 111 222"></div>
+      <div class="field"><label>Licence / ticket number</label><input type="text" id="sp-license" placeholder="e.g. White card 12345 or REC 67890"></div>
+      <button class="btn" onclick="saveStaffProfile()"><i class="ti ti-check"></i> Save changes</button>
+    </div>
+    <div class="settings-section">
+      <button class="btn btn-danger" style="margin-bottom:0;" onclick="doLogout()"><i class="ti ti-logout"></i> Log out</button>
+    </div>
   </div>
 </div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
@@ -787,26 +864,15 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const BACKEND_URL = 'https://tradieai-backend.onrender.com';
 const PLAN_LIMITS = { free:50, starter:100, pro:500, power:2000 };
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
-  }
+  auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true }
 });
 
-// Auto handle token refresh and session expiry
 sb.auth.onAuthStateChange(async (event, session) => {
-  if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-    if (event === 'SIGNED_OUT') {
-      currentUser = null;
-      userProfile = null;
-      localHistory = [];
-      allJobs = [];
-      currentJob = null;
-      goTo('screen-landing');
-    } else if (event === 'TOKEN_REFRESHED' && session) {
-      currentUser = session.user;
-    }
+  if (event === 'SIGNED_OUT') {
+    currentUser = null; userProfile = null; localHistory = []; allJobs = []; currentJob = null;
+    goTo('screen-landing');
+  } else if (event === 'TOKEN_REFRESHED' && session) {
+    currentUser = session.user;
   }
 });
 
@@ -818,6 +884,8 @@ let localHistory = [];
 let allJobs = [];
 let currentJob = null;
 let currentFilter = 'all';
+let myRole = 'owner';
+let staffContext = null;
 
 const templates = {
   quote:     { title:'Write a quote',   badge:'Quote',     loadingType:'quote',     hint:'Describe the job in plain language — what needs doing, parts cost, and your total charge including GST.',     label:'Describe the job',          placeholder:'e.g. Replace 10 powerpoints and 3 light fittings in Footscray. Parts $180, charging $520 all up inc GST.' },
@@ -827,12 +895,10 @@ const templates = {
   followup:  { title:'Follow up',       badge:'Follow-up', loadingType:'follow-up', hint:'Tell me what you quoted, how long ago, and any details. I will write a short confident follow-up.',         label:'What are you following up?', placeholder:'e.g. Sent a kitchen rewire quote 2 weeks ago for $1,800. No reply. Follow up without sounding desperate.' },
   chat:      { title:'Free chat',       badge:'Chat',      loadingType:'answer',    hint:'Ask me anything — pricing advice, how to handle a situation, what to charge, business questions.',          label:'Your question',              placeholder:'e.g. What should I charge per hour for an electrician in Melbourne in 2026?' }
 };
+
 async function getToken() {
   const { data: { session } } = await sb.auth.getSession();
-  if (!session) {
-    goTo('screen-landing');
-    return null;
-  }
+  if (!session) { goTo('screen-landing'); return null; }
   return session.access_token;
 }
 function goTo(id) {
@@ -854,7 +920,9 @@ function togglePw(id, btn) {
   else { inp.type='password'; btn.innerHTML='<i class="ti ti-eye"></i>'; }
 }
 
+// ══════════════════════════════════════
 // AUTH
+// ══════════════════════════════════════
 async function doSignup() {
   hideError('signup-error');
   const email = document.getElementById('su-email').value.trim();
@@ -900,16 +968,18 @@ async function doForgot() {
 }
 async function doLogout() {
   await sb.auth.signOut();
-  currentUser=null; userProfile=null; localHistory=[]; allJobs=[]; currentJob=null;
+  currentUser=null; userProfile=null; localHistory=[]; allJobs=[]; currentJob=null; myRole='owner'; staffContext=null;
   goTo('screen-landing');
 }
 
-// PROFILE
+// ══════════════════════════════════════
+// PROFILE + ROLE ROUTING
+// ══════════════════════════════════════
 async function loadProfile() {
   const {data, error} = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
-  
-  // Check if this user is a staff member first
   const session = (await sb.auth.getSession()).data.session;
+
+  // Check role
   const roleRes = await fetch(BACKEND_URL+'/api/team/my-role', {
     headers: { 'Authorization': 'Bearer '+session.access_token }
   });
@@ -917,21 +987,17 @@ async function loadProfile() {
   myRole = roleData.role;
   staffContext = roleData.member || null;
 
-  if (myRole === 'staff') {
-    // Activate if first login
+  // ── TEAM MEMBER ──
+  if (myRole === 'team_member') {
     await fetch(BACKEND_URL+'/api/team/activate', {
       method: 'POST',
       headers: { 'Authorization': 'Bearer '+session.access_token }
     });
-    // Create minimal profile if needed
     if (error || !data) {
       await sb.from('profiles').upsert({
-        id: currentUser.id,
-        email: currentUser.email,
-        name: roleData.member?.name || '',
-        firstname: roleData.member?.name?.split(' ')[0] || '',
-        plan: 'free',
-        usage_count: 0,
+        id: currentUser.id, email: currentUser.email,
+        name: roleData.member?.name || '', firstname: roleData.member?.name?.split(' ')[0] || '',
+        plan: 'free', usage_count: 0,
         usage_reset: new Date(new Date().getFullYear(), new Date().getMonth()+1, 1).toISOString()
       });
       const {data: staffProfile} = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
@@ -944,13 +1010,37 @@ async function loadProfile() {
     return;
   }
 
-  // Owner flow — normal
+  // ── SUPERVISOR ──
+  if (myRole === 'supervisor') {
+    await fetch(BACKEND_URL+'/api/team/activate', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer '+session.access_token }
+    });
+    if (error || !data) {
+      await sb.from('profiles').upsert({
+        id: currentUser.id, email: currentUser.email,
+        name: roleData.member?.name || '', firstname: roleData.member?.name?.split(' ')[0] || '',
+        plan: 'free', usage_count: 0,
+        usage_reset: new Date(new Date().getFullYear(), new Date().getMonth()+1, 1).toISOString()
+      });
+      const {data: supProfile} = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+      userProfile = supProfile;
+    } else {
+      userProfile = data;
+    }
+    await loadSupervisorHome();
+    goTo('screen-supervisor-home');
+    return;
+  }
+
+  // ── OWNER ──
   if (error||!data) { goTo('screen-onboard'); return; }
   userProfile = data;
   initHome();
   await loadHistory();
   goTo('screen-home');
 }
+
 async function saveProfile(profile) {
   const {error} = await sb.from('profiles').upsert({id:currentUser.id, email:currentUser.email, ...profile});
   if (error) { showToast('Could not save profile — please try again', true); return false; }
@@ -958,7 +1048,9 @@ async function saveProfile(profile) {
   return true;
 }
 
+// ══════════════════════════════════════
 // ONBOARDING
+// ══════════════════════════════════════
 let obTrade = 'Electrician';
 function selectTrade(el) {
   document.querySelectorAll('.trade-opt').forEach(o => o.classList.remove('selected'));
@@ -1002,7 +1094,9 @@ async function obNext(step) {
   }
 }
 
-// HOME
+// ══════════════════════════════════════
+// HOME (Owner)
+// ══════════════════════════════════════
 function initHome() {
   if (!userProfile) return;
   const initials = (userProfile.firstname||userProfile.name||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
@@ -1017,7 +1111,8 @@ function updateUsage() {
   const pct = Math.min((used/limit)*100,100);
   document.getElementById('usage-count').textContent = used+' / '+limit;
   document.getElementById('usage-bar').style.width = pct+'%';
-  document.getElementById('s-usage').textContent = used+' / '+limit;
+  const sUsage = document.getElementById('s-usage');
+  if (sUsage) sUsage.textContent = used+' / '+limit;
 }
 function renderRecent() {
   const list = document.getElementById('recent-list');
@@ -1044,7 +1139,6 @@ function updateSettings() {
   document.getElementById('sv-abn').textContent = userProfile.abn||'—';
   document.getElementById('sv-terms').textContent = userProfile.terms||'—';
   document.getElementById('s-plan').textContent = (userProfile.plan||'free').charAt(0).toUpperCase()+(userProfile.plan||'free').slice(1);
-  document.getElementById('s-usage').textContent = (userProfile.usage_count||0)+' / '+(PLAN_LIMITS[userProfile.plan]||50);
 }
 function toggleEditProfile() {
   document.getElementById('profile-view').style.display='none';
@@ -1090,7 +1184,9 @@ async function saveProfileSettings() {
   initHome();
 }
 
+// ══════════════════════════════════════
 // HISTORY
+// ══════════════════════════════════════
 async function loadHistory() {
   const {data, error} = await sb.from('history').select('*').eq('user_id', currentUser.id).order('created_at',{ascending:false}).limit(20);
   if (error||!data) return;
@@ -1125,7 +1221,9 @@ function renderHistoryPage() {
     </div>`).join('')+'</div>';
 }
 
-// TEMPLATE
+// ══════════════════════════════════════
+// TEMPLATE + AI
+// ══════════════════════════════════════
 function openTemplate(type) {
   if (type==='chat') { loadChatHistory(); goTo('screen-chat'); return; }
   currentTemplate = type;
@@ -1143,8 +1241,6 @@ function updateChar() { document.getElementById('char-count').textContent = docu
 async function sendToAI() {
   const input = document.getElementById('job-input').value.trim();
   if (!input) return showToast('Please describe the job first');
-  const limit = PLAN_LIMITS[userProfile?.plan]||50;
-  if ((userProfile?.usage_count||0)>=limit) { goUpgrade(); return; }
   const t = templates[currentTemplate];
   document.getElementById('loading-type').textContent = t.loadingType;
   goTo('screen-loading');
@@ -1204,8 +1300,6 @@ function shareResult() {
 async function sendChat() {
   const input = document.getElementById('chat-input').value.trim();
   if (!input) return;
-  const limit = PLAN_LIMITS[userProfile?.plan]||50;
-  if ((userProfile?.usage_count||0)>=limit) { goUpgrade(); return; }
   document.getElementById('chat-input').value='';
   document.getElementById('chat-send').disabled=true;
   autoResize(document.getElementById('chat-input'));
@@ -1235,11 +1329,22 @@ function scrollChat() { const c=document.getElementById('chat-messages'); c.scro
 function chatKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();} }
 function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
 
-// JOBS
+// ══════════════════════════════════════
+// JOBS (Owner + Supervisor shared logic)
+// ══════════════════════════════════════
 async function loadJobs() {
-  const {data, error} = await sb.from('jobs').select('*').eq('user_id', currentUser.id).order('created_at',{ascending:false});
-  if (error) return;
-  allJobs = data||[];
+  if (myRole === 'supervisor') {
+    // Supervisor loads ALL team jobs via backend
+    const session = (await sb.auth.getSession()).data.session;
+    const res = await fetch(BACKEND_URL+'/api/team/jobs', {
+      headers: { 'Authorization': 'Bearer '+session.access_token }
+    });
+    allJobs = await res.json();
+  } else {
+    const {data, error} = await sb.from('jobs').select('*').eq('user_id', currentUser.id).order('created_at',{ascending:false});
+    if (error) return;
+    allJobs = data||[];
+  }
   renderJobs();
   updatePipeline();
 }
@@ -1287,6 +1392,7 @@ function goNewJob() {
   document.getElementById('jf-customer').value='';
   document.getElementById('jf-phone').value='';
   document.getElementById('jf-email').value='';
+  document.getElementById('jf-job-address').value='';
   document.getElementById('jf-description').value='';
   document.getElementById('jf-value').value='';
   document.getElementById('jf-due').value='';
@@ -1323,7 +1429,7 @@ async function saveJob() {
   const btn = document.getElementById('job-save-btn');
   btn.disabled=true; btn.innerHTML='<i class="ti ti-loader"></i> Saving...';
   const jobData = {
-    user_id: currentUser.id,
+    user_id: myRole === 'supervisor' ? staffContext.teams.owner_user_id : currentUser.id,
     assigned_to: document.getElementById('jf-assigned').value || null,
     job_address: document.getElementById('jf-job-address').value.trim(),
     customer_name: customer,
@@ -1351,6 +1457,7 @@ async function saveJob() {
   showToast('Job saved ✓');
   viewJob(currentJob.id);
 }
+
 let jobPollInterval = null;
 var _pollJobId = null;
 
@@ -1358,6 +1465,15 @@ async function viewJob(id) {
   currentJob = allJobs.find(j => j.id===id);
   if (!currentJob) return;
   document.getElementById('jd-number').textContent = currentJob.job_number;
+
+  // Show/hide edit button based on role
+  const editBtn = document.getElementById('jd-edit-btn');
+  if (myRole === 'team_member') {
+    editBtn.style.display = 'none';
+  } else {
+    editBtn.style.display = '';
+  }
+
   await renderJobDetail();
   goTo('screen-job-detail');
   await loadActivityLog(currentJob.id);
@@ -1370,8 +1486,7 @@ async function viewJob(id) {
 async function pollJobUpdates() {
   try {
     if (!document.getElementById('screen-job-detail').classList.contains('active')) {
-      clearInterval(jobPollInterval);
-      return;
+      clearInterval(jobPollInterval); return;
     }
     var jobRes = await sb.from('jobs').select('*').eq('id', _pollJobId).single();
     var docRes = await sb.from('job_documents').select('*').eq('job_id', _pollJobId).order('created_at',{ascending:false});
@@ -1388,19 +1503,14 @@ async function pollJobUpdates() {
       }
       var btns = document.querySelectorAll('#job-detail-body .status-select-btn');
       for (var i = 0; i < btns.length; i++) {
-        if (btns[i].textContent.trim() === fresh.status) {
-          btns[i].classList.add('active-status');
-        } else {
-          btns[i].classList.remove('active-status');
-        }
+        if (btns[i].textContent.trim() === fresh.status) btns[i].classList.add('active-status');
+        else btns[i].classList.remove('active-status');
       }
       if (docRes.data) renderDocsList(docRes.data);
       await loadActivityLog(_pollJobId);
       if (changed) showToast('Status updated to ' + fresh.status);
     }
-  } catch(err) {
-    console.error('Poll error:', err);
-  }
+  } catch(err) { console.error('Poll error:', err); }
 }
 
 async function renderJobDetail() {
@@ -1421,6 +1531,26 @@ async function renderJobDetail() {
       </button>
     </div>`).join('') : '<div class="empty-state" style="padding:16px;">No documents yet</div>';
 
+  // Determine which statuses this role can update to
+  let statusButtons = '';
+  if (myRole === 'team_member') {
+    statusButtons = ['In Progress','Completed'].map(s => `
+      <button class="status-select-btn ${currentJob.status===s?'active-status':''}" onclick="staffStatusUpdate('${s}')">${s}</button>`).join('');
+  } else {
+    statusButtons = ['New','Quoted','In Progress','Completed','Invoiced','Paid'].map(s => `
+      <button class="status-select-btn ${currentJob.status===s?'active-status':''}" onclick="confirmStatusUpdate('${s}')">${s}</button>`).join('');
+  }
+
+  // Actions section — hide for team members
+  const actionsHtml = myRole === 'team_member' ? '' : `
+    <div class="section-label">Actions</div>
+    <div class="action-grid">
+      ${currentJob.customer_phone ? `<div class="action-card" onclick="window.location.href='tel:${currentJob.customer_phone}'"><i class="ti ti-phone-call"></i><span>Call customer</span></div>` : ''}
+      <div class="action-card" onclick="openTemplateForJob('quote')"><i class="ti ti-file-invoice"></i><span>Write quote</span></div>
+      <div class="action-card" onclick="openTemplateForJob('email')"><i class="ti ti-mail"></i><span>Send email</span></div>
+      <div class="action-card" onclick="openTemplateForJob('followup')"><i class="ti ti-clock"></i><span>Follow up</span></div>
+    </div>`;
+
   document.getElementById('job-detail-body').innerHTML = `
     <div style="padding:16px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
@@ -1431,23 +1561,15 @@ async function renderJobDetail() {
         <div class="detail-row"><span class="detail-label"><i class="ti ti-user"></i>Customer</span><span class="detail-val">${currentJob.customer_name}</span></div>
         ${currentJob.customer_phone ? `<div class="detail-row"><span class="detail-label"><i class="ti ti-phone"></i>Phone</span><a href="tel:${currentJob.customer_phone}" style="font-size:13px;color:var(--green);font-weight:500;text-decoration:none;">${currentJob.customer_phone} <i class="ti ti-phone-call" style="font-size:13px;"></i></a></div>` : ''}
         ${currentJob.customer_email ? `<div class="detail-row"><span class="detail-label"><i class="ti ti-mail"></i>Email</span><span class="detail-val">${currentJob.customer_email}</span></div>` : ''}
+        ${currentJob.job_address ? `<div class="detail-row"><span class="detail-label"><i class="ti ti-map-pin"></i>Address</span><span class="detail-val" style="max-width:200px;white-space:normal;text-align:right;">${currentJob.job_address}</span></div>` : ''}
         <div class="detail-row"><span class="detail-label"><i class="ti ti-file-description"></i>Description</span><span class="detail-val" style="max-width:200px;white-space:normal;text-align:right;">${currentJob.description}</span></div>
-        ${currentJob.value ? `<div class="detail-row"><span class="detail-label"><i class="ti ti-currency-dollar"></i>Value</span><span class="detail-val" style="color:var(--green);">$${parseFloat(currentJob.value).toLocaleString('en-AU')}</span></div>` : ''}
+        ${currentJob.value && myRole !== 'team_member' ? `<div class="detail-row"><span class="detail-label"><i class="ti ti-currency-dollar"></i>Value</span><span class="detail-val" style="color:var(--green);">$${parseFloat(currentJob.value).toLocaleString('en-AU')}</span></div>` : ''}
         ${currentJob.due_date ? `<div class="detail-row"><span class="detail-label"><i class="ti ti-calendar"></i>Due date</span><span class="detail-val ${isOverdue?'overdue':''}">${new Date(currentJob.due_date).toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'long'})}</span></div>` : ''}
         ${currentJob.notes ? `<div class="detail-row"><span class="detail-label"><i class="ti ti-notes"></i>Notes</span><span class="detail-val" style="max-width:200px;white-space:normal;text-align:right;">${currentJob.notes}</span></div>` : ''}
       </div>
       <div class="section-label">Update status</div>
-      <div class="status-select-grid">
-        ${['New','Quoted','In Progress','Completed','Invoiced','Paid'].map(s => `
-          <button class="status-select-btn ${currentJob.status===s?'active-status':''}" onclick="confirmStatusUpdate('${s}')">${s}</button>`).join('')}
-      </div>
-      <div class="section-label">Actions</div>
-      <div class="action-grid">
-        ${currentJob.customer_phone ? `<div class="action-card" onclick="window.location.href='tel:${currentJob.customer_phone}'"><i class="ti ti-phone-call"></i><span>Call customer</span></div>` : ''}
-        <div class="action-card" onclick="openTemplateForJob('quote')"><i class="ti ti-file-invoice"></i><span>Write quote</span></div>
-        <div class="action-card" onclick="openTemplateForJob('email')"><i class="ti ti-mail"></i><span>Send email</span></div>
-        <div class="action-card" onclick="openTemplateForJob('followup')"><i class="ti ti-clock"></i><span>Follow up</span></div>
-      </div>
+      <div class="status-select-grid">${statusButtons}</div>
+      ${actionsHtml}
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
         <div class="section-label" style="margin-bottom:0;">Documents</div>
         <button onclick="triggerDocUpload()" style="background:var(--green-light);border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--green);cursor:pointer;display:flex;align-items:center;gap:5px;-webkit-tap-highlight-color:transparent;"><i class="ti ti-upload" style="font-size:14px;"></i> Upload</button>
@@ -1458,6 +1580,7 @@ async function renderJobDetail() {
       <div class="activity-log" id="activity-log"><div class="empty-state" style="padding:16px;">Loading...</div></div>
     </div>`;
 }
+
 function viewJobDoc(id, type) {
   sb.from('job_documents').select('*').eq('id',id).single().then(({data}) => {
     if (!data) return;
@@ -1481,7 +1604,6 @@ function confirmStatusUpdate(status) {
     </div>`;
   document.body.appendChild(overlay);
 }
-
 async function applyStatusUpdate(status) {
   const overlay = document.getElementById('status-overlay');
   if (overlay) overlay.remove();
@@ -1493,17 +1615,11 @@ async function applyStatusUpdate(status) {
   await renderJobDetail();
   await loadActivityLog(currentJob.id);
 }
-
-function triggerDocUpload() {
-  document.getElementById('doc-upload-input').click();
-}
+function triggerDocUpload() { document.getElementById('doc-upload-input').click(); }
 function renderDocsList(docs) {
   const docsList = document.getElementById('docs-list');
   if (!docsList) return;
-  if (!docs || !docs.length) {
-    docsList.innerHTML = '<div class="empty-state" style="padding:16px;">No documents yet</div>';
-    return;
-  }
+  if (!docs || !docs.length) { docsList.innerHTML = '<div class="empty-state" style="padding:16px;">No documents yet</div>'; return; }
   docsList.innerHTML = docs.map(d => `
     <div class="doc-item" style="justify-content:space-between;">
       <div style="display:flex;align-items:flex-start;gap:10px;flex:1;min-width:0;" onclick="viewJobDoc('${d.id}','${d.type}')">
@@ -1518,32 +1634,6 @@ function renderDocsList(docs) {
       </button>
     </div>`).join('');
 }
-async function deleteStaffDoc(docId) {
-  const overlay = document.createElement('div');
-  overlay.id = 'delete-staff-doc-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:flex-end;';
-  overlay.innerHTML = `
-    <div style="background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px max(env(safe-area-inset-bottom),24px);width:100%;">
-      <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;">Delete document?</div>
-      <div style="font-size:14px;color:var(--text-muted);margin-bottom:20px;line-height:1.5;">This cannot be undone.</div>
-      <button class="btn btn-danger" style="margin-bottom:12px;" onclick="confirmDeleteStaffDoc('${docId}')"><i class="ti ti-trash"></i> Yes, delete</button>
-      <button class="btn btn-outline" style="margin-bottom:0;" onclick="document.getElementById('delete-staff-doc-overlay').remove()"><i class="ti ti-x"></i> Cancel</button>
-    </div>`;
-  document.body.appendChild(overlay);
-}
-
-async function confirmDeleteStaffDoc(docId) {
-  const overlay = document.getElementById('delete-staff-doc-overlay');
-  if (overlay) overlay.remove();
-  var {data: docInfo} = await sb.from('job_documents').select('input').eq('id', docId).single();
-  var docName = docInfo ? docInfo.input : 'a document';
-  await sb.from('job_documents').delete().eq('id', docId);
-  await logActivity(currentJob.id, 'deleted ' + docName);
-  showToast('Document deleted ✓');
-  await viewStaffJob(currentJob.id);
-  const backBtn = document.querySelector('#screen-job-detail .back-btn');
-  if (backBtn) backBtn.setAttribute('onclick', 'goTo("screen-staff-home")');
-}
 async function deleteDoc(docId) {
   const overlay = document.createElement('div');
   overlay.id = 'delete-doc-overlay';
@@ -1557,7 +1647,6 @@ async function deleteDoc(docId) {
     </div>`;
   document.body.appendChild(overlay);
 }
-
 async function confirmDeleteDoc(docId) {
   const overlay = document.getElementById('delete-doc-overlay');
   if (overlay) overlay.remove();
@@ -1592,10 +1681,7 @@ async function handleDocUpload(event) {
   showToast('Uploaded ✓');
   await logActivity(currentJob.id, 'uploaded ' + file.name);
   const {data: docs} = await sb.from('job_documents').select('*').eq('job_id', currentJob.id).order('created_at',{ascending:false});
-  const docsList = document.getElementById('docs-list');
-  if (docsList) {
-    renderDocsList(docs);
-  }
+  renderDocsList(docs);
 }
 function openTemplateForJob(type) {
   const t = templates[type];
@@ -1608,97 +1694,79 @@ function openTemplateForJob(type) {
   document.getElementById('char-count').textContent = currentJob.description.length;
   goTo('screen-template');
 }
-let jobsListPollInterval = null;
 
+let jobsListPollInterval = null;
 async function goJobs() {
+  // Hide new job button for team members
+  const newJobBtn = document.getElementById('new-job-btn');
+  if (newJobBtn) newJobBtn.style.display = myRole === 'team_member' ? 'none' : 'flex';
+
   await loadJobs();
   goTo('screen-jobs');
-  setActiveNav('jobs');
 
-  // Clear any existing poll
   if (jobsListPollInterval) clearInterval(jobsListPollInterval);
-
-  // Poll every 5 seconds for job list updates
   jobsListPollInterval = setInterval(async () => {
     if (!document.getElementById('screen-jobs').classList.contains('active')) {
-      clearInterval(jobsListPollInterval);
-      return;
+      clearInterval(jobsListPollInterval); return;
     }
     await loadJobs();
   }, 5000);
 }
 
+// ══════════════════════════════════════
 // NAV
-function setActiveNav(id) {
-  ['home','jobs','history','settings','upgrade'].forEach(n => {
-    document.getElementById('nav-'+n)?.classList.toggle('active', n===id);
-  });
+// ══════════════════════════════════════
+function goHome() {
+  if (myRole === 'supervisor') { goSupervisorHome(); return; }
+  if (myRole === 'team_member') { goStaffHome(); return; }
+  goTo('screen-home');
 }
-function goHome() { goTo('screen-home'); setActiveNav('home'); }
-function goHistory() { renderHistoryPage(); goTo('screen-history'); setActiveNav('history'); }
-function goSettings() { goTo('screen-settings'); setActiveNav('settings'); }
-function goUpgrade() { goTo('screen-upgrade'); setActiveNav('upgrade'); }
-// ── STAFF PASSWORD SETUP ──
+function goHistory() { renderHistoryPage(); goTo('screen-history'); }
+function goSettings() { goTo('screen-settings'); }
+function goUpgrade() { goTo('screen-upgrade'); }
+
+// ══════════════════════════════════════
+// STAFF PASSWORD SETUP
+// ══════════════════════════════════════
 async function staffSetPassword() {
   const pw = document.getElementById('staff-pw').value;
   const confirm = document.getElementById('staff-pw-confirm').value;
   if (pw.length < 8) return showError('staff-pw-error', 'Password must be at least 8 characters.');
   if (pw !== confirm) return showError('staff-pw-error', 'Passwords do not match.');
   hideError('staff-pw-error');
-
   const inviteToken = sessionStorage.getItem('invite_token');
   const inviteEmail = sessionStorage.getItem('invite_email');
-
   if (!inviteEmail) return showError('staff-pw-error', 'Something went wrong — please use the invite link again.');
 
-  // Sign up with email and password
   const { error: signUpError } = await sb.auth.signUp({ email: inviteEmail, password: pw });
   if (signUpError && !signUpError.message.includes('already registered')) {
     return showError('staff-pw-error', signUpError.message);
   }
-
-  // Sign in immediately
-  const { data: signInData, error: signInError } = await sb.auth.signInWithPassword({
-    email: inviteEmail,
-    password: pw
-  });
+  const { data: signInData, error: signInError } = await sb.auth.signInWithPassword({ email: inviteEmail, password: pw });
   if (signInError) return showError('staff-pw-error', signInError.message);
-
   currentUser = signInData.user;
 
-  // Activate team membership using token
   await fetch(BACKEND_URL+'/api/team/activate', {
     method: 'POST',
     headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+signInData.session.access_token },
     body: JSON.stringify({ invite_token: inviteToken })
   });
 
-  // Clear stored token
   sessionStorage.removeItem('invite_token');
   sessionStorage.removeItem('invite_name');
   sessionStorage.removeItem('invite_email');
-
+  sessionStorage.removeItem('invite_role');
   await loadProfile();
 }
 
-// ── TEAM & ROLE ──
-let myRole = 'owner';
-let staffContext = null;
-
-async function checkRole() {
-  const session = (await sb.auth.getSession()).data.session;
-  if (!session) return;
-  const res = await fetch(BACKEND_URL+'/api/team/my-role', {
-    headers: { 'Authorization': 'Bearer '+session.access_token }
-  });
-  const data = await res.json();
-  myRole = data.role;
-  staffContext = data.member || null;
-  return data;
-}
-
+// ══════════════════════════════════════
+// TEAM MANAGEMENT (Owner)
+// ══════════════════════════════════════
 async function goTeam() {
   goTo('screen-team');
+  // Show/hide invite section (supervisors can view team but not invite)
+  const inviteSec = document.getElementById('invite-section');
+  if (inviteSec) inviteSec.style.display = myRole === 'owner' ? 'block' : 'none';
   await loadTeamMembers();
   await populateAssignDropdown();
 }
@@ -1714,25 +1782,52 @@ async function loadTeamMembers() {
     list.innerHTML = '<div class="empty-state" style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;">No team members yet</div>';
     return;
   }
-  list.innerHTML = members.map(m => `
-    <div class="team-member-card">
+  list.innerHTML = members.map(m => {
+    const roleLabel = m.role === 'supervisor' ? 'Supervisor' : 'Team Member';
+    const roleClass = 'team-role-' + m.role;
+    // Only owners can remove/change roles
+    const ownerActions = myRole === 'owner' ? `
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select onchange="changeRole('${m.id}',this.value)" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);-webkit-appearance:none;">
+          <option value="team_member" ${m.role==='team_member'?'selected':''}>Team Member</option>
+          <option value="supervisor" ${m.role==='supervisor'?'selected':''}>Supervisor</option>
+        </select>
+        ${m.status === 'pending' ? `<button onclick="resendInvite('${m.email}')" style="background:var(--green-light);border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--green);cursor:pointer;">Resend</button>` : ''}
+        <button onclick="removeStaff('${m.id}','${m.name}')" style="background:none;border:none;padding:4px;cursor:pointer;">
+          <i class="ti ti-x" style="font-size:18px;color:var(--text-muted);"></i>
+        </button>
+      </div>` : '';
+    return `<div class="team-member-card">
       <div class="team-member-info">
         <div class="team-member-name">${m.name}</div>
         <div class="team-member-email">${m.email}</div>
       </div>
-     <span class="team-status-badge team-status-${m.status}">${m.status}</span>
-      <div style="display:flex;gap:8px;align-items:center;">
-        ${m.status === 'pending' ? `<button onclick="resendInvite('${m.email}')" style="background:var(--green-light);border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--green);cursor:pointer;-webkit-tap-highlight-color:transparent;">Resend</button>` : ''}
-        <button onclick="removeStaff('${m.id}','${m.name}')" style="background:none;border:none;padding:4px;cursor:pointer;-webkit-tap-highlight-color:transparent;">
-          <i class="ti ti-x" style="font-size:18px;color:var(--text-muted);"></i>
-        </button>
-      </div>
-    </div>`).join('');
+      <span class="team-role-badge ${roleClass}">${roleLabel}</span>
+      <span class="team-status-badge team-status-${m.status}">${m.status}</span>
+      ${ownerActions}
+    </div>`;
+  }).join('');
+}
+
+async function changeRole(memberId, newRole) {
+  const session = (await sb.auth.getSession()).data.session;
+  const res = await fetch(BACKEND_URL+'/api/team/members/'+memberId+'/role', {
+    method: 'PUT',
+    headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token },
+    body: JSON.stringify({ role: newRole })
+  });
+  if (res.ok) {
+    showToast('Role updated ✓');
+  } else {
+    showToast('Could not update role', true);
+    await loadTeamMembers();
+  }
 }
 
 async function inviteStaff() {
   const name = document.getElementById('invite-name').value.trim();
   const email = document.getElementById('invite-email').value.trim();
+  const role = document.getElementById('invite-role').value;
   if (!name) return showToast('Please enter a name', true);
   if (!email) return showToast('Please enter an email', true);
   const { data: { session } } = await sb.auth.getSession();
@@ -1740,12 +1835,13 @@ async function inviteStaff() {
   const res = await fetch(BACKEND_URL+'/api/team/invite', {
     method: 'POST',
     headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token },
-    body: JSON.stringify({ name, email })
+    body: JSON.stringify({ name, email, role })
   });
   const data = await res.json();
   if (!res.ok) return showToast(data.error || 'Could not create invite', true);
   document.getElementById('invite-name').value = '';
   document.getElementById('invite-email').value = '';
+  document.getElementById('invite-role').value = 'team_member';
   await loadTeamMembers();
   await populateAssignDropdown();
   showInviteLinkPopup(data.link, name);
@@ -1768,25 +1864,13 @@ function showInviteLinkPopup(link, name) {
     </div>`;
   document.body.appendChild(overlay);
 }
-
 function copyInviteLink(link) {
-  navigator.clipboard.writeText(link)
-    .then(() => showToast('Invite link copied ✓'))
-    .catch(() => showToast('Copy failed — please copy manually', true));
+  navigator.clipboard.writeText(link).then(() => showToast('Invite link copied ✓')).catch(() => showToast('Copy failed', true));
 }
-
 function shareInviteLink(link, name) {
-  if (navigator.share) {
-    navigator.share({
-      title: 'Join my team on Tradie AI',
-      text: 'Hi '+name+', tap this link to join my team on Tradie AI:',
-      url: link
-    });
-  } else {
-    copyInviteLink(link);
-  }
+  if (navigator.share) { navigator.share({ title: 'Join my team on Tradie AI', text: 'Hi '+name+', tap this link to join my team on Tradie AI:', url: link }); }
+  else { copyInviteLink(link); }
 }
-
 async function removeStaff(memberId, name) {
   const overlay = document.createElement('div');
   overlay.id = 'remove-staff-overlay';
@@ -1811,15 +1895,14 @@ async function resendInvite(email) {
   const data = await res.json();
   if (!res.ok) return showToast(data.error || 'Could not resend invite', true);
   if (data.link) {
-    // Rate limited — show the magic link directly so owner can share it manually
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:flex-end;';
     overlay.innerHTML = `
       <div style="background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px max(env(safe-area-inset-bottom),24px);width:100%;">
         <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;">Share this link</div>
-        <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.5;">Email rate limit reached. Copy this link and send it to <strong>${email}</strong> manually via WhatsApp or SMS.</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.5;">Email rate limit reached. Send this link to <strong>${email}</strong> manually.</div>
         <div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-size:11px;color:var(--text);word-break:break-all;margin-bottom:16px;">${data.link}</div>
-        <button class="btn" onclick="navigator.clipboard.writeText('${data.link}').then(()=>showToast('Link copied ✓')).catch(()=>showToast('Copy failed',true))"><i class="ti ti-copy"></i> Copy link</button>
+        <button class="btn" onclick="navigator.clipboard.writeText('${data.link}').then(()=>showToast('Link copied ✓'))"><i class="ti ti-copy"></i> Copy link</button>
         <button class="btn btn-outline" style="margin-bottom:0;" onclick="this.closest('div[style]').parentElement.remove()"><i class="ti ti-x"></i> Close</button>
       </div>`;
     document.body.appendChild(overlay);
@@ -1851,10 +1934,12 @@ async function populateAssignDropdown() {
   const select = document.getElementById('jf-assigned');
   if (!select) return;
   select.innerHTML = '<option value="">Unassigned</option>' +
-    active.map(m => `<option value="${m.user_id}">${m.name}</option>`).join('');
+    active.map(m => `<option value="${m.user_id}">${m.name} (${m.role === 'supervisor' ? 'Sup' : 'TM'})</option>`).join('');
 }
 
-// ── ACTIVITY LOG ──
+// ══════════════════════════════════════
+// ACTIVITY LOG
+// ══════════════════════════════════════
 async function loadActivityLog(jobId) {
   const session = (await sb.auth.getSession()).data.session;
   const res = await fetch(BACKEND_URL+'/api/jobs/'+jobId+'/activity', {
@@ -1873,7 +1958,6 @@ async function loadActivityLog(jobId) {
       </div>
     </div>`).join('');
 }
-
 async function logActivity(jobId, action) {
   const session = (await sb.auth.getSession()).data.session;
   const userName = userProfile?.firstname || userProfile?.name || 'Unknown';
@@ -1884,14 +1968,16 @@ async function logActivity(jobId, action) {
   });
 }
 
-// ── STAFF HOME ──
+// ══════════════════════════════════════
+// TEAM MEMBER HOME
+// ══════════════════════════════════════
 async function loadStaffHome() {
   const session = (await sb.auth.getSession()).data.session;
   const initials = (userProfile?.firstname||userProfile?.name||'S').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
   document.getElementById('staff-avatar').textContent = initials;
   document.getElementById('staff-greeting').textContent = 'G\'day '+(userProfile?.firstname||userProfile?.name||'')+' 👋';
-  // Hide bottom nav on all screens for staff
-  document.querySelectorAll('.bottom-nav').forEach(nav => nav.style.display = 'none');
+  document.getElementById('staff-role-label').textContent = 'Your assigned jobs';
+
   const res = await fetch(BACKEND_URL+'/api/jobs/assigned', {
     headers: { 'Authorization': 'Bearer '+session.access_token }
   });
@@ -1919,6 +2005,12 @@ async function loadStaffHome() {
   }).join('');
 }
 
+function goStaffHome() {
+  if (myRole === 'supervisor') { goSupervisorHome(); return; }
+  loadStaffHome();
+  goTo('screen-staff-home');
+}
+
 async function viewStaffJob(id) {
   const session = (await sb.auth.getSession()).data.session;
   const res = await fetch(BACKEND_URL+'/api/jobs/assigned', {
@@ -1927,70 +2019,23 @@ async function viewStaffJob(id) {
   const jobs = await res.json();
   currentJob = jobs.find(j => j.id === id);
   if (!currentJob) return;
+
+  // Use the shared job detail view
+  allJobs = jobs; // So viewJob can find it
   document.getElementById('jd-number').textContent = currentJob.job_number;
-  // Staff-only detail view
-  const isOverdue = currentJob.due_date && new Date(currentJob.due_date)<new Date() && !['Completed','Paid'].includes(currentJob.status);
-  const statusClass = 'status-'+currentJob.status.replace(' ','-');
-  const {data: docs} = await sb.from('job_documents').select('*').eq('job_id', currentJob.id).order('created_at',{ascending:false});
-  const docsHtml = docs?.length ? docs.map(d => `
-    <div class="doc-item" style="justify-content:space-between;">
-      <div style="display:flex;align-items:flex-start;gap:10px;flex:1;min-width:0;" onclick="viewStaffDoc('${d.output}','${d.type}','${d.input}')">
-        <div class="r-icon"><i class="ti ${d.type==='photo'?'ti-photo':'ti-file-text'}"></i></div>
-        <div style="min-width:0;">
-          <div class="r-title" style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${d.input}</div>
-          <div class="r-time" style="font-size:11px;">${new Date(d.created_at).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'})}</div>
-        </div>
-      </div>
-      <button onclick="deleteStaffDoc('${d.id}')" style="background:none;border:none;padding:4px 4px 4px 12px;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent;">
-        <i class="ti ti-x" style="font-size:18px;color:var(--text-muted);"></i>
-      </button>
-    </div>`).join('') : '<div class="empty-state" style="padding:16px;">No documents yet</div>';
+  document.getElementById('jd-edit-btn').style.display = 'none';
 
-  document.getElementById('job-detail-body').innerHTML = `
-    <div style="padding:16px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-        <span class="job-status-badge ${statusClass}" style="font-size:13px;padding:5px 14px;">${currentJob.status}</span>
-        ${isOverdue ? '<span style="font-size:12px;color:var(--red);font-weight:600;">⚠ Overdue</span>' : ''}
-      </div>
-      <div class="detail-section">
-        <div class="detail-row"><span class="detail-label"><i class="ti ti-user"></i>Customer</span><span class="detail-val">${currentJob.customer_name}</span></div>
-        ${currentJob.customer_phone ? `<div class="detail-row"><span class="detail-label"><i class="ti ti-phone"></i>Phone</span><a href="tel:${currentJob.customer_phone}" style="font-size:13px;color:var(--green);font-weight:500;text-decoration:none;">${currentJob.customer_phone} <i class="ti ti-phone-call" style="font-size:13px;"></i></a></div>` : ''}
-        ${currentJob.customer_email ? `<div class="detail-row"><span class="detail-label"><i class="ti ti-mail"></i>Email</span><span class="detail-val">${currentJob.customer_email}</span></div>` : ''}
-        ${currentJob.job_address ? `<div class="detail-row"><span class="detail-label"><i class="ti ti-map-pin"></i>Address</span><span class="detail-val" style="max-width:200px;white-space:normal;text-align:right;">${currentJob.job_address}</span></div>` : ''}
-        <div class="detail-row"><span class="detail-label"><i class="ti ti-file-description"></i>Description</span><span class="detail-val" style="max-width:200px;white-space:normal;text-align:right;">${currentJob.description}</span></div>
-        ${currentJob.due_date ? `<div class="detail-row"><span class="detail-label"><i class="ti ti-calendar"></i>Due date</span><span class="detail-val ${isOverdue?'overdue':''}">${new Date(currentJob.due_date).toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'long'})}</span></div>` : ''}
-        ${currentJob.notes ? `<div class="detail-row"><span class="detail-label"><i class="ti ti-notes"></i>Notes</span><span class="detail-val" style="max-width:200px;white-space:normal;text-align:right;">${currentJob.notes}</span></div>` : ''}
-      </div>
-      <div class="section-label">Activity</div>
-      <div class="activity-log" id="activity-log"><div class="empty-state" style="padding:16px;">Loading...</div></div>
-      <div class="section-label">Update status</div>
-      <div class="status-select-grid">
-        ${['In Progress','Completed'].map(s => `
-          <button class="status-select-btn ${currentJob.status===s?'active-status':''}" onclick="staffStatusUpdate('${s}')">${s}</button>`).join('')}
-      </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-        <div class="section-label" style="margin-bottom:0;">Documents</div>
-        <button onclick="triggerDocUpload()" style="background:var(--green-light);border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--green);cursor:pointer;display:flex;align-items:center;gap:5px;-webkit-tap-highlight-color:transparent;"><i class="ti ti-upload" style="font-size:14px;"></i> Upload</button>
-      </div>
-      <input type="file" id="doc-upload-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" style="display:none;" onchange="handleDocUpload(event)">
-      <div class="detail-section" id="docs-list">${docsHtml}</div>
-    </div>`;
-
-  // Hide bottom nav for staff
-  document.querySelector('#screen-job-detail .bottom-nav').style.display = 'none';
-
-  // Hide the Edit button for staff
-  const editBtn = document.querySelector('#screen-job-detail button[onclick="editCurrentJob()"]');
-  if (editBtn) editBtn.style.display = 'none';
-
+  await renderJobDetail();
   goTo('screen-job-detail');
   await loadActivityLog(currentJob.id);
+
   // Fix back button for staff
-  const staffBackBtn = document.querySelector('#screen-job-detail .back-btn');
-  if (staffBackBtn) staffBackBtn.setAttribute('onclick', 'goTo(\'screen-staff-home\')');
-  // Hide edit button for staff
-  const staffEditBtn = document.querySelector('#screen-job-detail button[onclick="editCurrentJob()"]');
-  if (staffEditBtn) staffEditBtn.style.display = 'none';
+  const backBtn = document.querySelector('#screen-job-detail .back-btn');
+  if (backBtn) backBtn.setAttribute('onclick', 'goStaffHome()');
+
+  // Hide bottom nav for team members
+  const bottomNav = document.getElementById('jd-bottom-nav');
+  if (bottomNav && myRole === 'team_member') bottomNav.style.display = 'none';
 }
 
 function staffStatusUpdate(status) {
@@ -2028,13 +2073,97 @@ async function applyStaffStatusUpdate(status) {
   if (completionNotes) await logActivity(currentJob.id, 'added completion notes: '+completionNotes);
   currentJob.status = status;
   showToast('Status updated to '+status+' ✓');
-  await viewStaffJob(currentJob.id);
-  const backBtn = document.querySelector('#screen-job-detail .back-btn');
-  if (backBtn) backBtn.setAttribute('onclick', 'goTo("screen-staff-home")');
+
+  if (myRole === 'team_member') {
+    await viewStaffJob(currentJob.id);
+  } else {
+    await renderJobDetail();
+    await loadActivityLog(currentJob.id);
+  }
 }
+
+// ══════════════════════════════════════
+// SUPERVISOR HOME
+// ══════════════════════════════════════
+async function loadSupervisorHome() {
+  const initials = (userProfile?.firstname||userProfile?.name||'S').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('sup-avatar').textContent = initials;
+  document.getElementById('sup-greeting').textContent = 'G\'day '+(userProfile?.firstname||userProfile?.name||'')+' 👋';
+
+  // Load owner's usage for display
+  if (staffContext) {
+    const session = (await sb.auth.getSession()).data.session;
+    // Get owner's profile for usage info
+    const {data: ownerProfile} = await sb.from('profiles').select('usage_count, plan').eq('id', staffContext.teams.owner_user_id).single();
+    if (ownerProfile) {
+      const used = ownerProfile.usage_count||0;
+      const limit = PLAN_LIMITS[ownerProfile.plan]||50;
+      document.getElementById('sup-usage-count').textContent = used+' / '+limit;
+      document.getElementById('sup-usage-bar').style.width = Math.min((used/limit)*100,100)+'%';
+    }
+  }
+
+  // Populate staff profile screen
+  populateStaffProfile();
+}
+
+function goSupervisorHome() {
+  loadSupervisorHome();
+  goTo('screen-supervisor-home');
+}
+
+async function goSupervisorJobs() {
+  await goJobs();
+}
+
+async function goSupervisorTeam() {
+  await goTeam();
+  // Fix back button for supervisor
+  const backBtn = document.querySelector('#screen-team .back-btn');
+  if (backBtn) backBtn.setAttribute('onclick', 'goSupervisorHome()');
+}
+
+// ══════════════════════════════════════
+// STAFF PROFILE (self-edit)
+// ══════════════════════════════════════
+function populateStaffProfile() {
+  document.getElementById('sp-name').textContent = userProfile?.name || userProfile?.firstname || '—';
+  document.getElementById('sp-email').textContent = currentUser?.email || '—';
+  const roleLabel = myRole === 'supervisor' ? 'Supervisor' : 'Team Member';
+  document.getElementById('sp-role').textContent = roleLabel;
+  document.getElementById('sp-phone').value = userProfile?.phone || '';
+  document.getElementById('sp-ec-name').value = userProfile?.emergency_contact_name || '';
+  document.getElementById('sp-ec-phone').value = userProfile?.emergency_contact_phone || '';
+  document.getElementById('sp-license').value = userProfile?.license_number || '';
+}
+
+async function saveStaffProfile() {
+  const session = (await sb.auth.getSession()).data.session;
+  const updateData = {
+    phone: document.getElementById('sp-phone').value.trim(),
+    emergency_contact_name: document.getElementById('sp-ec-name').value.trim(),
+    emergency_contact_phone: document.getElementById('sp-ec-phone').value.trim(),
+    license_number: document.getElementById('sp-license').value.trim()
+  };
+
+  const res = await fetch(BACKEND_URL+'/api/staff/profile', {
+    method: 'PUT',
+    headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token },
+    body: JSON.stringify(updateData)
+  });
+  if (res.ok) {
+    const updated = await res.json();
+    userProfile = {...userProfile, ...updated};
+    showToast('Profile saved ✓');
+  } else {
+    showToast('Could not save — please try again', true);
+  }
+}
+
+// ══════════════════════════════════════
 // INIT
+// ══════════════════════════════════════
 (async () => {
-  // Check for invite token in URL
   const urlParams = new URLSearchParams(window.location.search);
   const inviteToken = urlParams.get('invite');
 
@@ -2045,9 +2174,15 @@ async function applyStaffStatusUpdate(status) {
       sessionStorage.setItem('invite_token', inviteToken);
       sessionStorage.setItem('invite_name', tokenData.name);
       sessionStorage.setItem('invite_email', tokenData.email);
+      sessionStorage.setItem('invite_role', tokenData.role || 'team_member');
       history.replaceState(null, '', window.location.pathname);
       document.getElementById('staff-invite-email').value = tokenData.email;
       document.getElementById('staff-invite-greeting').textContent = 'Hi '+tokenData.name+'! You\'ve been invited.';
+      // Show role-specific hint
+      const roleHint = tokenData.role === 'supervisor'
+        ? 'You\'re joining as a Supervisor — you\'ll be able to see all jobs, assign work, and use AI tools.'
+        : 'Set your password below to access your assigned jobs.';
+      document.getElementById('staff-invite-role-hint').textContent = roleHint;
       goTo('screen-staff-setpassword');
     } else {
       showToast('Invalid or expired invite link', true);
