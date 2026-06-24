@@ -573,9 +573,10 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     <div class="settings-section" id="sp-plan-section">
       <div class="settings-section-title">Plan &amp; usage</div>
       <div class="settings-card">
-        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-crown"></i><span class="settings-row-label">Team plan</span></div><span class="settings-row-val" id="sp-plan-val" style="color:var(--green);font-weight:600;">—</span></div>
-        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-message"></i><span class="settings-row-label">Messages used</span></div><span class="settings-row-val" id="sp-usage-val">—</span></div>
+        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-crown"></i><span class="settings-row-label">Team plan</span></div><span class="settings-row-val" id="sp-plan-val" style="color:var(--green);font-weight:600;">Loading...</span></div>
+        <div class="settings-row"><div class="settings-row-left"><i class="ti ti-message"></i><span class="settings-row-label">Messages used</span></div><span class="settings-row-val" id="sp-usage-val">Loading...</span></div>
       </div>
+      <div style="margin-top:10px;"><button class="btn" onclick="goUpgrade()"><i class="ti ti-crown"></i> Upgrade plan</button></div>
     </div>
     <div class="settings-section">
       <div class="settings-section-title">Editable details</div>
@@ -947,7 +948,7 @@ async function goSupervisorJobs(){await goJobs();}
 async function goSupervisorTeam(){await goTeam();const b=document.getElementById('team-back-btn');if(b)b.onclick=goSupervisorHome;}
 
 // ── STAFF / SUPERVISOR PROFILE ──
-function populateStaffProfile(){
+async function populateStaffProfile(){
   document.getElementById('sp-name').textContent=userProfile?.name||userProfile?.firstname||'—';
   document.getElementById('sp-email').textContent=currentUser?.email||'—';
   document.getElementById('sp-role').textContent=myRole==='supervisor'?'Supervisor':'Team Member';
@@ -955,11 +956,19 @@ function populateStaffProfile(){
   document.getElementById('sp-ec-name').value=userProfile?.emergency_contact_name||'';
   document.getElementById('sp-ec-phone').value=userProfile?.emergency_contact_phone||'';
   document.getElementById('sp-license').value=userProfile?.license_number||'';
-  // Plan & usage from owner account
-  const planSection=document.getElementById('sp-plan-section');
-  if(planSection){
-    if(ownerPlanInfo){const planName=(ownerPlanInfo.plan||'free').charAt(0).toUpperCase()+(ownerPlanInfo.plan||'free').slice(1);const used=ownerPlanInfo.usage_count||0,limit=PLAN_LIMITS[ownerPlanInfo.plan]||50;document.getElementById('sp-plan-val').textContent=planName;document.getElementById('sp-usage-val').textContent=used+' / '+limit;}
-    else if(staffContext){sb.from('profiles').select('usage_count,plan').eq('id',staffContext.teams.owner_user_id).single().then(({data})=>{if(data){ownerPlanInfo=data;const planName=(data.plan||'free').charAt(0).toUpperCase()+(data.plan||'free').slice(1);const used=data.usage_count||0,limit=PLAN_LIMITS[data.plan]||50;document.getElementById('sp-plan-val').textContent=planName;document.getElementById('sp-usage-val').textContent=used+' / '+limit;}});}
+  // Plan & usage — fetch fresh every time to stay accurate
+  const ownerUserId=ownerPlanInfo?null:(staffContext?.teams?.owner_user_id||staffContext?.owner_user_id||null);
+  if(!ownerPlanInfo&&ownerUserId){
+    try{const{data}=await sb.from('profiles').select('usage_count,plan').eq('id',ownerUserId).single();if(data)ownerPlanInfo=data;}catch(e){}
+  }
+  if(ownerPlanInfo){
+    const planName=(ownerPlanInfo.plan||'free').charAt(0).toUpperCase()+(ownerPlanInfo.plan||'free').slice(1);
+    const used=ownerPlanInfo.usage_count||0,limit=PLAN_LIMITS[ownerPlanInfo.plan]||50;
+    document.getElementById('sp-plan-val').textContent=planName;
+    document.getElementById('sp-usage-val').textContent=used+' / '+limit;
+  }else{
+    document.getElementById('sp-plan-val').textContent='—';
+    document.getElementById('sp-usage-val').textContent='—';
   }
   // Nav
   const spNav=document.getElementById('sp-bottom-nav');
