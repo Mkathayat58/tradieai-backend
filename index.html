@@ -711,30 +711,33 @@ function renderOnboardingPrompt(){
     return;
   }
 
-  el.innerHTML=`
-    <div class="ob-prompt">
-      <div class="ob-prompt-title"><i class="ti ti-rocket"></i> Get started</div>
-      <div class="ob-prompt-sub">Two quick steps to get Tradie AI working for you.</div>
-      <div class="ob-prompt-steps">
-        <div class="ob-prompt-step ${hasJob?'done':''}" onclick="${hasJob?'':\"goNewJob()\"}">
-          <div class="ob-prompt-step-icon"><i class="ti ti-briefcase"></i></div>
-          <div class="ob-prompt-step-text">
-            <div class="ob-prompt-step-title">Create your first job</div>
-            <div class="ob-prompt-step-desc">Add a customer, description and due date</div>
-          </div>
-          <i class="ti ti-circle-check ob-prompt-step-check"></i>
-        </div>
-        <div class="ob-prompt-step ${hasTeam?'done':''}" onclick="${hasTeam?'':\"goTeam()\"}">
-          <div class="ob-prompt-step-icon"><i class="ti ti-user-plus"></i></div>
-          <div class="ob-prompt-step-text">
-            <div class="ob-prompt-step-title">Invite your first team member</div>
-            <div class="ob-prompt-step-desc">Send an invite link via WhatsApp or SMS</div>
-          </div>
-          <i class="ti ti-circle-check ob-prompt-step-check"></i>
-        </div>
-      </div>
-      <button class="ob-prompt-dismiss" onclick="dismissOnboarding()">I'll do this later</button>
-    </div>`;
+const step1Class=hasJob?'ob-prompt-step done':'ob-prompt-step';
+  const step1Click=hasJob?'':'onclick="goNewJob()"';
+  const step2Class=hasTeam?'ob-prompt-step done':'ob-prompt-step';
+  const step2Click=hasTeam?'':'onclick="goTeam()"';
+  el.innerHTML='<div class="ob-prompt">'
+    +'<div class="ob-prompt-title"><i class="ti ti-rocket"></i> Get started</div>'
+    +'<div class="ob-prompt-sub">Two quick steps to get Tradie AI working for you.</div>'
+    +'<div class="ob-prompt-steps">'
+    +'<div class="'+step1Class+'" '+step1Click+'>'
+    +'<div class="ob-prompt-step-icon"><i class="ti ti-briefcase"></i></div>'
+    +'<div class="ob-prompt-step-text">'
+    +'<div class="ob-prompt-step-title">Create your first job</div>'
+    +'<div class="ob-prompt-step-desc">Add a customer, description and due date</div>'
+    +'</div>'
+    +'<i class="ti ti-circle-check ob-prompt-step-check"></i>'
+    +'</div>'
+    +'<div class="'+step2Class+'" '+step2Click+'>'
+    +'<div class="ob-prompt-step-icon"><i class="ti ti-user-plus"></i></div>'
+    +'<div class="ob-prompt-step-text">'
+    +'<div class="ob-prompt-step-title">Invite your first team member</div>'
+    +'<div class="ob-prompt-step-desc">Send an invite link via WhatsApp or SMS</div>'
+    +'</div>'
+    +'<i class="ti ti-circle-check ob-prompt-step-check"></i>'
+    +'</div>'
+    +'</div>'
+    +'<button class="ob-prompt-dismiss" onclick="dismissOnboarding()">I\'ll do this later</button>'
+    +'</div>';
 }
 // ── PDF GENERATION + EMAIL ──
 let _pdfJobId=null,_pdfType='quote',_pdfBase64=null,_pdfFilename=null;
@@ -747,38 +750,34 @@ function openPdfModal(jobId){
   const ov=document.createElement('div');
   ov.id='pdf-overlay';
   ov.className='pdf-overlay';
-  ov.innerHTML=`
-    <div class="pdf-sheet">
-      <div class="pdf-sheet-title">Generate PDF</div>
-      <div class="pdf-sheet-sub">For ${j.customer_name} — ${j.job_number}</div>
-      <div class="pdf-type-row">
-        <div class="pdf-type-btn selected" id="pdf-btn-quote" onclick="selectPdfType('quote')">
-          <i class="ti ti-file-invoice"></i>
-          <span>Quote</span>
-          <small>For new jobs</small>
-        </div>
-        <div class="pdf-type-btn" id="pdf-btn-invoice" onclick="selectPdfType('invoice')">
-          <i class="ti ti-receipt"></i>
-          <span>Invoice</span>
-          <small>Request payment</small>
-        </div>
-      </div>
-      <div class="pdf-actions">
-        <button class="btn" id="pdf-generate-btn" onclick="generatePdf()">
-          <i class="ti ti-sparkles"></i> Generate PDF
-        </button>
-        <button class="btn btn-outline" id="pdf-download-btn" style="display:none;" onclick="downloadPdf()">
-          <i class="ti ti-download"></i> Download PDF
-        </button>
-        <button class="btn btn-outline" id="pdf-email-btn" style="display:none;" onclick="emailPdfToCustomer()">
-          <i class="ti ti-mail"></i> Email to ${j.customer_email||'customer'}
-        </button>
-        <button class="btn btn-outline" style="margin-bottom:0;" onclick="closePdfModal()">
-          <i class="ti ti-x"></i> Cancel
-        </button>
-      </div>
-      <div id="pdf-status" style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:10px;min-height:18px;"></div>
-    </div>`;
+const emailLabel=j.customer_email||'customer';
+  ov.innerHTML='<div class="pdf-sheet">'
+    +'<div class="pdf-sheet-title">Generate PDF</div>'
+    +'<div class="pdf-sheet-sub">For '+j.customer_name+' \u2014 '+j.job_number+'</div>'
+    +'<div class="pdf-type-row">'
+    +'<div class="pdf-type-btn selected" id="pdf-btn-quote" onclick="selectPdfType(\'quote\')">'
+    +'<i class="ti ti-file-invoice"></i><span>Quote</span><small>For new jobs</small>'
+    +'</div>'
+    +'<div class="pdf-type-btn" id="pdf-btn-invoice" onclick="selectPdfType(\'invoice\')">'
+    +'<i class="ti ti-receipt"></i><span>Invoice</span><small>Request payment</small>'
+    +'</div>'
+    +'</div>'
+    +'<div class="pdf-actions">'
+    +'<button class="btn" id="pdf-generate-btn" onclick="generatePdf()">'
+    +'<i class="ti ti-sparkles"></i> Generate PDF'
+    +'</button>'
+    +'<button class="btn btn-outline" id="pdf-download-btn" style="display:none;" onclick="downloadPdf()">'
+    +'<i class="ti ti-download"></i> Download PDF'
+    +'</button>'
+    +'<button class="btn btn-outline" id="pdf-email-btn" style="display:none;" onclick="emailPdfToCustomer()">'
+    +'<i class="ti ti-mail"></i> Email to '+emailLabel
+    +'</button>'
+    +'<button class="btn btn-outline" style="margin-bottom:0;" onclick="closePdfModal()">'
+    +'<i class="ti ti-x"></i> Cancel'
+    +'</button>'
+    +'</div>'
+    +'<div id="pdf-status" style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:10px;min-height:18px;"></div>'
+    +'</div>';
   document.body.appendChild(ov);
 }
 
