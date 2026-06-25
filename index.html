@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0F6E56">
+<link rel="manifest" href="/manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Tradie AI — Paperwork sorted in seconds</title>
@@ -145,6 +146,24 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 .ai-expand-btn{display:inline-flex;align-items:center;gap:6px;background:var(--green);border:none;border-radius:var(--radius-sm);padding:10px 16px;font-size:13px;font-weight:600;color:#fff;cursor:pointer;-webkit-tap-highlight-color:transparent;margin-top:10px;width:100%;justify-content:center;transition:background .15s;}.ai-expand-btn i{font-size:16px;}.ai-expand-btn:active{background:var(--green-dark);}.ai-expand-btn:disabled{background:var(--border);color:var(--text-muted);cursor:not-allowed;}
 /* Priority */
 .priority-Low{color:var(--text-muted);}.priority-Normal{color:var(--blue);}.priority-Urgent{color:var(--red);font-weight:600;}
+/* Onboarding prompt */
+.ob-prompt{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:20px;margin:16px;box-shadow:0 2px 12px rgba(0,0,0,0.06);}
+.ob-prompt-title{font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+.ob-prompt-title i{font-size:20px;color:var(--green);}
+.ob-prompt-sub{font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.5;}
+.ob-prompt-steps{display:flex;flex-direction:column;gap:10px;margin-bottom:20px;}
+.ob-prompt-step{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface2);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:border-color .15s;}
+.ob-prompt-step.done{border-color:var(--green);background:var(--green-light);}
+.ob-prompt-step-icon{width:36px;height:36px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ob-prompt-step.done .ob-prompt-step-icon{background:var(--green);}
+.ob-prompt-step-icon i{font-size:18px;color:var(--green);}
+.ob-prompt-step.done .ob-prompt-step-icon i{color:#fff;}
+.ob-prompt-step-text{flex:1;}
+.ob-prompt-step-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:1px;}
+.ob-prompt-step-desc{font-size:11px;color:var(--text-muted);}
+.ob-prompt-step-check{font-size:18px;color:var(--green);opacity:0;transition:opacity .2s;}
+.ob-prompt-step.done .ob-prompt-step-check{opacity:1;}
+.ob-prompt-dismiss{background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;padding:0;text-decoration:underline;display:block;text-align:center;width:100%;}
 /* Add to home screen banner */
 .a2hs-banner{background:var(--green-dark);padding:12px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;}
 .a2hs-banner i{font-size:20px;color:var(--green-mid);flex-shrink:0;}
@@ -236,6 +255,8 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     <div class="usage-pill"><div class="usage-row"><span class="usage-lbl">Messages this month</span><span class="usage-val" id="usage-count">0 / 50</span></div><div class="usage-track"><div class="usage-fill" id="usage-bar" style="width:0%"></div></div></div>
   </div>
   <div class="home-body">
+    <!-- Onboarding prompt — shown to new owners until both steps done -->
+    <div id="owner-onboarding"></div>
     <!-- Up Next widget for owner -->
     <div id="owner-up-next"></div>
     <!-- End-of-day summary for owner (shows after 3pm) -->
@@ -589,6 +610,59 @@ function initHome(){
   updateUsage();renderRecent();updateSettings();renderUpNext('owner-up-next',allJobs);
   // Show end-of-day summary for owner after 3pm — same as supervisor
   renderEodSummary('owner-eod-summary',allJobs);
+  // Show onboarding prompt for new owners
+  renderOnboardingPrompt();
+}
+
+function renderOnboardingPrompt(){
+  const el=document.getElementById('owner-onboarding');
+  if(!el)return;
+
+  // Check if user has dismissed the prompt permanently
+  if(localStorage.getItem('ob_prompt_done'))return void(el.innerHTML='');
+
+  // Step 1: have they created at least one job?
+  const hasJob=allJobs.length>0;
+  // Step 2: have they invited at least one team member?
+  const hasTeam=teamMembers.length>0;
+
+  // Both done — hide permanently
+  if(hasJob&&hasTeam){
+    localStorage.setItem('ob_prompt_done','1');
+    el.innerHTML='';
+    return;
+  }
+
+  el.innerHTML=`
+    <div class="ob-prompt">
+      <div class="ob-prompt-title"><i class="ti ti-rocket"></i> Get started</div>
+      <div class="ob-prompt-sub">Two quick steps to get Tradie AI working for you.</div>
+      <div class="ob-prompt-steps">
+        <div class="ob-prompt-step ${hasJob?'done':''}" onclick="${hasJob?'':\"goNewJob()\"}">
+          <div class="ob-prompt-step-icon"><i class="ti ti-briefcase"></i></div>
+          <div class="ob-prompt-step-text">
+            <div class="ob-prompt-step-title">Create your first job</div>
+            <div class="ob-prompt-step-desc">Add a customer, description and due date</div>
+          </div>
+          <i class="ti ti-circle-check ob-prompt-step-check"></i>
+        </div>
+        <div class="ob-prompt-step ${hasTeam?'done':''}" onclick="${hasTeam?'':\"goTeam()\"}">
+          <div class="ob-prompt-step-icon"><i class="ti ti-user-plus"></i></div>
+          <div class="ob-prompt-step-text">
+            <div class="ob-prompt-step-title">Invite your first team member</div>
+            <div class="ob-prompt-step-desc">Send an invite link via WhatsApp or SMS</div>
+          </div>
+          <i class="ti ti-circle-check ob-prompt-step-check"></i>
+        </div>
+      </div>
+      <button class="ob-prompt-dismiss" onclick="dismissOnboarding()">I'll do this later</button>
+    </div>`;
+}
+
+function dismissOnboarding(){
+  localStorage.setItem('ob_prompt_done','1');
+  const el=document.getElementById('owner-onboarding');
+  if(el)el.innerHTML='';
 }
 function updateUsage(){if(!userProfile)return;const used=userProfile.usage_count||0,limit=PLAN_LIMITS[userProfile.plan]||50;document.getElementById('usage-count').textContent=used+' / '+limit;document.getElementById('usage-bar').style.width=Math.min((used/limit)*100,100)+'%';const s=document.getElementById('s-usage');if(s)s.textContent=used+' / '+limit;}
 function renderRecent(){
