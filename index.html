@@ -255,6 +255,16 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
   <div class="auth-body"><div class="error-msg" id="forgot-error"></div><div class="field"><label>Email address</label><input type="email" id="fp-email" placeholder="your@email.com" autocomplete="email"></div><button class="btn" onclick="doForgot()"><i class="ti ti-mail"></i> Send reset link</button></div>
   <div class="auth-footer"><button class="link-btn" onclick="goTo('screen-login')">Back to log in</button></div>
 </div>
+<!-- RESET PASSWORD (shown after clicking email link) -->
+<div class="screen" id="screen-reset-password">
+  <div class="auth-header"><div class="auth-title">Set new password</div><div class="auth-sub">Choose a strong password for your account</div></div>
+  <div class="auth-body">
+    <div class="error-msg" id="reset-error"></div>
+    <div class="field"><label>New password</label><div class="password-wrap"><input type="password" id="rp-password" placeholder="Min. 8 characters" autocomplete="new-password"><button class="eye-btn" onclick="togglePw('rp-password',this)"><i class="ti ti-eye"></i></button></div></div>
+    <div class="field"><label>Confirm new password</label><div class="password-wrap"><input type="password" id="rp-confirm" placeholder="Re-enter password" autocomplete="new-password"><button class="eye-btn" onclick="togglePw('rp-confirm',this)"><i class="ti ti-eye"></i></button></div></div>
+    <button class="btn" id="reset-btn" onclick="doResetPassword()"><i class="ti ti-check"></i> Set new password</button>
+  </div>
+</div>
 <!-- ONBOARDING -->
 <div class="screen" id="screen-onboard">
   <div class="ob-header"><div class="ob-logo">Tradie AI</div><div class="ob-progress"><div class="ob-dot active" id="ob-d0"></div><div class="ob-dot" id="ob-d1"></div><div class="ob-dot" id="ob-d2"></div></div><div class="ob-step-label" id="ob-step-label">Step 1 of 3 — Your details</div></div>
@@ -1430,7 +1440,31 @@ async function saveStaffProfile(){const session=(await sb.auth.getSession()).dat
 (async()=>{
   const urlParams=new URLSearchParams(window.location.search),inviteToken=urlParams.get('invite');
   if(inviteToken){const tokenRes=await fetch(BACKEND_URL+'/api/team/invite/'+inviteToken);if(tokenRes.ok){const td=await tokenRes.json();sessionStorage.setItem('invite_token',inviteToken);sessionStorage.setItem('invite_name',td.name);sessionStorage.setItem('invite_email',td.email);sessionStorage.setItem('invite_role',td.role||'team_member');history.replaceState(null,'',window.location.pathname);document.getElementById('staff-invite-email').value=td.email;document.getElementById('staff-invite-greeting').textContent='Hi '+td.name+"! You've been invited.";document.getElementById('staff-invite-role-hint').textContent=td.role==='supervisor'?"You're joining as a Supervisor.":"Set your password below to access your assigned jobs.";goTo('screen-staff-setpassword');}else{showToast('Invalid or expired invite link',true);goTo('screen-landing');}return;}
- const{data:{session}}=await sb.auth.getSession();
+
+  // ── Detect password reset link ──
+  // Supabase puts the token in the URL hash as #access_token=...&type=recovery
+  const hash=window.location.hash;
+  if(hash&&hash.includes('type=recovery')){
+    // Parse the hash fragment
+    const hashParams=new URLSearchParams(hash.replace('#',''));
+    const accessToken=hashParams.get('access_token');
+    if(accessToken){
+      // Set the session from the recovery token
+      const{error}=await sb.auth.setSession({
+        access_token:accessToken,
+        refresh_token:hashParams.get('refresh_token')||''
+      });
+      // Clear the hash from the URL so it looks clean
+      history.replaceState(null,'',window.location.pathname);
+      if(!error){
+        // Show the reset password screen
+        goTo('screen-reset-password');
+        return;
+      }
+    }
+  }
+
+  const{data:{session}}=await sb.auth.getSession();
   if(session){
     currentUser=session.user;
     await loadProfile();
@@ -1440,6 +1474,25 @@ async function saveStaffProfile(){const session=(await sb.auth.getSession()).dat
   // Show "Add to home screen" banner on mobile browsers
   showA2hsBanner();
 })();
+
+async function doResetPassword(){
+  hideError('reset-error');
+  const pw=document.getElementById('rp-password').value;
+  const confirm=document.getElementById('rp-confirm').value;
+  if(pw.length<8)return showError('reset-error','Password must be at least 8 characters.');
+  if(pw!==confirm)return showError('reset-error','Passwords do not match.');
+  const btn=document.getElementById('reset-btn');
+  btn.disabled=true;
+  btn.innerHTML='<i class="ti ti-loader"></i> Saving...';
+  const{error}=await sb.auth.updateUser({password:pw});
+  btn.disabled=false;
+  btn.innerHTML='<i class="ti ti-check"></i> Set new password';
+  if(error)return showError('reset-error',error.message);
+  showToast('Password updated \u2713');
+  // Log them out and send to login so they use the new password
+  await sb.auth.signOut();
+  goTo('screen-login');
+}
 // ── PUSH NOTIFICATIONS ──
 function urlBase64ToUint8Array(base64String){
   const padding='='.repeat((4-base64String.length%4)%4);
