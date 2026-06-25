@@ -142,7 +142,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 .cal-cell{background:var(--surface);min-height:40px;padding:2px;position:relative;}
 .cal-job-block{font-size:9px;font-weight:500;padding:2px 4px;border-radius:3px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;line-height:1.3;}
 /* AI expand button */
-.ai-expand-btn{display:inline-flex;align-items:center;gap:4px;background:var(--green-light);border:1px solid var(--green-mid);border-radius:20px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--green-dark);cursor:pointer;-webkit-tap-highlight-color:transparent;margin-top:6px;}.ai-expand-btn i{font-size:14px;}.ai-expand-btn:active{background:var(--green-mid);}
+.ai-expand-btn{display:inline-flex;align-items:center;gap:6px;background:var(--green);border:none;border-radius:var(--radius-sm);padding:10px 16px;font-size:13px;font-weight:600;color:#fff;cursor:pointer;-webkit-tap-highlight-color:transparent;margin-top:10px;width:100%;justify-content:center;transition:background .15s;}.ai-expand-btn i{font-size:16px;}.ai-expand-btn:active{background:var(--green-dark);}.ai-expand-btn:disabled{background:var(--border);color:var(--text-muted);cursor:not-allowed;}
 /* Priority */
 .priority-Low{color:var(--text-muted);}.priority-Normal{color:var(--blue);}.priority-Urgent{color:var(--red);font-weight:600;}
 </style>
@@ -150,7 +150,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 <body>
 <!-- LANDING -->
 <div class="screen active" id="screen-landing">
-  <div class="landing-body">
+  <div class="landing-body">.ai-expand-btn{display:inline-flex;align-items:center;gap:4px;background:var(--green-light);border:1px solid var(--green-mid);border-radius:20px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--green-dark);cursor:pointer;-webkit-tap-highlight-color:transparent;margin-top:6px;}.ai-expand-btn i{font-size:14px;}.ai-expand-btn:active{background:var(--green-mid);}
     <div class="landing-logo">Tradie AI</div>
     <div class="landing-tagline">Paperwork sorted in seconds</div>
     <div class="landing-sub">Write quotes, emails &amp; job ads instantly.<br>Built for Australian tradies.</div>
@@ -220,6 +220,8 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
   <div class="home-body">
     <!-- Up Next widget for owner -->
     <div id="owner-up-next"></div>
+    <!-- End-of-day summary for owner (shows after 3pm) -->
+    <div id="owner-eod-summary"></div>
     <div class="section-label">What do you need?</div>
     <div class="tpl-grid">
       <div class="tpl-card" onclick="openTemplate('quote')"><i class="ti ti-file-invoice tpl-icon"></i><div class="tpl-name">Write a quote</div><div class="tpl-desc">Parts, labour &amp; GST</div></div>
@@ -229,8 +231,8 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
       <div class="tpl-card" onclick="openTemplate('followup')"><i class="ti ti-clock tpl-icon"></i><div class="tpl-name">Follow up</div><div class="tpl-desc">Chase a quote</div></div>
       <div class="tpl-card" onclick="openTemplate('chat')"><i class="ti ti-message-2 tpl-icon"></i><div class="tpl-name">Free chat</div><div class="tpl-desc">Ask me anything</div></div>
     </div>
-    <div class="section-label">Recent</div>
-    <div class="recent-list" id="recent-list"><div class="empty-state">Your recent outputs will appear here</div></div>
+    <div class="section-label">Recent activity</div>
+    <div class="recent-list" id="recent-list"><div class="empty-state">Your recent activity will appear here</div></div>
   </div>
   <nav class="bottom-nav">
     <button class="nav-btn active" onclick="goHome()"><i class="ti ti-home"></i><span>Home</span></button>
@@ -356,7 +358,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     <div class="field"><label>Customer phone</label><input type="tel" id="jf-phone" placeholder="e.g. 0412 345 678"></div>
     <div class="field"><label>Customer email</label><input type="email" id="jf-email" placeholder="e.g. john@email.com"></div>
     <div class="field"><label>Job address</label><input type="text" id="jf-job-address" placeholder="e.g. 123 Smith St, Footscray VIC 3011"></div>
-    <div class="field"><label>Job description</label><textarea class="job-input" id="jf-description" placeholder="Describe the job..." style="min-height:90px;"></textarea><button class="ai-expand-btn" onclick="aiExpandDescription()"><i class="ti ti-sparkles"></i> AI expand description</button></div>
+    <div class="field"><label>Job description</label><textarea class="job-input" id="jf-description" placeholder="Describe the job..." style="min-height:90px;"></textarea><button class="ai-expand-btn" onclick="aiExpandDescription()" id="ai-expand-btn"><i class="ti ti-sparkles"></i> Expand with AI</button></div>
     <div class="field"><label>Job value ($)</label><input type="number" id="jf-value" placeholder="e.g. 1200"></div>
     <div style="display:flex;gap:10px;">
       <div class="field" style="flex:1;"><label>Due date</label><input type="date" id="jf-due"></div>
@@ -552,9 +554,53 @@ function initHome(){
   document.getElementById('home-avatar').textContent=initials;
   document.getElementById('home-greeting').textContent="G'day "+(userProfile.firstname||userProfile.name||'')+' \uD83D\uDC4B';
   updateUsage();renderRecent();updateSettings();renderUpNext('owner-up-next',allJobs);
+  // Show end-of-day summary for owner after 3pm — same as supervisor
+  renderEodSummary('owner-eod-summary',allJobs);
 }
 function updateUsage(){if(!userProfile)return;const used=userProfile.usage_count||0,limit=PLAN_LIMITS[userProfile.plan]||50;document.getElementById('usage-count').textContent=used+' / '+limit;document.getElementById('usage-bar').style.width=Math.min((used/limit)*100,100)+'%';const s=document.getElementById('s-usage');if(s)s.textContent=used+' / '+limit;}
-function renderRecent(){const list=document.getElementById('recent-list');if(!localHistory.length){list.innerHTML='<div class="empty-state">Your recent outputs will appear here</div>';return;}const icons={quote:'ti-file-invoice',email:'ti-mail',jobad:'ti-briefcase',complaint:'ti-mood-angry',followup:'ti-clock',chat:'ti-message-2'};list.innerHTML=localHistory.slice(0,5).map((h,i)=>`<div class="recent-item" onclick="viewResult(${i})"><div class="r-icon"><i class="ti ${icons[h.type]||'ti-file'}"></i></div><div class="r-info"><div class="r-title">${h.label}</div><div class="r-time">${h.time}</div></div><i class="ti ti-chevron-right" style="font-size:16px;color:var(--border);"></i></div>`).join('');}
+function renderRecent(){
+  const list=document.getElementById('recent-list');
+  const icons={quote:'ti-file-invoice',email:'ti-mail',jobad:'ti-briefcase',complaint:'ti-mood-angry',followup:'ti-clock',chat:'ti-message-2'};
+
+  // Build AI doc entries (max 3)
+  const docEntries=localHistory.slice(0,3).map((h,i)=>({
+    icon:icons[h.type]||'ti-file',
+    title:h.label,
+    subtitle:h.time,
+    onclick:`viewResult(${i})`,
+    type:'doc'
+  }));
+
+  // Build recent job entries (max 3) — sorted by updated_at or created_at
+  const recentJobs=[...allJobs]
+    .sort((a,b)=>new Date(b.updated_at||b.created_at)-new Date(a.updated_at||a.created_at))
+    .slice(0,3)
+    .map(j=>({
+      icon:'ti-briefcase',
+      title:j.customer_name+' — '+j.job_number,
+      subtitle:j.status+(j.due_date?' · Due '+new Date(j.due_date).toLocaleDateString('en-AU',{day:'numeric',month:'short'}):''),
+      onclick:`viewJob('${j.id}')`,
+      type:'job'
+    }));
+
+  // Interleave: show up to 5 items total, jobs first then docs
+  const combined=[...recentJobs,...docEntries].slice(0,5);
+
+  if(!combined.length){
+    list.innerHTML='<div class="empty-state">Your recent activity will appear here</div>';
+    return;
+  }
+
+  list.innerHTML=combined.map(entry=>`
+    <div class="recent-item" onclick="${entry.onclick}">
+      <div class="r-icon"><i class="ti ${entry.icon}"></i></div>
+      <div class="r-info">
+        <div class="r-title">${entry.title}</div>
+        <div class="r-time">${entry.subtitle}</div>
+      </div>
+      <i class="ti ti-chevron-right" style="font-size:16px;color:var(--border);"></i>
+    </div>`).join('');
+}
 function updateSettings(){if(!userProfile)return;const fn=((userProfile.firstname||'')+' '+(userProfile.lastname||'')).trim()||userProfile.name||'\u2014';document.getElementById('sv-name').textContent=fn;document.getElementById('sv-phone').textContent=userProfile.phone||'\u2014';document.getElementById('sv-email').textContent=currentUser?.email||'\u2014';document.getElementById('sv-biz').textContent=userProfile.bizname||'\u2014';document.getElementById('sv-trade').textContent=userProfile.trade||'\u2014';document.getElementById('sv-state').textContent=userProfile.state||'\u2014';document.getElementById('sv-address').textContent=userProfile.address||'\u2014';document.getElementById('sv-licence').textContent=userProfile.licence||'\u2014';document.getElementById('sv-abn').textContent=userProfile.abn||'\u2014';document.getElementById('sv-terms').textContent=userProfile.terms||'\u2014';document.getElementById('s-plan').textContent=(userProfile.plan||'free').charAt(0).toUpperCase()+(userProfile.plan||'free').slice(1);}
 function toggleEditProfile(){document.getElementById('profile-view').style.display='none';document.getElementById('profile-edit').style.display='block';document.getElementById('edit-profile-btn').style.display='none';['s-firstname','s-lastname','s-phone','s-biz','s-licence','s-abn'].forEach(id=>{const key=id.replace('s-','');document.getElementById(id).value=userProfile[key==='firstname'?'firstname':key==='lastname'?'lastname':key==='biz'?'bizname':key]||'';});document.getElementById('s-email').value=currentUser?.email||'';document.getElementById('s-trade').value=userProfile.trade||'Electrician';document.getElementById('s-state').value=userProfile.state||'VIC';document.getElementById('s-address').value=userProfile.address||'';document.getElementById('s-terms').value=userProfile.terms||'Payment due on completion';}
 function cancelEditProfile(){document.getElementById('profile-view').style.display='block';document.getElementById('profile-edit').style.display='none';document.getElementById('edit-profile-btn').style.display='flex';}
@@ -669,9 +715,9 @@ async function saveJob(){
 // ── AI EXPAND DESCRIPTION ──
 async function aiExpandDescription(){
   const desc=document.getElementById('jf-description').value.trim();if(!desc)return showToast('Enter a brief description first');
-  const btn=document.querySelector('.ai-expand-btn');btn.innerHTML='<i class="ti ti-loader"></i> Expanding...';btn.disabled=true;
+  const btn=document.getElementById('ai-expand-btn');btn.innerHTML='<i class="ti ti-loader"></i> Expanding...';btn.disabled=true;
   try{const res=await fetch(BACKEND_URL+'/api/generate',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(await sb.auth.getSession()).data.session?.access_token},body:JSON.stringify({template:'expand',message:'Expand this brief job description into a detailed job brief with expected scope and key tasks. Keep it concise, 3-5 sentences max. Brief: '+desc,profile:userProfile})});const data=await res.json();document.getElementById('jf-description').value=data.output||desc;document.getElementById('jf-description').style.height='auto';document.getElementById('jf-description').style.height=document.getElementById('jf-description').scrollHeight+'px';}catch(e){showToast('Could not expand',true);}
-  btn.innerHTML='<i class="ti ti-sparkles"></i> AI expand description';btn.disabled=false;
+  btn.innerHTML='<i class="ti ti-sparkles"></i> Expand with AI';btn.disabled=false;
 }
 
 // ── AI FOLLOW UP DRAFTER ──
@@ -749,15 +795,26 @@ function renderCalendar(){
   const weekLabel=days[0].toLocaleDateString('en-AU',{day:'numeric',month:'short'})+' \u2013 '+days[6].toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'});
   const hours=[7,8,9,10,11,12,13,14,15,16,17,18];
   const dayNames=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  // Colour map shared across timed + all-day jobs
+  const jobColors={'New':'#EEEDFE','Quoted':'#FAEEDA','In Progress':'#E6F1FB','Completed':'#EAF3DE','Invoiced':'#FAEEDA','Paid':'#E1F5EE','Accepted':'#E1F5EE'};
   let grid=`<div class="cal-header"><button class="cal-nav" onclick="calPrev()">\u2039</button><span class="cal-week-label">${weekLabel}</span><button class="cal-nav" onclick="calNext()">\u203A</button></div>`;
   grid+=`<div class="cal-grid"><div class="cal-day-header"></div>`;
   days.forEach((d,i)=>{const ds=d.toISOString().slice(0,10);grid+=`<div class="cal-day-header ${ds===todayStr?'today':''}">${dayNames[i]}<br>${d.getDate()}</div>`;});
+  // ── All-day row: jobs with a due_date but NO due_time ──
+  grid+=`<div class="cal-time-label" style="font-size:9px;color:var(--text-muted);">all day</div>`;
+  days.forEach(d=>{
+    const ds=d.toISOString().slice(0,10);
+    const allDayJobs=allJobs.filter(j=>j.due_date===ds&&!j.due_time&&!['Declined'].includes(j.status));
+    const blocks=allDayJobs.map(j=>`<div class="cal-job-block" style="background:${jobColors[j.status]||'#f0f0f0'};" onclick="viewJob('${j.id}')" title="${j.customer_name}">${j.customer_name.split(' ')[0]}</div>`).join('');
+    grid+=`<div class="cal-cell" style="background:var(--surface2);">${blocks}</div>`;
+  });
+  // ── Timed rows: jobs that have a specific due_time ──
   hours.forEach(h=>{
     grid+=`<div class="cal-time-label">${h>12?h-12:h}${h>=12?'pm':'am'}</div>`;
     days.forEach(d=>{
       const ds=d.toISOString().slice(0,10);
       const jobsInSlot=allJobs.filter(j=>j.due_date===ds&&j.due_time&&parseInt(j.due_time.split(':')[0])===h&&!['Declined'].includes(j.status));
-      const blocks=jobsInSlot.map(j=>{const colors={'New':'#EEEDFE','Quoted':'#FAEEDA','In Progress':'#E6F1FB','Completed':'#EAF3DE','Invoiced':'#FAEEDA','Paid':'#E1F5EE','Accepted':'#E1F5EE'};return`<div class="cal-job-block" style="background:${colors[j.status]||'#f0f0f0'};" onclick="viewJob('${j.id}')">${j.customer_name.split(' ')[0]}</div>`;}).join('');
+      const blocks=jobsInSlot.map(j=>`<div class="cal-job-block" style="background:${jobColors[j.status]||'#f0f0f0'};" onclick="viewJob('${j.id}')" title="${j.customer_name}">${j.customer_name.split(' ')[0]}</div>`).join('');
       grid+=`<div class="cal-cell">${blocks}</div>`;
     });
   });
