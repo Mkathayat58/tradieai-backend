@@ -29,6 +29,19 @@ const PLAN_LIMITS = {
 };
 
 const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
+const PDFDocument = require('pdfkit');
+const nodemailer = require('nodemailer');
+
+// ── EMAIL TRANSPORTER ──
+const emailTransporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+  port: parseInt(process.env.EMAIL_PORT) || 587,
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
 
 // ── HELPERS ──
 function getSystemPrompt(template, profile) {
@@ -730,7 +743,181 @@ app.get('/api/team/invite/:token', async (req, res) => {
   res.json({ name: data.name, email: data.email, role: data.role });
 });
 
+// ── JOBS: GENERATE PDF (quote or invoice) ──
+app.post('/api/jobs/:id/generate-pdf', requireAuth, async (req, res) => {
+  try {
+    const { type } = req.body;
+    if (!['quote', 'invoice'].includes(type)) {
+      return res.status(400).json({ error: 'Type must be quote or invoice' });
+    }
 
+    const { data: job, error: jobError } = await supabase
+      .from('jobs')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+    if (jobError || !job) return res.status(404).json({ error: 'Job not found' });
+
+    let profileId = req.user.id;
+    const staffCtx = await getStaffMember(req.user.id);
+    if (staffCtx) profileId = staffCtx.teams.owner_user_id;
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', profileId)
+      .single();
+    if (profileError || !profile) return res.status(404).json({ error: 'Profile not found' });
+
+    const doc = new PDFDocument({ margin: 50, size: 'A4' });
+    const chunks = [];
+    doc.on('data', chunk => chunks.push(chunk));
+    doc.on('end', () => {
+      const pdfBuffer = Buffer.concat(chunks);
+      const base64 = pdfBuffer.toString('base64');
+      res.json({ pdf: base64, filename: `${type}-${job.job_number}.pdf` });
+    });
+
+    const isInvoice = type === 'invoice';
+    const green = '#0F6E56';
+    const lightGreen = '#E1F5EE';
+    const textDark = '#1A1A1A';
+    const textMuted = '#666660';
+
+    // Header band
+    doc.rect(0, 0, doc.page.width, 110).fill(green);
+    doc.fillColor('#FFFFFF').fontSize(24).font('Helvetica-Bold')
+       .text(profile.bizname || profile.name || 'Tradie AI', 50, 30);
+    doc.fontSize(13).font('Helvetica')
+       .text(isInvoice ? 'INVOICE' : 'QUOTE', 0, 40, { align: 'right', width: doc.page.width - 50 });
+    doc.fontSize(10)
+       .text(job.job_number, 0, 58, { align: 'right', width: doc.page.width - 50 });
+
+    // Business details
+    doc.fillColor(textMuted).fontSize(9).font('Helvetica');
+    let detailY = 125;
+    if (profile.address) { doc.text(profile.address, 50, detailY); detailY += 13; }
+    if (profile.phone)   { doc.text(profile.phone, 50, detailY);   detailY += 13; }
+    if (profile.abn)     { doc.text(`ABN: ${profile.abn}`, 50, detailY); detailY += 13; }
+    if (profile.licence) { doc.text(`Licence: ${profile.licence}`, 50, detailY); detailY += 13; }
+
+    const today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+    doc.fillColor(textMuted).fontSize(9)
+       .text(`Date: ${today}`, 0, 125, { align: 'right', width: doc.page.width - 50 });
+    if (!isInvoice) {
+      doc.text('Valid for 30 days', 0, 138, { align: 'right', width: doc.page.width - 50 });
+    }
+
+    // Divider
+    const dividerY = Math.max(detailY, 160) + 10;
+    doc.moveTo(50, dividerY).lineTo(doc.page.width - 50, dividerY)
+       .strokeColor('#E0DED8').lineWidth(0.5).stroke();
+
+    // Bill to
+    let contentY = dividerY + 20;
+    doc.fillColor(green).fontSize(9).font('Helvetica-Bold').text('BILL TO', 50, contentY);
+    contentY += 14;
+    doc.fillColor(textDark).fontSize(11).font('Helvetica-Bold').text(job.customer_name, 50, contentY);
+    contentY += 14;
+    if (job.customer_phone) { doc.fillColor(textMuted).fontSize(9).font('Helvetica').text(job.customer_phone, 50, contentY); contentY += 12; }
+    if (job.customer_email) { doc.fillColor(textMuted).fontSize(9).text(job.customer_email, 50, contentY); contentY += 12; }
+    if (job.job_address)    { doc.fillColor(textMuted).fontSize(9).text(job.job_address, 50, contentY); contentY += 12; }
+    contentY += 20;
+
+    // Table header
+    doc.rect(50, contentY, doc.page.width - 100, 24).fill(green);
+    doc.fillColor('#FFFFFF').fontSize(9).font('Helvetica-Bold');
+    doc.text('DESCRIPTION', 60, contentY + 8);
+    doc.text('AMOUNT', 0, contentY + 8, { align: 'right', width: doc.page.width - 60 });
+    contentY += 24;
+
+    // Table row
+    const jobValue = parseFloat(job.value) || 0;
+    const exGST = jobValue / 1.1;
+    const gst = jobValue - exGST;
+    doc.rect(50, contentY, doc.page.width - 100, 40).fill(lightGreen);
+    doc.fillColor(textDark).fontSize(10).font('Helvetica')
+       .text(job.description, 60, contentY + 8, { width: doc.page.width - 200, height: 28, ellipsis: true });
+    doc.text(`$${exGST.toFixed(2)}`, 0, contentY + 14, { align: 'right', width: doc.page.width - 60 });
+    contentY += 50;
+
+    // Totals
+    doc.fillColor(textMuted).fontSize(9).font('Helvetica');
+    doc.text('Subtotal (ex GST)', doc.page.width - 220, contentY);
+    doc.text(`$${exGST.toFixed(2)}`, 0, contentY, { align: 'right', width: doc.page.width - 50 });
+    contentY += 16;
+    doc.text('GST (10%)', doc.page.width - 220, contentY);
+    doc.text(`$${gst.toFixed(2)}`, 0, contentY, { align: 'right', width: doc.page.width - 50 });
+    contentY += 16;
+    doc.moveTo(doc.page.width - 220, contentY).lineTo(doc.page.width - 50, contentY)
+       .strokeColor('#E0DED8').lineWidth(0.5).stroke();
+    contentY += 10;
+    doc.fillColor(textDark).fontSize(12).font('Helvetica-Bold').text('TOTAL (inc GST)', doc.page.width - 220, contentY);
+    doc.fillColor(green).fontSize(14).text(`$${jobValue.toFixed(2)}`, 0, contentY - 2, { align: 'right', width: doc.page.width - 50 });
+    contentY += 40;
+
+    // Payment terms
+    if (profile.terms || isInvoice) {
+      doc.rect(50, contentY, doc.page.width - 100, 36).fill(lightGreen);
+      doc.fillColor(green).fontSize(8).font('Helvetica-Bold').text('PAYMENT TERMS', 60, contentY + 6);
+      doc.fillColor(textDark).fontSize(9).font('Helvetica')
+         .text(profile.terms || 'Payment due within 14 days', 60, contentY + 18);
+      contentY += 50;
+    }
+
+    // Footer
+    doc.fillColor(textMuted).fontSize(8).font('Helvetica')
+       .text(`Thank you for your business. Generated by Tradie AI — ${profile.bizname || profile.name}`,
+         50, doc.page.height - 60, { align: 'center', width: doc.page.width - 100 });
+
+    doc.end();
+
+  } catch (err) {
+    console.error('PDF generation error:', err);
+    res.status(500).json({ error: 'Could not generate PDF — please try again' });
+  }
+});
+
+// ── JOBS: EMAIL PDF TO CUSTOMER ──
+app.post('/api/jobs/:id/email-pdf', requireAuth, async (req, res) => {
+  try {
+    const { pdf, filename, type, customerEmail } = req.body;
+    if (!pdf || !customerEmail) {
+      return res.status(400).json({ error: 'PDF data and customer email required' });
+    }
+
+    let profileId = req.user.id;
+    const staffCtx = await getStaffMember(req.user.id);
+    if (staffCtx) profileId = staffCtx.teams.owner_user_id;
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('bizname, name, email')
+      .eq('id', profileId)
+      .single();
+
+    const businessName = profile?.bizname || profile?.name || 'Tradie AI';
+    const isInvoice = type === 'invoice';
+    const subject = isInvoice ? `Invoice from ${businessName}` : `Quote from ${businessName}`;
+    const bodyText = isInvoice
+      ? `Please find your invoice attached.\n\nThank you for your business.\n\n${businessName}`
+      : `Please find your quote attached. This quote is valid for 30 days.\n\nPlease don't hesitate to get in touch if you have any questions.\n\n${businessName}`;
+
+    await emailTransporter.sendMail({
+      from: `"${businessName}" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+      to: customerEmail,
+      subject,
+      text: bodyText,
+      attachments: [{ filename: filename || `${type}.pdf`, content: pdf, encoding: 'base64' }]
+    });
+
+    res.json({ success: true, message: `${isInvoice ? 'Invoice' : 'Quote'} sent to ${customerEmail}` });
+
+  } catch (err) {
+    console.error('Email PDF error:', err);
+    res.status(500).json({ error: 'Could not send email — please check your email settings' });
+  }
+});
 // ── JOBS: NEXT NUMBER (server-side, prevents duplicates) ──
 app.get('/api/jobs/next-number', requireAuth, async (req, res) => {
   try {

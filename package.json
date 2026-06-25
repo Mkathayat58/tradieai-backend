@@ -19,11 +19,13 @@
     "url": "https://github.com/Mkathayat58/tradieai-backend/issues"
   },
   "homepage": "https://github.com/Mkathayat58/tradieai-backend#readme",
-  "dependencies": {
+"dependencies": {
     "@supabase/supabase-js": "^2.108.2",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "nodemailer": "^6.9.0",
+    "pdfkit": "^0.15.0"
   }
 }
