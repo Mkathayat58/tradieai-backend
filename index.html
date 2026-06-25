@@ -766,6 +766,9 @@ const emailLabel=j.customer_email||'customer';
     +'<button class="btn" id="pdf-generate-btn" onclick="generatePdf()">'
     +'<i class="ti ti-sparkles"></i> Generate PDF'
     +'</button>'
++'<button class="btn btn-outline" id="pdf-preview-btn" style="display:none;" onclick="previewPdf()">'
+    +'<i class="ti ti-eye"></i> Preview PDF'
+    +'</button>'
     +'<button class="btn btn-outline" id="pdf-download-btn" style="display:none;" onclick="downloadPdf()">'
     +'<i class="ti ti-download"></i> Download PDF'
     +'</button>'
@@ -808,7 +811,8 @@ async function generatePdf(){
     const data=await res.json();
     _pdfBase64=data.pdf;
     _pdfFilename=data.filename;
-    btn.style.display='none';
+btn.style.display='none';
+    document.getElementById('pdf-preview-btn').style.display='flex';
     document.getElementById('pdf-download-btn').style.display='flex';
     const j=allJobs.find(x=>x.id===_pdfJobId);
     if(j?.customer_email){
@@ -823,7 +827,15 @@ async function generatePdf(){
     document.getElementById('pdf-status').style.color='var(--red)';
   }
 }
-
+function previewPdf(){
+  if(!_pdfBase64||!_pdfFilename)return;
+  const byteChars=atob(_pdfBase64);
+  const byteNums=Array.from(byteChars).map(c=>c.charCodeAt(0));
+  const blob=new Blob([new Uint8Array(byteNums)],{type:'application/pdf'});
+  const url=URL.createObjectURL(blob);
+  window.open(url,'_blank');
+  setTimeout(()=>URL.revokeObjectURL(url),10000);
+}
 function downloadPdf(){
   if(!_pdfBase64||!_pdfFilename)return;
   const byteChars=atob(_pdfBase64);
