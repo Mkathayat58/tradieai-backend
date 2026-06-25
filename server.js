@@ -30,12 +30,13 @@ const PLAN_LIMITS = {
 
 const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
 const PDFDocument = require('pdfkit');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const webpush = require('web-push');
 
+// ── RESEND EMAIL SETUP ──
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 // ── WEB PUSH SETUP ──
-// Add these to Render environment variables:
-// VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_MAILTO
 if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(
     process.env.VAPID_MAILTO || 'mailto:admin@tradieai.com',
@@ -43,17 +44,6 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
     process.env.VAPID_PRIVATE_KEY
   );
 }
-
-// ── EMAIL TRANSPORTER ──
-const emailTransporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.EMAIL_PORT) || 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
 
 // ── HELPERS ──
 function getSystemPrompt(template, profile) {
@@ -976,12 +966,15 @@ app.post('/api/jobs/:id/email-pdf', requireAuth, async (req, res) => {
       ? `Please find your invoice attached.\n\nThank you for your business.\n\n${businessName}`
       : `Please find your quote attached. This quote is valid for 30 days.\n\nPlease don't hesitate to get in touch if you have any questions.\n\n${businessName}`;
 
-    await emailTransporter.sendMail({
-      from: `"${businessName}" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+  await resend.emails.send({
+      from: `${businessName} <onboarding@resend.dev>`,
       to: customerEmail,
       subject,
       text: bodyText,
-      attachments: [{ filename: filename || `${type}.pdf`, content: pdf, encoding: 'base64' }]
+      attachments: [{
+        filename: filename || `${type}.pdf`,
+        content: pdf
+      }]
     });
 
     res.json({ success: true, message: `${isInvoice ? 'Invoice' : 'Quote'} sent to ${customerEmail}` });
