@@ -200,7 +200,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 
 <!-- LANDING -->
 <div class="screen active" id="screen-landing">
-  <div class="landing-body">.ai-expand-btn{display:inline-flex;align-items:center;gap:4px;background:var(--green-light);border:1px solid var(--green-mid);border-radius:20px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--green-dark);cursor:pointer;-webkit-tap-highlight-color:transparent;margin-top:6px;}.ai-expand-btn i{font-size:14px;}.ai-expand-btn:active{background:var(--green-mid);}
+<div class="landing-body">
     <div class="landing-logo">Tradie AI</div>
     <div class="landing-tagline">Paperwork sorted in seconds</div>
     <div class="landing-sub">Write quotes, emails &amp; job ads instantly.<br>Built for Australian tradies.</div>
@@ -532,6 +532,8 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 
 <script>
 const SUPABASE_URL='https://lkporornrpyvgfvzvstr.supabase.co';
+// VAPID public key — fetched from backend on load
+let VAPID_PUBLIC_KEY='';
 const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxrcG9yb3JucnB5dmdmdnp2c3RyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE5ODYxNjMsImV4cCI6MjA5NzU2MjE2M30.i2cNn9W-7OwOzCIj9H6uYXBbEaMLhguQransVCQ-Cjs';
 const BACKEND_URL='https://tradieai-backend.onrender.com';
 const PLAN_LIMITS={free:50,starter:100,pro:500,power:2000};
@@ -1241,14 +1243,86 @@ async function saveStaffProfile(){const session=(await sb.auth.getSession()).dat
 (async()=>{
   const urlParams=new URLSearchParams(window.location.search),inviteToken=urlParams.get('invite');
   if(inviteToken){const tokenRes=await fetch(BACKEND_URL+'/api/team/invite/'+inviteToken);if(tokenRes.ok){const td=await tokenRes.json();sessionStorage.setItem('invite_token',inviteToken);sessionStorage.setItem('invite_name',td.name);sessionStorage.setItem('invite_email',td.email);sessionStorage.setItem('invite_role',td.role||'team_member');history.replaceState(null,'',window.location.pathname);document.getElementById('staff-invite-email').value=td.email;document.getElementById('staff-invite-greeting').textContent='Hi '+td.name+"! You've been invited.";document.getElementById('staff-invite-role-hint').textContent=td.role==='supervisor'?"You're joining as a Supervisor.":"Set your password below to access your assigned jobs.";goTo('screen-staff-setpassword');}else{showToast('Invalid or expired invite link',true);goTo('screen-landing');}return;}
-  const{data:{session}}=await sb.auth.getSession();
-  if(session){currentUser=session.user;await loadProfile();}else goTo('screen-landing');
+ const{data:{session}}=await sb.auth.getSession();
+  if(session){
+    currentUser=session.user;
+    await loadProfile();
+    initPushNotifications();
+  }else goTo('screen-landing');
 
   // Show "Add to home screen" banner on mobile browsers
-  // Only if not already installed as PWA and not previously dismissed
   showA2hsBanner();
 })();
+// ── PUSH NOTIFICATIONS ──
+function urlBase64ToUint8Array(base64String){
+  const padding='='.repeat((4-base64String.length%4)%4);
+  const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');
+  const rawData=atob(base64);
+  return Uint8Array.from([...rawData].map(c=>c.charCodeAt(0)));
+}
 
+async function initPushNotifications(){
+  // Only run if browser supports push
+  if(!('serviceWorker' in navigator)||!('PushManager' in window))return;
+
+  try{
+    // Fetch VAPID public key from backend
+    const keyRes=await fetch(BACKEND_URL+'/api/push/vapid-public-key');
+    const keyData=await keyRes.json();
+    if(!keyData.key)return; // Push not configured yet
+    VAPID_PUBLIC_KEY=keyData.key;
+
+    // Register service worker
+    const reg=await navigator.serviceWorker.register('/sw.js');
+
+    // Check current permission
+    if(Notification.permission==='denied')return;
+
+    // If already subscribed, just save subscription again (in case it changed)
+    const existing=await reg.pushManager.getSubscription();
+    if(existing){
+      await savePushSubscription(existing);
+      return;
+    }
+
+    // Don't ask straight away — wait until user has been in app 30 seconds
+    setTimeout(()=>askPushPermission(reg), 30000);
+  }catch(err){
+    console.log('Push init error:',err);
+  }
+}
+
+async function askPushPermission(reg){
+  // Don't ask if already decided
+  if(Notification.permission!=='default')return;
+
+  const permission=await Notification.requestPermission();
+  if(permission!=='granted')return;
+
+  try{
+    const subscription=await reg.pushManager.subscribe({
+      userVisibleOnly:true,
+      applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+    });
+    await savePushSubscription(subscription);
+  }catch(err){
+    console.log('Push subscribe error:',err);
+  }
+}
+
+async function savePushSubscription(subscription){
+  try{
+    const session=(await sb.auth.getSession()).data.session;
+    if(!session)return;
+    await fetch(BACKEND_URL+'/api/push/subscribe',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({subscription:subscription.toJSON()})
+    });
+  }catch(err){
+    console.log('Save subscription error:',err);
+  }
+}
 function showA2hsBanner(){
   // Don't show if already running as installed PWA
   const isInstalled=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;

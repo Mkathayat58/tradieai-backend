@@ -31,6 +31,18 @@ const PLAN_LIMITS = {
 const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
 const PDFDocument = require('pdfkit');
 const nodemailer = require('nodemailer');
+const webpush = require('web-push');
+
+// ── WEB PUSH SETUP ──
+// Add these to Render environment variables:
+// VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_MAILTO
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    process.env.VAPID_MAILTO || 'mailto:admin@tradieai.com',
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+}
 
 // ── EMAIL TRANSPORTER ──
 const emailTransporter = nodemailer.createTransport({
@@ -648,6 +660,17 @@ app.put('/api/team/jobs/:id/status', requireAuth, async (req, res) => {
     .select()
     .single();
   if (error) return res.status(400).json({ error: error.message });
+
+  // Notify owner when supervisor marks job complete
+  if (status === 'Completed') {
+    await sendPushToUser(
+      ownerId,
+      'Job completed',
+      `"${data.customer_name}" marked complete by your supervisor`,
+      `/`
+    );
+  }
+
   res.json(data);
 });
 
@@ -742,7 +765,57 @@ app.get('/api/team/invite/:token', async (req, res) => {
   if (data.status === 'active') return res.status(400).json({ error: 'This invite has already been used' });
   res.json({ name: data.name, email: data.email, role: data.role });
 });
+// ── PUSH: SAVE SUBSCRIPTION ──
+app.post('/api/push/subscribe', requireAuth, async (req, res) => {
+  try {
+    const { subscription } = req.body;
+    if (!subscription) return res.status(400).json({ error: 'Subscription required' });
 
+    await supabase.from('push_subscriptions').upsert({
+      user_id: req.user.id,
+      subscription,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Push subscribe error:', err);
+    res.status(500).json({ error: 'Could not save subscription' });
+  }
+});
+
+// ── PUSH: SEND TO USER (internal helper) ──
+async function sendPushToUser(userId, title, body, url = '/') {
+  if (!process.env.VAPID_PUBLIC_KEY) return; // Skip if VAPID not configured
+
+  try {
+    const { data: subs } = await supabase
+      .from('push_subscriptions')
+      .select('subscription')
+      .eq('user_id', userId);
+
+    for (const row of subs || []) {
+      try {
+        await webpush.sendNotification(
+          row.subscription,
+          JSON.stringify({ title, body, url })
+        );
+      } catch (err) {
+        // Subscription expired or invalid — remove it
+        if (err.statusCode === 404 || err.statusCode === 410) {
+          await supabase.from('push_subscriptions').delete().eq('user_id', userId);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('sendPushToUser error:', err);
+  }
+}
+
+// ── PUSH: GET VAPID PUBLIC KEY ──
+app.get('/api/push/vapid-public-key', (req, res) => {
+  res.json({ key: process.env.VAPID_PUBLIC_KEY || null });
+});
 // ── JOBS: GENERATE PDF (quote or invoice) ──
 app.post('/api/jobs/:id/generate-pdf', requireAuth, async (req, res) => {
   try {
