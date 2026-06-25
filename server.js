@@ -730,4 +730,29 @@ app.get('/api/team/invite/:token', async (req, res) => {
   res.json({ name: data.name, email: data.email, role: data.role });
 });
 
+
+// ── JOBS: NEXT NUMBER (server-side, prevents duplicates) ──
+app.get('/api/jobs/next-number', requireAuth, async (req, res) => {
+  try {
+    const ownerId = req.user.id;
+
+    // Count all jobs for this owner to get next number
+    const { count, error } = await supabase
+      .from('jobs')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', ownerId);
+
+    if (error) throw error;
+
+    // Format as JOB-0001, JOB-0042 etc.
+    const nextNum = String((count || 0) + 1).padStart(4, '0');
+    res.json({ job_number: `JOB-${nextNum}` });
+
+  } catch (err) {
+    console.error('next-number error:', err);
+    res.status(500).json({ error: 'Could not generate job number' });
+  }
+});
+
+
 app.listen(PORT, () => console.log(`Tradie AI backend running on port ${PORT}`));
