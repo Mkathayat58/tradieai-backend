@@ -146,6 +146,11 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 .ai-expand-btn{display:inline-flex;align-items:center;gap:6px;background:var(--green);border:none;border-radius:var(--radius-sm);padding:10px 16px;font-size:13px;font-weight:600;color:#fff;cursor:pointer;-webkit-tap-highlight-color:transparent;margin-top:10px;width:100%;justify-content:center;transition:background .15s;}.ai-expand-btn i{font-size:16px;}.ai-expand-btn:active{background:var(--green-dark);}.ai-expand-btn:disabled{background:var(--border);color:var(--text-muted);cursor:not-allowed;}
 /* Priority */
 .priority-Low{color:var(--text-muted);}.priority-Normal{color:var(--blue);}.priority-Urgent{color:var(--red);font-weight:600;}
+/* Reports dashboard */
+.reports-metric-card{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
+.reports-metric-label{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;}
+.reports-metric-value{font-size:26px;font-weight:700;color:var(--text);margin-bottom:2px;}
+.reports-metric-sub{font-size:11px;color:var(--text-muted);}
 /* PDF generation modal */
 .pdf-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:flex-end;}
 .pdf-sheet{background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px;width:100%;padding-bottom:max(env(safe-area-inset-bottom),24px);}
@@ -290,7 +295,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     <button class="nav-btn active" onclick="goHome()"><i class="ti ti-home"></i><span>Home</span></button>
     <button class="nav-btn" onclick="goJobs()"><i class="ti ti-briefcase"></i><span>Jobs</span></button>
     <button class="nav-btn" onclick="goCalendar()"><i class="ti ti-calendar"></i><span>Calendar</span></button>
-    <button class="nav-btn" onclick="goHistory()"><i class="ti ti-clock"></i><span>History</span></button>
+ <button class="nav-btn" onclick="goReports()"><i class="ti ti-chart-bar"></i><span>Reports</span></button>
     <button class="nav-btn" onclick="goSettings()"><i class="ti ti-settings"></i><span>Settings</span></button>
   </nav>
 </div>
@@ -315,15 +320,73 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
   <div class="chat-messages" id="chat-messages"><div class="msg msg-ai">G'day! I'm Tradie AI. Ask me anything. &#x1F919;</div></div>
   <div class="chat-input-row"><textarea class="chat-textarea" id="chat-input" placeholder="Ask me anything..." rows="1" onkeydown="chatKey(event)" oninput="autoResize(this)"></textarea><button class="chat-send-btn" id="chat-send" onclick="sendChat()"><i class="ti ti-arrow-up"></i></button></div>
 </div>
-<!-- HISTORY -->
-<div class="screen" id="screen-history">
-  <div class="settings-header"><div class="settings-topbar"><button class="back-btn" onclick="goHome()"><i class="ti ti-arrow-left"></i></button><span class="settings-title">History</span></div></div>
-  <div class="settings-body" id="history-body"><div class="empty-state" style="padding:40px 20px;">No history yet</div></div>
+<!-- REPORTS (contains Overview dashboard + History) -->
+<div class="screen" id="screen-reports">
+  <div class="settings-header">
+    <div class="settings-topbar">
+      <span class="settings-title">Reports</span>
+    </div>
+    <!-- Inner tabs -->
+    <div style="display:flex;gap:0;border-top:0.5px solid rgba(255,255,255,0.15);margin-top:12px;">
+      <button id="reports-tab-overview" onclick="switchReportsTab('overview')" style="flex:1;background:rgba(255,255,255,0.15);border:none;color:#E1F5EE;font-size:13px;font-weight:600;padding:10px;cursor:pointer;border-bottom:2px solid #E1F5EE;">Overview</button>
+      <button id="reports-tab-history" onclick="switchReportsTab('history')" style="flex:1;background:none;border:none;color:var(--green-mid);font-size:13px;font-weight:500;padding:10px;cursor:pointer;border-bottom:2px solid transparent;">History</button>
+    </div>
+  </div>
+
+  <!-- Overview panel -->
+  <div id="reports-overview" style="flex:1;overflow-y:auto;padding:16px;">
+
+    <!-- Key metrics -->
+    <div class="section-label">This month</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+      <div class="reports-metric-card">
+        <div class="reports-metric-label">Pipeline value</div>
+        <div class="reports-metric-value" id="rpt-pipeline">$0</div>
+        <div class="reports-metric-sub">Open jobs</div>
+      </div>
+      <div class="reports-metric-card">
+        <div class="reports-metric-label">Paid this month</div>
+        <div class="reports-metric-value" id="rpt-paid" style="color:var(--green);">$0</div>
+        <div class="reports-metric-sub">Revenue collected</div>
+      </div>
+      <div class="reports-metric-card">
+        <div class="reports-metric-label">Overdue jobs</div>
+        <div class="reports-metric-value" id="rpt-overdue" style="color:var(--red);">0</div>
+        <div class="reports-metric-sub">Past due date</div>
+      </div>
+      <div class="reports-metric-card">
+        <div class="reports-metric-label">Completed</div>
+        <div class="reports-metric-value" id="rpt-completed" style="color:var(--green);">0</div>
+        <div class="reports-metric-sub">This month</div>
+      </div>
+    </div>
+
+    <!-- Job status breakdown -->
+    <div class="section-label">Jobs by status</div>
+    <div class="detail-section" id="rpt-status-breakdown" style="margin-bottom:20px;"></div>
+
+    <!-- Top staff by jobs -->
+    <div class="section-label" id="rpt-staff-label" style="display:none;">Team activity</div>
+    <div class="detail-section" id="rpt-staff-breakdown" style="margin-bottom:20px;display:none;"></div>
+
+    <!-- Recent paid jobs -->
+    <div class="section-label">Recently paid</div>
+    <div class="detail-section" id="rpt-recent-paid" style="margin-bottom:20px;"></div>
+
+  </div>
+
+  <!-- History panel -->
+  <div id="reports-history" style="flex:1;overflow-y:auto;display:none;">
+    <div class="settings-body" id="history-body" style="padding:16px;">
+      <div class="empty-state" style="padding:40px 20px;">No history yet</div>
+    </div>
+  </div>
+
   <nav class="bottom-nav">
     <button class="nav-btn" onclick="goHome()"><i class="ti ti-home"></i><span>Home</span></button>
     <button class="nav-btn" onclick="goJobs()"><i class="ti ti-briefcase"></i><span>Jobs</span></button>
     <button class="nav-btn" onclick="goCalendar()"><i class="ti ti-calendar"></i><span>Calendar</span></button>
-    <button class="nav-btn active" onclick="goHistory()"><i class="ti ti-clock"></i><span>History</span></button>
+    <button class="nav-btn active" onclick="goReports()"><i class="ti ti-chart-bar"></i><span>Reports</span></button>
     <button class="nav-btn" onclick="goSettings()"><i class="ti ti-settings"></i><span>Settings</span></button>
   </nav>
 </div>
@@ -358,7 +421,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     <button class="nav-btn" onclick="goHome()"><i class="ti ti-home"></i><span>Home</span></button>
     <button class="nav-btn" onclick="goJobs()"><i class="ti ti-briefcase"></i><span>Jobs</span></button>
     <button class="nav-btn" onclick="goCalendar()"><i class="ti ti-calendar"></i><span>Calendar</span></button>
-    <button class="nav-btn" onclick="goHistory()"><i class="ti ti-clock"></i><span>History</span></button>
+    <button class="nav-btn" onclick="goReports()"><i class="ti ti-chart-bar"></i><span>Reports</span></button>
     <button class="nav-btn active" onclick="goSettings()"><i class="ti ti-settings"></i><span>Settings</span></button>
   </nav>
 </div>
@@ -386,7 +449,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     <button class="nav-btn" onclick="goHome()"><i class="ti ti-home"></i><span>Home</span></button>
     <button class="nav-btn active" onclick="goJobs()"><i class="ti ti-briefcase"></i><span>Jobs</span></button>
     <button class="nav-btn" onclick="goCalendar()"><i class="ti ti-calendar"></i><span>Calendar</span></button>
-    <button class="nav-btn" onclick="goHistory()"><i class="ti ti-clock"></i><span>History</span></button>
+  <button class="nav-btn" onclick="goReports()"><i class="ti ti-chart-bar"></i><span>Reports</span></button>
     <button class="nav-btn" onclick="goSettings()"><i class="ti ti-settings"></i><span>Settings</span></button>
   </nav>
 </div>
@@ -398,7 +461,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     <button class="nav-btn" onclick="goHome()"><i class="ti ti-home"></i><span>Home</span></button>
     <button class="nav-btn" onclick="goJobs()"><i class="ti ti-briefcase"></i><span>Jobs</span></button>
     <button class="nav-btn active" onclick="goCalendar()"><i class="ti ti-calendar"></i><span>Calendar</span></button>
-    <button class="nav-btn" onclick="goHistory()"><i class="ti ti-clock"></i><span>History</span></button>
+  <button class="nav-btn" onclick="goReports()"><i class="ti ti-chart-bar"></i><span>Reports</span></button>
     <button class="nav-btn" onclick="goSettings()"><i class="ti ti-settings"></i><span>Settings</span></button>
   </nav>
 </div>
@@ -564,7 +627,7 @@ function hideError(id){document.getElementById(id).classList.remove('show');}
 function togglePw(id,btn){const inp=document.getElementById(id);if(inp.type==='password'){inp.type='text';btn.innerHTML='<i class="ti ti-eye-off"></i>';}else{inp.type='password';btn.innerHTML='<i class="ti ti-eye"></i>';}}
 function getAssigneeName(userId){if(!userId)return null;const m=teamMembers.find(m=>m.user_id===userId);return m?m.name:null;}
 function supNav(active='jobs'){return['home','jobs','calendar','team','profile'].map(t=>{const icons={home:'ti-home',jobs:'ti-briefcase',calendar:'ti-calendar',team:'ti-users',profile:'ti-user'};const labels={home:'Home',jobs:'Jobs',calendar:'Calendar',team:'Team',profile:'Profile'};const clicks={home:'goSupervisorHome()',jobs:'goSupervisorJobs()',calendar:'goCalendar()',team:'goSupervisorTeam()',profile:"goTo('screen-staff-profile')"};return`<button class="nav-btn ${t===active?'active':''}" onclick="${clicks[t]}"><i class="ti ${icons[t]}"></i><span>${labels[t]}</span></button>`;}).join('');}
-function ownerNav(active='jobs'){return['home','jobs','calendar','history','settings'].map(t=>{const icons={home:'ti-home',jobs:'ti-briefcase',calendar:'ti-calendar',history:'ti-clock',settings:'ti-settings'};const labels={home:'Home',jobs:'Jobs',calendar:'Calendar',history:'History',settings:'Settings'};const clicks={home:'goHome()',jobs:'goJobs()',calendar:'goCalendar()',history:'goHistory()',settings:'goSettings()'};return`<button class="nav-btn ${t===active?'active':''}" onclick="${clicks[t]}"><i class="ti ${icons[t]}"></i><span>${labels[t]}</span></button>`;}).join('');}
+function ownerNav(active='jobs'){return['home','jobs','calendar','reports','settings'].map(t=>{const icons={home:'ti-home',jobs:'ti-briefcase',calendar:'ti-calendar',reports:'ti-chart-bar',settings:'ti-settings'};const labels={home:'Home',jobs:'Jobs',calendar:'Calendar',reports:'Reports',settings:'Settings'};const clicks={home:'goHome()',jobs:'goJobs()',calendar:'goCalendar()',reports:'goReports()',settings:'goSettings()'};return`<button class="nav-btn ${t===active?'active':''}" onclick="${clicks[t]}"><i class="ti ${icons[t]}"></i><span>${labels[t]}</span></button>`;}).join('');}
 function fmtTime(t){if(!t)return'';const[h,m]=t.split(':');const hr=parseInt(h);const ampm=hr>=12?'pm':'am';return(hr%12||12)+':'+m+ampm;}
 function jobDateTime(j){const d=j.due_date||'9999-12-31';const t=j.due_time||'00:00';return d+'T'+t;}
 
@@ -1111,7 +1174,120 @@ function calNext(){calWeekStart.setDate(calWeekStart.getDate()+7);renderCalendar
 
 // ── NAV ──
 function goHome(){if(myRole==='supervisor')return goSupervisorHome();if(myRole==='team_member')return goStaffHome();goTo('screen-home');}
-function goHistory(){renderHistoryPage();goTo('screen-history');}
+function goHistory(){goReports();switchReportsTab('history');}
+
+function goReports(){
+  renderReportsDashboard();
+  renderHistoryPage();
+  switchReportsTab('overview');
+  goTo('screen-reports');
+}
+
+function switchReportsTab(tab){
+  const overview=document.getElementById('reports-overview');
+  const history=document.getElementById('reports-history');
+  const tabOv=document.getElementById('reports-tab-overview');
+  const tabHi=document.getElementById('reports-tab-history');
+  if(tab==='overview'){
+    overview.style.display='block';
+    history.style.display='none';
+    tabOv.style.background='rgba(255,255,255,0.15)';
+    tabOv.style.color='#E1F5EE';
+    tabOv.style.fontWeight='600';
+    tabOv.style.borderBottom='2px solid #E1F5EE';
+    tabHi.style.background='none';
+    tabHi.style.color='var(--green-mid)';
+    tabHi.style.fontWeight='500';
+    tabHi.style.borderBottom='2px solid transparent';
+  }else{
+    overview.style.display='none';
+    history.style.display='block';
+    tabOv.style.background='none';
+    tabOv.style.color='var(--green-mid)';
+    tabOv.style.fontWeight='500';
+    tabOv.style.borderBottom='2px solid transparent';
+    tabHi.style.background='rgba(255,255,255,0.15)';
+    tabHi.style.color='#E1F5EE';
+    tabHi.style.fontWeight='600';
+    tabHi.style.borderBottom='2px solid #E1F5EE';
+  }
+}
+
+function renderReportsDashboard(){
+  if(!allJobs.length)return;
+  const now=new Date();
+  const todayStr=now.toISOString().slice(0,10);
+  const monthStart=new Date(now.getFullYear(),now.getMonth(),1);
+
+  // ── Key metrics ──
+  const pipeline=allJobs
+    .filter(j=>!['Completed','Paid','Declined'].includes(j.status))
+    .reduce((s,j)=>s+(parseFloat(j.value)||0),0);
+
+  const paidThisMonth=allJobs
+    .filter(j=>j.status==='Paid'&&new Date(j.updated_at||j.created_at)>=monthStart)
+    .reduce((s,j)=>s+(parseFloat(j.value)||0),0);
+
+  const overdue=allJobs
+    .filter(j=>j.due_date&&j.due_date<todayStr&&!['Completed','Paid','Declined'].includes(j.status)).length;
+
+  const completedThisMonth=allJobs
+    .filter(j=>j.status==='Completed'&&new Date(j.updated_at||j.created_at)>=monthStart).length;
+
+  document.getElementById('rpt-pipeline').textContent='$'+pipeline.toLocaleString('en-AU');
+  document.getElementById('rpt-paid').textContent='$'+paidThisMonth.toLocaleString('en-AU');
+  document.getElementById('rpt-overdue').textContent=overdue;
+  document.getElementById('rpt-completed').textContent=completedThisMonth;
+
+  // ── Status breakdown ──
+  const statuses=['New','Quoted','Accepted','In Progress','Completed','Invoiced','Paid','Declined'];
+  const statusCounts={};
+  statuses.forEach(s=>statusCounts[s]=allJobs.filter(j=>j.status===s).length);
+  const breakdownEl=document.getElementById('rpt-status-breakdown');
+  breakdownEl.innerHTML=statuses
+    .filter(s=>statusCounts[s]>0)
+    .map(s=>`<div class="detail-row">
+      <span class="detail-label">
+        <span class="job-status-badge status-${s.replace(' ','-')}">${s}</span>
+      </span>
+      <span class="detail-val">${statusCounts[s]} job${statusCounts[s]!==1?'s':''}</span>
+    </div>`).join('');
+
+  // ── Staff breakdown (if team exists) ──
+  if(teamMembers.length>0){
+    document.getElementById('rpt-staff-label').style.display='block';
+    const staffEl=document.getElementById('rpt-staff-breakdown');
+    staffEl.style.display='block';
+    const staffStats=teamMembers.map(m=>{
+      const assigned=allJobs.filter(j=>j.assigned_to===m.user_id);
+      const active=assigned.filter(j=>!['Completed','Paid','Declined'].includes(j.status)).length;
+      const done=assigned.filter(j=>['Completed','Paid'].includes(j.status)&&new Date(j.updated_at||j.created_at)>=monthStart).length;
+      return{name:m.name,active,done};
+    }).sort((a,b)=>b.done-a.done);
+    staffEl.innerHTML=staffStats.map(s=>`<div class="detail-row">
+      <span class="detail-label"><i class="ti ti-user"></i>${s.name}</span>
+      <span class="detail-val" style="text-align:right;">
+        <span style="color:var(--green);font-weight:600;">${s.done} done</span>
+        <span style="color:var(--text-muted);font-size:11px;margin-left:6px;">${s.active} active</span>
+      </span>
+    </div>`).join('');
+  }
+
+  // ── Recently paid jobs ──
+  const recentPaid=allJobs
+    .filter(j=>j.status==='Paid')
+    .sort((a,b)=>new Date(b.updated_at||b.created_at)-new Date(a.updated_at||a.created_at))
+    .slice(0,5);
+  const paidEl=document.getElementById('rpt-recent-paid');
+  if(!recentPaid.length){
+    paidEl.innerHTML='<div class="empty-state" style="padding:16px;">No paid jobs yet</div>';
+  }else{
+    paidEl.innerHTML=recentPaid.map(j=>`<div class="detail-row" style="cursor:pointer;" onclick="viewJob('${j.id}')">
+      <span class="detail-label"><i class="ti ti-circle-check" style="color:var(--green);"></i>${j.customer_name}</span>
+      <span class="detail-val" style="color:var(--green);font-weight:600;">$${parseFloat(j.value||0).toLocaleString('en-AU')}</span>
+    </div>`).join('');
+  }
+}
 function goSettings(){goTo('screen-settings');}
 function goUpgrade(){goTo('screen-upgrade');}
 
