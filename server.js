@@ -1033,4 +1033,249 @@ app.get('/api/jobs/next-number', requireAuth, async (req, res) => {
 });
 
 
-app.listen(PORT, () => console.log(`Tradie AI backend running on port ${PORT}`));
+// ══════════════════════════════════════════════════
+// ── AUTOMATION ENGINE ──
+// ══════════════════════════════════════════════════
+
+// ── CUSTOMER STATUS EMAIL HELPER ──
+async function sendCustomerStatusEmail(job, profile, newStatus) {
+  if (!job.customer_email) return;
+  const businessName = profile.bizname || profile.name || 'Tradie AI';
+  const firstName = job.customer_name ? job.customer_name.split(' ')[0] : 'there';
+  const value = parseFloat(job.value || 0).toFixed(2);
+  const dueDate = job.due_date ? new Date(job.due_date).toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' }) : '';
+  const phone = profile.phone || '';
+
+  const msgs = {
+    'Quoted': {
+      subject: 'Quote from ' + businessName,
+      body: 'Hi ' + firstName + ',\n\nThanks for getting in touch. We\'ve prepared a quote for you.\n\nJob: ' + job.description + '\nAmount: $' + value + ' inc GST\n\nPlease let us know if you\'d like to go ahead.\n\nCheers,\n' + businessName
+    },
+    'Accepted': {
+      subject: 'Job confirmed — ' + businessName,
+      body: 'Hi ' + firstName + ',\n\nGreat news — your job has been confirmed.\n\nJob: ' + job.description + (dueDate ? '\nScheduled: ' + dueDate : '') + (job.job_address ? '\nAddress: ' + job.job_address : '') + '\n\nWe\'ll be in touch with any updates.\n\nCheers,\n' + businessName + (phone ? '\n' + phone : '')
+    },
+    'In Progress': {
+      subject: 'Work has started — ' + businessName,
+      body: 'Hi ' + firstName + ',\n\nJust letting you know we\'ve started work on your job.\n\nJob: ' + job.description + (job.job_address ? '\nAddress: ' + job.job_address : '') + '\n\nWe\'ll keep you updated on progress.\n\nCheers,\n' + businessName + (phone ? '\n' + phone : '')
+    },
+    'Completed': {
+      subject: 'Job completed — ' + businessName,
+      body: 'Hi ' + firstName + ',\n\nGood news — your job has been completed.\n\nJob: ' + job.description + (job.job_address ? '\nAddress: ' + job.job_address : '') + '\n\nIf you have any questions, don\'t hesitate to get in touch.\n\nCheers,\n' + businessName + (phone ? '\n' + phone : '')
+    }
+  };
+
+  const template = msgs[newStatus];
+  if (!template) return;
+
+  try {
+    await resend.emails.send({
+      from: businessName + ' <onboarding@resend.dev>',
+      to: job.customer_email,
+      subject: template.subject,
+      text: template.body
+    });
+    console.log('Status email sent to ' + job.customer_email + ' for status ' + newStatus);
+  } catch (err) {
+    console.error('Status email error:', err);
+  }
+}
+
+// ── JOBS: UPDATE STATUS (with auto customer email) ──
+app.post('/api/jobs/:id/update-status', requireAuth, async (req, res) => {
+  const { status, notes } = req.body;
+  const validStatuses = ['New', 'Quoted', 'Accepted', 'Declined', 'In Progress', 'Completed', 'Invoiced', 'Paid'];
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ error: 'Invalid status' });
+  }
+
+  let profileId = req.user.id;
+  const staffCtx = await getStaffMember(req.user.id);
+  if (staffCtx) profileId = staffCtx.teams.owner_user_id;
+
+  const updateData = { status: status, updated_at: new Date().toISOString() };
+  if (status === 'Invoiced') updateData.invoiced_at = new Date().toISOString();
+  if (notes !== undefined) updateData.notes = notes;
+
+  const { data: job, error } = await supabase
+    .from('jobs')
+    .update(updateData)
+    .eq('id', req.params.id)
+    .select()
+    .single();
+  if (error) return res.status(400).json({ error: error.message });
+
+  // Send customer status email
+  const { data: profile } = await supabase.from('profiles').select('*').eq('id', profileId).single();
+  if (profile) {
+    await sendCustomerStatusEmail(job, profile, status);
+  }
+
+  // Push to owner when supervisor/staff completes a job
+  if (status === 'Completed' && staffCtx) {
+    await sendPushToUser(
+      profileId,
+      'Job completed',
+      '"' + job.customer_name + '" marked complete',
+      '/'
+    );
+  }
+
+  res.json({ success: true, job: job });
+});
+
+// ── CRON: DAILY TASKS (payment chase + job reminders) ──
+app.post('/api/cron/daily', async (req, res) => {
+  const secret = req.headers['x-cron-secret'] || req.query.secret;
+  if (secret !== process.env.CRON_SECRET) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const results = { chases_sent: 0, reminders_sent: 0, errors: [] };
+  const now = new Date();
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+
+  // ── 1. PAYMENT CHASE — 7 / 14 / 30 day reminders for unpaid invoices ──
+  try {
+    const { data: invoicedJobs } = await supabase
+      .from('jobs')
+      .select('*')
+      .eq('status', 'Invoiced')
+      .not('customer_email', 'is', null);
+
+    for (const job of invoicedJobs || []) {
+      const invoicedAt = new Date(job.invoiced_at || job.updated_at);
+      const daysSince = Math.floor((now - invoicedAt) / (1000 * 60 * 60 * 24));
+      const chaseCount = job.chase_count || 0;
+
+      let shouldChase = false;
+      let chaseLevel = '';
+      if (daysSince >= 30 && chaseCount < 3) { shouldChase = true; chaseLevel = 'final'; }
+      else if (daysSince >= 14 && chaseCount < 2) { shouldChase = true; chaseLevel = 'second'; }
+      else if (daysSince >= 7 && chaseCount < 1) { shouldChase = true; chaseLevel = 'first'; }
+
+      if (!shouldChase) continue;
+
+      const { data: profile } = await supabase.from('profiles').select('*').eq('id', job.user_id).single();
+      if (!profile) continue;
+
+      const businessName = profile.bizname || profile.name || 'Tradie AI';
+      const value = parseFloat(job.value || 0).toFixed(2);
+      const firstName = job.customer_name ? job.customer_name.split(' ')[0] : 'there';
+      const phone = profile.phone || '';
+
+      const chaseMessages = {
+        first: {
+          subject: 'Payment reminder — ' + businessName,
+          body: 'Hi ' + firstName + ',\n\nJust a friendly reminder that payment of $' + value + ' is now due.\n\nJob: ' + job.description + '\nInvoice: ' + job.job_number + '\n\nIf you\'ve already paid, please disregard this message.\n\nCheers,\n' + businessName + (phone ? '\n' + phone : '')
+        },
+        second: {
+          subject: 'Payment overdue — ' + businessName,
+          body: 'Hi ' + firstName + ',\n\nThis is a reminder that payment of $' + value + ' is now 14 days overdue.\n\nJob: ' + job.description + '\nInvoice: ' + job.job_number + '\n\nPlease arrange payment at your earliest convenience.\n\nCheers,\n' + businessName + (phone ? '\n' + phone : '')
+        },
+        final: {
+          subject: 'Final payment notice — ' + businessName,
+          body: 'Hi ' + firstName + ',\n\nThis is a final notice that payment of $' + value + ' is now 30 days overdue.\n\nJob: ' + job.description + '\nInvoice: ' + job.job_number + '\n\nPlease arrange payment urgently. If you have any questions, please contact us.\n\nRegards,\n' + businessName + (phone ? '\n' + phone : '')
+        }
+      };
+
+      try {
+        await resend.emails.send({
+          from: businessName + ' <onboarding@resend.dev>',
+          to: job.customer_email,
+          subject: chaseMessages[chaseLevel].subject,
+          text: chaseMessages[chaseLevel].body
+        });
+        await supabase.from('jobs').update({
+          chase_count: chaseCount + 1,
+          last_chase_at: now.toISOString()
+        }).eq('id', job.id);
+        results.chases_sent++;
+      } catch (err) {
+        console.error('Chase email error for job ' + job.job_number + ':', err);
+        results.errors.push('Chase: ' + job.job_number);
+      }
+    }
+  } catch (err) {
+    console.error('Chase query error:', err);
+    results.errors.push('Chase query failed');
+  }
+
+  // ── 2. JOB REMINDERS — jobs due tomorrow ──
+  try {
+    const { data: tomorrowJobs } = await supabase
+      .from('jobs')
+      .select('*')
+      .eq('due_date', tomorrowStr)
+      .in('status', ['New', 'Quoted', 'Accepted', 'In Progress']);
+
+    for (const job of tomorrowJobs || []) {
+      const { data: profile } = await supabase.from('profiles').select('*').eq('id', job.user_id).single();
+      if (!profile) continue;
+
+      const businessName = profile.bizname || profile.name || 'Tradie AI';
+      const dueDate = new Date(job.due_date).toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' });
+      const firstName = job.customer_name ? job.customer_name.split(' ')[0] : 'there';
+      const phone = profile.phone || 'our office number';
+
+      // Email to customer
+      if (job.customer_email) {
+        try {
+          await resend.emails.send({
+            from: businessName + ' <onboarding@resend.dev>',
+            to: job.customer_email,
+            subject: 'Reminder: ' + businessName + ' is scheduled tomorrow',
+            text: 'Hi ' + firstName + ',\n\nJust a reminder that ' + businessName + ' is scheduled to visit you tomorrow.\n\nDate: ' + dueDate + (job.due_time ? '\nTime: ' + job.due_time.slice(0, 5) : '') + '\nJob: ' + job.description + (job.job_address ? '\nAddress: ' + job.job_address : '') + '\n\nIf you need to reschedule, please call us on ' + phone + '.\n\nCheers,\n' + businessName
+          });
+          results.reminders_sent++;
+        } catch (err) {
+          console.error('Customer reminder error:', err);
+          results.errors.push('Reminder email: ' + job.job_number);
+        }
+      }
+
+      // Push notification to assigned staff
+      if (job.assigned_to) {
+        await sendPushToUser(
+          job.assigned_to,
+          'Job tomorrow',
+          job.customer_name + (job.due_time ? ' at ' + job.due_time.slice(0, 5) : '') + ' — ' + (job.job_address || job.description),
+          '/'
+        );
+      }
+    }
+  } catch (err) {
+    console.error('Reminder query error:', err);
+    results.errors.push('Reminder query failed');
+  }
+
+  console.log('Cron daily completed:', results);
+  res.json({ success: true, timestamp: now.toISOString(), results: results });
+});
+
+app.listen(PORT, () => {
+  console.log(`Tradie AI backend running on port ${PORT}`);
+
+  // ── BUILT-IN DAILY CRON — runs every hour, checks if it's 5pm AEST ──
+  let lastCronDate = '';
+  setInterval(async () => {
+    const now = new Date();
+    const aest = new Date(now.toLocaleString('en-US', { timeZone: 'Australia/Melbourne' }));
+    const hour = aest.getHours();
+    const dateStr = aest.toISOString().slice(0, 10);
+    // Run once per day at 5pm Melbourne time
+    if (hour === 17 && dateStr !== lastCronDate) {
+      lastCronDate = dateStr;
+      console.log('Running daily cron at', now.toISOString());
+      try {
+        const res = await fetch('http://localhost:' + PORT + '/api/cron/daily?secret=' + process.env.CRON_SECRET);
+        const data = await res.json();
+        console.log('Cron result:', data);
+      } catch (err) {
+        console.error('Cron self-call error:', err);
+      }
+    }
+  }, 60 * 60 * 1000); // Check every hour
+});
