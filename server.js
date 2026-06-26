@@ -919,13 +919,38 @@ app.post('/api/jobs/:id/generate-pdf', requireAuth, async (req, res) => {
     doc.fillColor(green).fontSize(14).text(`$${jobValue.toFixed(2)}`, 0, contentY - 2, { align: 'right', width: doc.page.width - 50 });
     contentY += 40;
 
-    // Payment terms
+// Payment terms
     if (profile.terms || isInvoice) {
       doc.rect(50, contentY, doc.page.width - 100, 36).fill(lightGreen);
       doc.fillColor(green).fontSize(8).font('Helvetica-Bold').text('PAYMENT TERMS', 60, contentY + 6);
       doc.fillColor(textDark).fontSize(9).font('Helvetica')
          .text(profile.terms || 'Payment due within 14 days', 60, contentY + 18);
       contentY += 50;
+    }
+
+    // Payment details — invoices only
+    if (isInvoice && (profile.bank_name || profile.bsb || profile.account_number || profile.pay_id)) {
+      const payLines = [];
+      if (profile.bank_name)     payLines.push({ label: 'Bank', value: profile.bank_name });
+      if (profile.account_name)  payLines.push({ label: 'Account Name', value: profile.account_name });
+      if (profile.bsb)           payLines.push({ label: 'BSB', value: profile.bsb });
+      if (profile.account_number)payLines.push({ label: 'Account No', value: profile.account_number });
+      if (profile.pay_id)        payLines.push({ label: 'PayID', value: profile.pay_id });
+
+      const boxHeight = 16 + (payLines.length * 14);
+      doc.rect(50, contentY, doc.page.width - 100, boxHeight).fill(lightGreen);
+      doc.fillColor(green).fontSize(8).font('Helvetica-Bold')
+         .text('PAYMENT DETAILS', 60, contentY + 6);
+      contentY += 18;
+
+      payLines.forEach(line => {
+        doc.fillColor(textMuted).fontSize(9).font('Helvetica-Bold')
+           .text(line.label + ':', 60, contentY);
+        doc.fillColor(textDark).font('Helvetica')
+           .text(line.value, 160, contentY);
+        contentY += 14;
+      });
+      contentY += 10;
     }
 
     // Footer
