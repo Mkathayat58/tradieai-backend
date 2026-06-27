@@ -189,7 +189,18 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 .a2hs-text strong{display:block;font-size:13px;margin-bottom:1px;}
 .a2hs-btn{background:var(--green-bright);border:none;border-radius:var(--radius-xs);padding:7px 12px;font-size:12px;font-weight:600;color:var(--green-darker);cursor:pointer;white-space:nowrap;flex-shrink:0;}
 .a2hs-dismiss{background:none;border:none;color:var(--green-mid);font-size:18px;cursor:pointer;padding:0;flex-shrink:0;}
-.voice-btn{background:var(--green-light);border:1.5px solid var(--green-mid);border-radius:var(--radius-sm);padding:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent;margin-bottom:12px;gap:8px;width:100%;font-size:13px;font-weight:600;color:var(--green-dark);}.voice-btn.listening{background:var(--red-light);border-color:#F09595;color:var(--red);animation:pulse 1s infinite;}
+.voice-mic-btn{position:absolute;bottom:10px;right:10px;background:none;border:none;cursor:pointer;padding:4px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);-webkit-tap-highlight-color:transparent;z-index:10;}
+.voice-mic-btn.listening{color:var(--green);}
+.voice-mic-btn svg{width:22px;height:22px;}
+.voice-wave{display:none;align-items:center;gap:2px;height:22px;}
+.voice-wave.show{display:flex;}
+.voice-wave span{display:inline-block;width:3px;background:var(--green);border-radius:2px;animation:wave 0.8s infinite ease-in-out;}
+.voice-wave span:nth-child(1){height:6px;animation-delay:0s;}
+.voice-wave span:nth-child(2){height:14px;animation-delay:0.1s;}
+.voice-wave span:nth-child(3){height:20px;animation-delay:0.2s;}
+.voice-wave span:nth-child(4){height:14px;animation-delay:0.3s;}
+.voice-wave span:nth-child(5){height:6px;animation-delay:0.4s;}
+@keyframes wave{0%,100%{transform:scaleY(1)}50%{transform:scaleY(0.4)}}
 .quote-table{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:13px;}
 .quote-table th{background:var(--green);color:#fff;padding:8px 10px;text-align:left;font-weight:600;font-size:12px;}
 .quote-table td{padding:8px 10px;border-bottom:0.5px solid var(--border);vertical-align:middle;}
@@ -987,22 +998,62 @@ function renderVoiceBtn(){
   const existing=document.getElementById('voice-btn-wrap');
   if(existing)existing.remove();
   if(!('webkitSpeechRecognition' in window||'SpeechRecognition' in window))return;
+  const textarea=document.getElementById('job-input');
   const wrap=document.createElement('div');
   wrap.id='voice-btn-wrap';
-  wrap.innerHTML='<button class="voice-btn" id="voice-btn" onclick="toggleVoice()"><i class="ti ti-microphone"></i> Tap to speak</button>';
-  const textarea=document.getElementById('job-input');
+  wrap.style.cssText='position:relative;';
   textarea.parentNode.insertBefore(wrap,textarea);
-}
+  wrap.appendChild(textarea);
+  wrap.innerHTML+=`<button class="voice-mic-btn" id="voice-btn" onclick="toggleVoice()" aria-label="Voice input">
+    <svg id="voice-mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="9" y="2" width="6" height="11" rx="3"/>
+      <path d="M5 10a7 7 0 0 0 14 0"/>
+      <line x1="12" y1="17" x2="12" y2="21"/>
+      <line x1="9" y1="21" x2="15" y2="21"/>
+    </svg>
+    <div class="voice-wave" id="voice-wave">
+      <span></span><span></span><span></span><span></span><span></span>
+    </div>
+  </button>`;}
+
 function toggleVoice(){
   if(_isListening){_recognition&&_recognition.stop();return;}
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   _recognition=new SR();
   _recognition.lang='en-AU';
-  _recognition.continuous=false;
-  _recognition.interimResults=false;
-  _recognition.onstart=()=>{_isListening=true;const b=document.getElementById('voice-btn');if(b){b.classList.add('listening');b.innerHTML='<i class="ti ti-microphone"></i> Listening...';}}
-  _recognition.onresult=(e)=>{const txt=e.results[0][0].transcript;const ta=document.getElementById('job-input');ta.value=(ta.value?ta.value+' ':'')+txt;updateChar();}
-  _recognition.onend=()=>{_isListening=false;const b=document.getElementById('voice-btn');if(b){b.classList.remove('listening');b.innerHTML='<i class="ti ti-microphone"></i> Tap to speak';}}
+  _recognition.continuous=true;
+  _recognition.interimResults=true;
+  let _base='';
+  _recognition.onstart=()=>{
+    _isListening=true;
+    _base=document.getElementById('job-input').value;
+    const mic=document.getElementById('voice-mic-icon');
+    const wave=document.getElementById('voice-wave');
+    if(mic)mic.style.display='none';
+    if(wave)wave.classList.add('show');
+    const btn=document.getElementById('voice-btn');
+    if(btn)btn.classList.add('listening');
+  }
+  _recognition.onresult=(e)=>{
+    let interim='';let final='';
+    for(let i=0;i<e.results.length;i++){
+      if(e.results[i].isFinal)final+=e.results[i][0].transcript;
+      else interim+=e.results[i][0].transcript;
+    }
+    const ta=document.getElementById('job-input');
+    ta.value=(_base?_base+' ':'')+final+interim;
+    if(final)_base=(_base?_base+' ':'')+final;
+    updateChar();
+  }
+  _recognition.onend=()=>{
+    _isListening=false;
+    const mic=document.getElementById('voice-mic-icon');
+    const wave=document.getElementById('voice-wave');
+    if(mic)mic.style.display='';
+    if(wave)wave.classList.remove('show');
+    const btn=document.getElementById('voice-btn');
+    if(btn)btn.classList.remove('listening');
+  }
   _recognition.onerror=()=>{_isListening=false;showToast('Voice not available — please type instead',true);}
   _recognition.start();
 }
