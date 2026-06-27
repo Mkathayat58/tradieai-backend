@@ -1125,6 +1125,12 @@ app.post('/api/jobs/:id/update-status', requireAuth, async (req, res) => {
 });
 
 // ── CRON: DAILY TASKS (payment chase + job reminders) ──
+async function runDailyCronTasks() {
+  const req = { headers: { 'x-cron-secret': process.env.CRON_SECRET }, query: { secret: process.env.CRON_SECRET } };
+  const res = { json: (d) => console.log('Cron result:', JSON.stringify(d)) };
+  await handleDailyCron(req, res);
+}
+
 app.post('/api/cron/daily', async (req, res) => {
   const secret = req.headers['x-cron-secret'] || req.query.secret;
   if (secret !== process.env.CRON_SECRET) {
@@ -1251,9 +1257,17 @@ app.post('/api/cron/daily', async (req, res) => {
     results.errors.push('Reminder query failed');
   }
 
-  console.log('Cron daily completed:', results);
+console.log('Cron daily completed:', results);
   res.json({ success: true, timestamp: now.toISOString(), results: results });
-});
+}
+
+async function handleDailyCron(req, res) {
+  const secret = req.headers['x-cron-secret'] || req.query.secret;
+  if (secret !== process.env.CRON_SECRET) {
+    return res.json({ error: 'Unauthorized' });
+  }
+  return handleDailyCron(req, res);
+}
 
 app.listen(PORT, () => {
   console.log(`Tradie AI backend running on port ${PORT}`);
@@ -1270,9 +1284,7 @@ app.listen(PORT, () => {
       lastCronDate = dateStr;
       console.log('Running daily cron at', now.toISOString());
       try {
-const res = await fetch((process.env.FRONTEND_URL ? 'https://tradieai-backend.onrender.com' : 'http://localhost:' + PORT) + '/api/cron/daily?secret=' + process.env.CRON_SECRET);
-        const data = await res.json();
-        console.log('Cron result:', data);
+await runDailyCronTasks();
       } catch (err) {
         console.error('Cron self-call error:', err);
       }
