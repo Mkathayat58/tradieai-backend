@@ -1125,12 +1125,6 @@ app.post('/api/jobs/:id/update-status', requireAuth, async (req, res) => {
 });
 
 // ── CRON: DAILY TASKS (payment chase + job reminders) ──
-async function runDailyCronTasks() {
-  const req = { headers: { 'x-cron-secret': process.env.CRON_SECRET }, query: { secret: process.env.CRON_SECRET } };
-  const res = { json: (d) => console.log('Cron result:', JSON.stringify(d)) };
-  await handleDailyCron(req, res);
-}
-
 app.post('/api/cron/daily', async (req, res) => {
   const secret = req.headers['x-cron-secret'] || req.query.secret;
   if (secret !== process.env.CRON_SECRET) {
@@ -1259,14 +1253,32 @@ app.post('/api/cron/daily', async (req, res) => {
 
 console.log('Cron daily completed:', results);
   res.json({ success: true, timestamp: now.toISOString(), results: results });
-}
+});
 
-async function handleDailyCron(req, res) {
-  const secret = req.headers['x-cron-secret'] || req.query.secret;
-  if (secret !== process.env.CRON_SECRET) {
-    return res.json({ error: 'Unauthorized' });
-  }
-  return handleDailyCron(req, res);
+async function runDailyCronTasks() {
+  console.log('Running cron tasks directly...');
+  const results = { chases_sent: 0, reminders_sent: 0, errors: [] };
+  const fakeRes = { json: (d) => console.log('Cron result:', JSON.stringify(d)) };
+  const fakeReq = { headers: { 'x-cron-secret': process.env.CRON_SECRET }, query: { secret: process.env.CRON_SECRET } };
+  
+  // Make internal request to cron endpoint
+  const http = require('http');
+  const options = {
+    hostname: 'localhost',
+    port: process.env.PORT || 10000,
+    path: '/api/cron/daily',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-cron-secret': process.env.CRON_SECRET }
+  };
+  return new Promise((resolve) => {
+    const req = http.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => { console.log('Cron result:', data); resolve(); });
+    });
+    req.on('error', (err) => { console.error('Cron error:', err.message); resolve(); });
+    req.end();
+  });
 }
 
 app.listen(PORT, () => {
