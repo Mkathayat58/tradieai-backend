@@ -992,7 +992,7 @@ app.post('/api/jobs/:id/email-pdf', requireAuth, async (req, res) => {
       : `Please find your quote attached. This quote is valid for 30 days.\n\nPlease don't hesitate to get in touch if you have any questions.\n\n${businessName}`;
 
   await resend.emails.send({
-      from: `${businessName} <onboarding@resend.dev>`,
+      from: `${businessName} <noreply@mailoncall.net>`,
       to: customerEmail,
       subject,
       text: bodyText,
@@ -1183,7 +1183,7 @@ app.post('/api/cron/daily', async (req, res) => {
 
       try {
         await resend.emails.send({
-          from: businessName + ' <onboarding@resend.dev>',
+          from: businessName + ' <noreply@mailoncall.net>',
           to: job.customer_email,
           subject: chaseMessages[chaseLevel].subject,
           text: chaseMessages[chaseLevel].body
@@ -1224,7 +1224,7 @@ app.post('/api/cron/daily', async (req, res) => {
       if (job.customer_email) {
         try {
           await resend.emails.send({
-            from: businessName + ' <onboarding@resend.dev>',
+            from: businessName + ' <noreply@mailoncall.net>',
             to: job.customer_email,
             subject: 'Reminder: ' + businessName + ' is scheduled tomorrow',
             text: 'Hi ' + firstName + ',\n\nJust a reminder that ' + businessName + ' is scheduled to visit you tomorrow.\n\nDate: ' + dueDate + (job.due_time ? '\nTime: ' + job.due_time.slice(0, 5) : '') + '\nJob: ' + job.description + (job.job_address ? '\nAddress: ' + job.job_address : '') + '\n\nIf you need to reschedule, please call us on ' + phone + '.\n\nCheers,\n' + businessName
