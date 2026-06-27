@@ -1266,7 +1266,7 @@ app.listen(PORT, () => {
     const hour = aest.getHours();
     const dateStr = aest.toISOString().slice(0, 10);
     // Run once per day at 5pm Melbourne time
-    if (hour === 17 && dateStr !== lastCronDate) {
+  if (dateStr !== lastCronDate) {
       lastCronDate = dateStr;
       console.log('Running daily cron at', now.toISOString());
       try {
@@ -1277,5 +1277,5 @@ app.listen(PORT, () => {
         console.error('Cron self-call error:', err);
       }
     }
-  }, 60 * 60 * 1000); // Check every hour
+}, 2 * 60 * 1000); // Check every 2 minutes (TESTING ONLY)
 });
