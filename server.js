@@ -1270,7 +1270,7 @@ app.listen(PORT, () => {
       lastCronDate = dateStr;
       console.log('Running daily cron at', now.toISOString());
       try {
-        const res = await fetch('http://localhost:' + PORT + '/api/cron/daily?secret=' + process.env.CRON_SECRET);
+const res = await fetch((process.env.FRONTEND_URL ? 'https://tradieai-backend.onrender.com' : 'http://localhost:' + PORT) + '/api/cron/daily?secret=' + process.env.CRON_SECRET);
         const data = await res.json();
         console.log('Cron result:', data);
       } catch (err) {
