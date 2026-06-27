@@ -1070,7 +1070,7 @@ async function sendCustomerStatusEmail(job, profile, newStatus) {
 
   try {
     await resend.emails.send({
-      from: businessName + ' <onboarding@resend.dev>',
+      from: businessName + ' <noreply@mailoncall.net>',
       to: job.customer_email,
       subject: template.subject,
       text: template.body
