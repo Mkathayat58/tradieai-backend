@@ -1332,7 +1332,7 @@ async function goJobs(){
   currentAssigneeFilter='all';jobSearchQuery='';const si=document.getElementById('job-search-input');if(si)si.value='';
   await loadJobs();goTo('screen-jobs');
   if(jobsListPollInterval)clearInterval(jobsListPollInterval);
-  jobsListPollInterval=setInterval(async()=>{if(!document.getElementById('screen-jobs').classList.contains('active')){clearInterval(jobsListPollInterval);return;}await loadJobs();},5000);
+jobsListPollInterval=setInterval(async()=>{if(!document.getElementById('screen-jobs').classList.contains('active')){clearInterval(jobsListPollInterval);return;}await loadJobs();},30000);
 }
 
 // ── CALENDAR ──
