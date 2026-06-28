@@ -584,7 +584,6 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
   </div>
   <div class="home-body">
     <div id="sup-briefing"></div>
-    <div id="sup-up-next"></div>
     <div class="section-label">What do you need?</div>
     <div class="tpl-grid">
  <div class="tpl-card" onclick="openTemplate('smartquote')"><i class="ti ti-sparkles tpl-icon"></i><div class="tpl-name">AI Smart Quote</div><div class="tpl-desc">Pricing suggested</div></div>
@@ -592,6 +591,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
       <div class="tpl-card" onclick="openTemplate('email')"><i class="ti ti-mail tpl-icon"></i><div class="tpl-name">Customer email</div><div class="tpl-desc">Reply or follow up</div></div>
       <div class="tpl-card" onclick="openTemplate('chat')"><i class="ti ti-message-2 tpl-icon"></i><div class="tpl-name">Free chat</div><div class="tpl-desc">Ask me anything</div></div>
     </div>
+<div id="sup-up-next"></div>
     <!-- End of day summary placeholder -->
     <div id="sup-eod-summary"></div>
   </div>
@@ -1164,15 +1164,23 @@ function renderUpNext(containerId,jobs,userId){
   let upcoming=jobs.filter(j=>j.due_date&&!['Completed','Paid','Declined'].includes(j.status));
   if(userId)upcoming=upcoming.filter(j=>j.assigned_to===userId);
   upcoming.sort((a,b)=>jobDateTime(a).localeCompare(jobDateTime(b)));
-  const todayJobs=upcoming.filter(j=>j.due_date===todayStr);
-  const futureJobs=upcoming.filter(j=>j.due_date>todayStr).slice(0,3);
-  const show=[...todayJobs,...futureJobs].slice(0,4);
+  const show=upcoming.slice(0,3);
   if(!show.length){el.innerHTML='';return;}
-  el.innerHTML=`<div class="up-next-card"><div class="up-next-title"><i class="ti ti-clock"></i> Up next</div>${show.map(j=>{
-    const isToday=j.due_date===todayStr;
-    const timeStr=j.due_time?fmtTime(j.due_time):(isToday?'Today':new Date(j.due_date).toLocaleDateString('en-AU',{day:'numeric',month:'short'}));
-    return`<div class="up-next-item" onclick="viewJob('${j.id}')"><span class="up-next-time">${timeStr}</span><div class="up-next-info"><div class="up-next-customer">${j.customer_name}</div>${j.job_address?`<div class="up-next-addr">${j.job_address}</div>`:''}</div></div>`;
-  }).join('')}</div>`;
+  const total=upcoming.length;
+  el.innerHTML='<div class="up-next-card">'
+    +'<div class="up-next-title"><i class="ti ti-clock"></i> Up next</div>'
+    +show.map(j=>{
+      const isToday=j.due_date===todayStr;
+      const timeStr=j.due_time?fmtTime(j.due_time):(isToday?'Today':new Date(j.due_date).toLocaleDateString('en-AU',{day:'numeric',month:'short'}));
+      return'<div class="up-next-item" onclick="viewJob(\''+j.id+'\')">'
+        +'<span class="up-next-time">'+timeStr+'</span>'
+        +'<div class="up-next-info">'
+        +'<div class="up-next-customer">'+j.customer_name+'</div>'
+        +(j.job_address?'<div class="up-next-addr">'+j.job_address+'</div>':'')
+        +'</div></div>';
+    }).join('')
+    +(total>3?'<div style="padding:10px 0 2px;text-align:center;"><button onclick="goJobs()" style="background:none;border:none;color:var(--green);font-size:13px;font-weight:500;cursor:pointer;-webkit-tap-highlight-color:transparent;">See all jobs</button></div>':'')
+    +'</div>';
 }
 
 // ── DAILY BRIEFING ──
