@@ -999,19 +999,14 @@ function renderVoiceBtn(){
   if(existing)existing.remove();
   if(!('webkitSpeechRecognition' in window||'SpeechRecognition' in window))return;
   const textarea=document.getElementById('job-input');
-  const wrap=document.createElement('div');
-  wrap.id='voice-btn-wrap';
-  wrap.style.cssText='position:relative;display:flex;align-items:flex-end;gap:8px;';
+  if(!textarea||!textarea.parentNode)return;
   const micBtn=document.createElement('button');
-  micBtn.className='voice-mic-btn';
-  micBtn.id='voice-btn';
+  micBtn.id='voice-btn-wrap';
   micBtn.setAttribute('aria-label','Voice input');
   micBtn.onclick=toggleVoice;
-  micBtn.style.cssText='position:relative;flex-shrink:0;bottom:auto;right:auto;';
-  micBtn.innerHTML=`<svg id="voice-mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="21"/><line x1="9" y1="21" x2="15" y2="21"/></svg><div class="voice-wave" id="voice-wave"><span></span><span></span><span></span><span></span><span></span></div>`;
-  textarea.parentNode.insertBefore(wrap,textarea);
-  wrap.appendChild(textarea);
-  wrap.appendChild(micBtn);
+  micBtn.style.cssText='display:inline-flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:12px;padding:4px 0;margin-top:6px;-webkit-tap-highlight-color:transparent;';
+  micBtn.innerHTML='<svg id="voice-mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="21"/><line x1="9" y1="21" x2="15" y2="21"/></svg><div class="voice-wave" id="voice-wave"><span></span><span></span><span></span><span></span><span></span></div><span id="voice-label" style="font-size:12px;">Tap to speak</span>';
+  textarea.parentNode.insertBefore(micBtn,textarea.nextSibling);
 }
 
 function toggleVoice(){
@@ -1030,8 +1025,10 @@ function toggleVoice(){
     const wave=document.getElementById('voice-wave');
     if(mic)mic.style.display='none';
     if(wave)wave.classList.add('show');
-    const btn=document.getElementById('voice-btn');
-    if(btn)btn.classList.add('listening');
+  const btn=document.getElementById('voice-btn-wrap');
+    if(btn)btn.style.color='var(--green)';
+    const lbl=document.getElementById('voice-label');
+    if(lbl)lbl.textContent='Listening...';
   }
   _recognition.onresult=(e)=>{
     let final='';let interim='';
@@ -1050,8 +1047,10 @@ function toggleVoice(){
     const wave=document.getElementById('voice-wave');
     if(mic)mic.style.display='';
     if(wave)wave.classList.remove('show');
-    const btn=document.getElementById('voice-btn');
-    if(btn)btn.classList.remove('listening');
+const btn=document.getElementById('voice-btn-wrap');
+    if(btn)btn.style.color='var(--text-muted)';
+    const lbl=document.getElementById('voice-label');
+    if(lbl)lbl.textContent='Tap to speak';
   }
   _recognition.onerror=()=>{_isListening=false;showToast('Voice not available — please type instead',true);}
   _recognition.start();
