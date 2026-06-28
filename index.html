@@ -1001,20 +1001,18 @@ function renderVoiceBtn(){
   const textarea=document.getElementById('job-input');
   const wrap=document.createElement('div');
   wrap.id='voice-btn-wrap';
-  wrap.style.cssText='position:relative;';
+  wrap.style.cssText='position:relative;display:flex;align-items:flex-end;gap:8px;';
+  const micBtn=document.createElement('button');
+  micBtn.className='voice-mic-btn';
+  micBtn.id='voice-btn';
+  micBtn.setAttribute('aria-label','Voice input');
+  micBtn.onclick=toggleVoice;
+  micBtn.style.cssText='position:relative;flex-shrink:0;bottom:auto;right:auto;';
+  micBtn.innerHTML=`<svg id="voice-mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="21"/><line x1="9" y1="21" x2="15" y2="21"/></svg><div class="voice-wave" id="voice-wave"><span></span><span></span><span></span><span></span><span></span></div>`;
   textarea.parentNode.insertBefore(wrap,textarea);
   wrap.appendChild(textarea);
-  wrap.innerHTML+=`<button class="voice-mic-btn" id="voice-btn" onclick="toggleVoice()" aria-label="Voice input">
-    <svg id="voice-mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="9" y="2" width="6" height="11" rx="3"/>
-      <path d="M5 10a7 7 0 0 0 14 0"/>
-      <line x1="12" y1="17" x2="12" y2="21"/>
-      <line x1="9" y1="21" x2="15" y2="21"/>
-    </svg>
-    <div class="voice-wave" id="voice-wave">
-      <span></span><span></span><span></span><span></span><span></span>
-    </div>
-  </button>`;}
+  wrap.appendChild(micBtn);
+}
 
 function toggleVoice(){
   if(_isListening){_recognition&&_recognition.stop();return;}
@@ -1023,10 +1021,11 @@ function toggleVoice(){
   _recognition.lang='en-AU';
   _recognition.continuous=true;
   _recognition.interimResults=true;
-  let _base='';
+ let _base='';let _lastResultIndex=0;
   _recognition.onstart=()=>{
     _isListening=true;
-    _base=document.getElementById('job-input').value;
+    _base=document.getElementById('job-input').value.trim();
+    _lastResultIndex=0;
     const mic=document.getElementById('voice-mic-icon');
     const wave=document.getElementById('voice-wave');
     if(mic)mic.style.display='none';
@@ -1035,14 +1034,14 @@ function toggleVoice(){
     if(btn)btn.classList.add('listening');
   }
   _recognition.onresult=(e)=>{
-    let interim='';let final='';
-    for(let i=0;i<e.results.length;i++){
-      if(e.results[i].isFinal)final+=e.results[i][0].transcript;
-      else interim+=e.results[i][0].transcript;
+    let final='';let interim='';
+    for(let i=_lastResultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal){final+=e.results[i][0].transcript+' ';_lastResultIndex=i+1;}
+      else interim=e.results[i][0].transcript;
     }
+    if(final)_base=(_base?_base+' ':'')+final.trim();
     const ta=document.getElementById('job-input');
-    ta.value=(_base?_base+' ':'')+final+interim;
-    if(final)_base=(_base?_base+' ':'')+final;
+    ta.value=(_base+(interim?' '+interim:'')).trim();
     updateChar();
   }
   _recognition.onend=()=>{
