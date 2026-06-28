@@ -1125,14 +1125,27 @@ app.post('/api/jobs/:id/update-status', requireAuth, async (req, res) => {
     await sendCustomerStatusEmail(job, profile, status);
   }
 
-  // Push to owner when supervisor/staff completes a job
-  if (status === 'Completed' && staffCtx) {
-    await sendPushToUser(
-      profileId,
-      'Job completed',
-      '"' + job.customer_name + '" marked complete',
-      '/'
-    );
+// Push to owner and supervisors on every status change
+  const pushTitle = job.job_number + ' — ' + status;
+  const pushBody = job.customer_name + ' — updated to ' + status;
+
+  // Notify owner
+  await sendPushToUser(profileId, pushTitle, pushBody, '/');
+
+  // Notify all active supervisors on the same team
+  const { data: team } = await supabase.from('teams').select('id').eq('owner_user_id', profileId).single();
+  if (team) {
+    const { data: supervisors } = await supabase
+      .from('team_members')
+      .select('user_id')
+      .eq('team_id', team.id)
+      .eq('role', 'supervisor')
+      .eq('status', 'active');
+    for (const sup of supervisors || []) {
+      if (sup.user_id !== req.user.id) {
+        await sendPushToUser(sup.user_id, pushTitle, pushBody, '/');
+      }
+    }
   }
 
   res.json({ success: true, job: job });
