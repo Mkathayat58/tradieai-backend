@@ -1283,7 +1283,7 @@ function renderJobs(){
   filtered.sort((a,b)=>jobDateTime(b).localeCompare(jobDateTime(a)));
   if(!filtered.length){list.innerHTML='<div class="empty-state" style="padding:40px 20px;text-align:center;">No jobs found</div>';return;}
   list.innerHTML=filtered.map(j=>{
-    const isOverdue=j.due_date&&new Date(j.due_date)<new Date()&&!['Completed','Paid'].includes(j.status);
+const isOverdue=j.due_date&&new Date(j.due_date+(j.due_time?'T'+j.due_time:'T23:59'))<new Date()&&!['Completed','Paid'].includes(j.status);
     const sc='status-'+j.status.replace(' ','-');
     const dueText=j.due_date?new Date(j.due_date).toLocaleDateString('en-AU',{day:'numeric',month:'short'}):'';
     const timeText=j.due_time?fmtTime(j.due_time):'';
