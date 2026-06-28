@@ -348,7 +348,17 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 <div class="screen" id="screen-chat">
   <div class="tpl-header"><button class="back-btn" onclick="goHome()"><i class="ti ti-arrow-left"></i></button><span class="tpl-header-title">Free chat</span></div>
   <div class="chat-messages" id="chat-messages"><div class="msg msg-ai">G'day! I'm Tradie AI. Ask me anything. &#x1F919;</div></div>
-  <div class="chat-input-row"><textarea class="chat-textarea" id="chat-input" placeholder="Ask me anything..." rows="1" onkeydown="chatKey(event)" oninput="autoResize(this)"></textarea><button class="chat-send-btn" id="chat-send" onclick="sendChat()"><i class="ti ti-arrow-up"></i></button></div>
+<div class="chat-input-row">
+    <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+      <textarea class="chat-textarea" id="chat-input" placeholder="Ask me anything..." rows="1" onkeydown="chatKey(event)" oninput="autoResize(this)"></textarea>
+      <button id="chat-voice-btn" onclick="toggleChatVoice()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:12px;padding:2px 4px;display:inline-flex;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent;align-self:flex-start;">
+        <svg id="chat-mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="21"/><line x1="9" y1="21" x2="15" y2="21"/></svg>
+        <div class="voice-wave" id="chat-voice-wave"><span></span><span></span><span></span><span></span><span></span></div>
+        <span id="chat-voice-label">Tap to speak</span>
+      </button>
+    </div>
+    <button class="chat-send-btn" id="chat-send" onclick="sendChat()"><i class="ti ti-arrow-up"></i></button>
+  </div>
 </div>
 <!-- REPORTS (contains Overview dashboard + History) -->
 <div class="screen" id="screen-reports">
@@ -1156,6 +1166,47 @@ function addChatMsg(text,role){const div=document.createElement('div');div.class
 function scrollChat(){const c=document.getElementById('chat-messages');c.scrollTop=c.scrollHeight;}
 function chatKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}}
 function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
+
+let _chatRecognition=null,_chatListening=false;
+function toggleChatVoice(){
+  if(_chatListening){_chatRecognition&&_chatRecognition.stop();return;}
+  if(!('webkitSpeechRecognition' in window||'SpeechRecognition' in window))return showToast('Voice not available on this browser',true);
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  _chatRecognition=new SR();
+  _chatRecognition.lang='en-AU';
+  _chatRecognition.continuous=true;
+  _chatRecognition.interimResults=true;
+  let _base='';let _lastIdx=0;
+  _chatRecognition.onstart=()=>{
+    _chatListening=true;
+    _base=document.getElementById('chat-input').value.trim();
+    _lastIdx=0;
+    document.getElementById('chat-mic-icon').style.display='none';
+    document.getElementById('chat-voice-wave').classList.add('show');
+    document.getElementById('chat-voice-label').textContent='Listening...';
+    document.getElementById('chat-voice-btn').style.color='var(--green)';
+  }
+  _chatRecognition.onresult=(e)=>{
+    let final='';let interim='';
+    for(let i=_lastIdx;i<e.results.length;i++){
+      if(e.results[i].isFinal){final+=e.results[i][0].transcript+' ';_lastIdx=i+1;}
+      else interim=e.results[i][0].transcript;
+    }
+    if(final)_base=(_base?_base+' ':'')+final.trim();
+    const ta=document.getElementById('chat-input');
+    ta.value=(_base+(interim?' '+interim:'')).trim();
+    autoResize(ta);
+  }
+  _chatRecognition.onend=()=>{
+    _chatListening=false;
+    document.getElementById('chat-mic-icon').style.display='';
+    document.getElementById('chat-voice-wave').classList.remove('show');
+    document.getElementById('chat-voice-label').textContent='Tap to speak';
+    document.getElementById('chat-voice-btn').style.color='var(--text-muted)';
+  }
+  _chatRecognition.onerror=()=>{_chatListening=false;showToast('Voice not available — please type instead',true);}
+  _chatRecognition.start();
+}
 
 // ── UP NEXT WIDGET ──
 function renderUpNext(containerId,jobs,userId){
