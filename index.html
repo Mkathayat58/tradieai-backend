@@ -761,7 +761,7 @@ function initHome(){
   const initials=(userProfile.firstname||userProfile.name||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
   document.getElementById('home-avatar').textContent=initials;
   document.getElementById('home-greeting').textContent="G'day "+(userProfile.firstname||userProfile.name||'')+' \uD83D\uDC4B';
-  updateUsage();renderRecent();updateSettings();renderUpNext('owner-up-next',allJobs);
+updateUsage();renderRecent();updateSettings();
   // Show end-of-day summary for owner after 3pm — same as supervisor
   renderEodSummary('owner-eod-summary',allJobs);
   // Show onboarding prompt for new owners
@@ -990,8 +990,8 @@ function renderRecent(){
       type:'job'
     }));
 
-  // Interleave: show up to 5 items total, jobs first then docs
-  const combined=[...recentJobs,...docEntries].slice(0,5);
+// Show up to 4 items total, jobs first then docs
+  const combined=[...recentJobs,...docEntries].slice(0,4);
 
   if(!combined.length){
     list.innerHTML='<div class="empty-state">Your recent activity will appear here</div>';
@@ -1006,7 +1006,8 @@ function renderRecent(){
         <div class="r-time">${entry.subtitle}</div>
       </div>
       <i class="ti ti-chevron-right" style="font-size:16px;color:var(--border);"></i>
-    </div>`).join('');
+    </div>`).join('')
+  +'<div style="padding:12px 14px;text-align:center;border-top:0.5px solid var(--border);"><button onclick="goHistory()" style="background:none;border:none;color:var(--green);font-size:13px;font-weight:500;cursor:pointer;-webkit-tap-highlight-color:transparent;">See all activity</button></div>';
 }
 function updateSettings(){if(!userProfile)return;const fn=((userProfile.firstname||'')+' '+(userProfile.lastname||'')).trim()||userProfile.name||'\u2014';document.getElementById('sv-name').textContent=fn;document.getElementById('sv-phone').textContent=userProfile.phone||'\u2014';document.getElementById('sv-email').textContent=currentUser?.email||'\u2014';document.getElementById('sv-biz').textContent=userProfile.bizname||'\u2014';document.getElementById('sv-trade').textContent=userProfile.trade||'\u2014';document.getElementById('sv-state').textContent=userProfile.state||'\u2014';document.getElementById('sv-address').textContent=userProfile.address||'\u2014';document.getElementById('sv-licence').textContent=userProfile.licence||'\u2014';document.getElementById('sv-abn').textContent=userProfile.abn||'\u2014';document.getElementById('sv-terms').textContent=userProfile.terms||'\u2014';document.getElementById('s-plan').textContent=(userProfile.plan||'free').charAt(0).toUpperCase()+(userProfile.plan||'free').slice(1);}
 function toggleEditProfile(){document.getElementById('profile-view').style.display='none';document.getElementById('profile-edit').style.display='block';document.getElementById('edit-profile-btn').style.display='none';['s-firstname','s-lastname','s-phone','s-biz','s-licence','s-abn'].forEach(id=>{const key=id.replace('s-','');document.getElementById(id).value=userProfile[key==='firstname'?'firstname':key==='lastname'?'lastname':key==='biz'?'bizname':key]||'';});document.getElementById('s-email').value=currentUser?.email||'';document.getElementById('s-trade').value=userProfile.trade||'Electrician';document.getElementById('s-state').value=userProfile.state||'VIC';document.getElementById('s-address').value=userProfile.address||'';
