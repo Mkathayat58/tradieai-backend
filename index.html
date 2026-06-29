@@ -1824,9 +1824,46 @@ async function loadStaffHome(){
   renderBriefing('staff-briefing',visibleJobs,currentUser.id);
   renderUpNext('staff-up-next',jobs,currentUser.id);
   const list=document.getElementById('staff-jobs-list');
-  if(!visibleJobs.length){list.innerHTML='<div class="empty-state" style="padding:40px 20px;">No jobs assigned yet</div>';return;}
-  visibleJobs.sort((a,b)=>jobDateTime(a).localeCompare(jobDateTime(b)));
-list.innerHTML=visibleJobs.map(j=>{const displayStatus=['Invoiced','Paid'].includes(j.status)?'Completed':j.status;const sc='status-'+displayStatus.replace(' ','-');const isOverdue=j.due_date&&new Date(j.due_date)<new Date()&&!['Completed','Paid'].includes(j.status);const dueText=j.due_date?new Date(j.due_date).toLocaleDateString('en-AU',{day:'numeric',month:'short'}):'';const timeText=j.due_time?fmtTime(j.due_time):'';return`<div class="staff-job-card" onclick="viewJob('${j.id}')"><div class="job-card-top"><span class="job-num">${j.job_number}</span><span class="job-status-badge ${sc}">${displayStatus}</span></div><div class="job-customer">${j.customer_name}</div><div class="job-desc">${j.description}</div>${j.job_address?`<div class="job-meta-row"><i class="ti ti-map-pin"></i><span class="job-meta-text">${j.job_address}</span></div>`:''}<div class="job-card-bottom"><span></span><span class="job-due ${isOverdue?'overdue':''}">${isOverdue?'\u26A0 ':''}${timeText?timeText+' ':''}${dueText}</span></div></div>`;}).join('');
+if(!visibleJobs.length){list.innerHTML='<div class="empty-state" style="padding:40px 20px;">No jobs assigned yet</div>';return;}
+
+  // Split into active and completed
+  const activeStaffJobs=visibleJobs.filter(j=>!['Completed','Invoiced','Paid'].includes(j.status));
+  const completedStaffJobs=visibleJobs.filter(j=>['Completed','Invoiced','Paid'].includes(j.status));
+
+  // Sort active by soonest due date first, no date goes to bottom
+  activeStaffJobs.sort((a,b)=>{
+    if(!a.due_date&&!b.due_date)return 0;
+    if(!a.due_date)return 1;
+    if(!b.due_date)return -1;
+    return jobDateTime(a).localeCompare(jobDateTime(b));
+  });
+
+  // Sort completed by most recently updated
+  completedStaffJobs.sort((a,b)=>new Date(b.updated_at||b.created_at)-new Date(a.updated_at||a.created_at));
+
+  const renderStaffCard=j=>{
+    const displayStatus=['Invoiced','Paid'].includes(j.status)?'Completed':j.status;
+    const sc='status-'+displayStatus.replace(' ','-');
+    const isOverdue=j.due_date&&new Date(j.due_date)<new Date()&&!['Completed','Paid'].includes(j.status);
+    const dueText=j.due_date?new Date(j.due_date).toLocaleDateString('en-AU',{day:'numeric',month:'short'}):'';
+    const timeText=j.due_time?fmtTime(j.due_time):'';
+    return`<div class="staff-job-card" onclick="viewJob('${j.id}')"><div class="job-card-top"><span class="job-num">${j.job_number}</span><span class="job-status-badge ${sc}">${displayStatus}</span></div><div class="job-customer">${j.customer_name}</div><div class="job-desc">${j.description}</div>${j.job_address?`<div class="job-meta-row"><i class="ti ti-map-pin"></i><span class="job-meta-text">${j.job_address}</span></div>`:''}<div class="job-card-bottom"><span></span><span class="job-due ${isOverdue?'overdue':''}">${isOverdue?'\u26A0 ':''}${timeText?timeText+' ':''}${dueText}</span></div></div>`;
+  };
+
+  let staffHtml=activeStaffJobs.length
+    ?activeStaffJobs.map(renderStaffCard).join('')
+    :'<div class="empty-state" style="padding:20px;">No active jobs — nice work!</div>';
+
+  if(completedStaffJobs.length){
+    staffHtml+=`<div style="margin-top:20px;border-top:1px solid var(--border);padding-top:12px;">
+      <button onclick="const s=document.getElementById('staff-closed-jobs');const i=this.querySelector('i');s.style.display=s.style.display==='none'?'block':'none';i.classList.toggle('ti-chevron-down');i.classList.toggle('ti-chevron-up');" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text-muted);padding:4px 0;width:100%;-webkit-tap-highlight-color:transparent;">
+        <i class="ti ti-chevron-down" style="font-size:14px;"></i> Completed jobs (${completedStaffJobs.length})
+      </button>
+      <div id="staff-closed-jobs" style="display:none;margin-top:10px;">${completedStaffJobs.map(renderStaffCard).join('')}</div>
+    </div>`;
+  }
+
+  list.innerHTML=staffHtml;
 }
 function goStaffHome(){if(myRole==='supervisor')return goSupervisorHome();loadStaffHome();goTo('screen-staff-home');}
 
