@@ -1350,9 +1350,29 @@ const isOverdue=j.due_date&&new Date(j.due_date+(j.due_time?'T'+j.due_time:'T23:
 return`<div class="job-card" onclick="viewJob('${j.id}')"><div class="job-card-top"><span class="job-num">${j.job_number}</span><span class="job-status-badge ${sc}">${j.status}</span></div><div class="job-customer">${j.customer_name}</div><div class="job-desc">${j.description}</div>${addrHtml}${assigneeHtml}<div class="job-card-bottom"><span class="job-value">${j.value&&myRole!=='team_member'?'$'+parseFloat(j.value).toLocaleString('en-AU'):''}</span><span class="job-due ${isOverdue?'overdue':''}">${isOverdue?'\u26A0 ':''}${timeText?timeText+' ':'' }${dueText}</span></div></div>`;
   };
   let html='';
-  if(currentFilter==='all'){
+ if(currentFilter==='all'){
     html+=activeJobs.map(renderCard).join('');
-    if(closedJobs.length){html+=`<div style="margin-top:20px;border-top:1px solid var(--border);padding-top:12px;"><button onclick="document.getElementById('closed-jobs-section').style.display=document.getElementById('closed-jobs-section').style.display==='none'?'block':'none';this.querySelector('i').classList.toggle('ti-chevron-down');this.querySelector('i').classList.toggle('ti-chevron-up');" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text-muted);padding:4px 0;width:100%;-webkit-tap-highlight-color:transparent;"><i class="ti ti-chevron-down" style="font-size:14px;"></i> Closed jobs (${closedJobs.length})</button><div id="closed-jobs-section" style="display:none;margin-top:10px;">${closedJobs.map(renderCard).join('')}</div></div>`;}
+
+    const makeToggle=(id,label,jobs)=>{
+      if(!jobs.length)return'';
+      return`<div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px;">
+        <button onclick="const s=document.getElementById('${id}');const i=this.querySelector('i');s.style.display=s.style.display==='none'?'block':'none';i.classList.toggle('ti-chevron-down');i.classList.toggle('ti-chevron-up');" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text-muted);padding:4px 0;width:100%;-webkit-tap-highlight-color:transparent;">
+          <i class="ti ti-chevron-down" style="font-size:14px;"></i> ${label} (${jobs.length})
+        </button>
+        <div id="${id}" style="display:none;margin-top:10px;">${jobs.map(renderCard).join('')}</div>
+      </div>`;
+    };
+
+    const completedJobs=filtered.filter(j=>j.status==='Completed');
+    const invoicedJobs=filtered.filter(j=>j.status==='Invoiced');
+    const paidJobs=filtered.filter(j=>j.status==='Paid');
+    const declinedJobs=filtered.filter(j=>j.status==='Declined');
+
+    html+=makeToggle('closed-completed','Completed jobs',completedJobs);
+    html+=makeToggle('closed-invoiced','Invoiced jobs',invoicedJobs);
+    html+=makeToggle('closed-paid','Paid jobs',paidJobs);
+    html+=makeToggle('closed-declined','Declined jobs',declinedJobs);
+
   }else{html=filtered.map(renderCard).join('');}
   list.innerHTML=html;
 }
@@ -1854,14 +1874,18 @@ if(!visibleJobs.length){list.innerHTML='<div class="empty-state" style="padding:
     ?activeStaffJobs.map(renderStaffCard).join('')
     :'<div class="empty-state" style="padding:20px;">No active jobs — nice work!</div>';
 
-  if(completedStaffJobs.length){
-    staffHtml+=`<div style="margin-top:20px;border-top:1px solid var(--border);padding-top:12px;">
-      <button onclick="const s=document.getElementById('staff-closed-jobs');const i=this.querySelector('i');s.style.display=s.style.display==='none'?'block':'none';i.classList.toggle('ti-chevron-down');i.classList.toggle('ti-chevron-up');" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text-muted);padding:4px 0;width:100%;-webkit-tap-highlight-color:transparent;">
-        <i class="ti ti-chevron-down" style="font-size:14px;"></i> Completed jobs (${completedStaffJobs.length})
+ const staffDoneJobs=visibleJobs.filter(j=>['Completed','Invoiced','Paid'].includes(j.status));
+
+  if(staffDoneJobs.length){
+    staffHtml+=`<div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px;">
+      <button onclick="const s=document.getElementById('staff-done-jobs');const i=this.querySelector('i');s.style.display=s.style.display==='none'?'block':'none';i.classList.toggle('ti-chevron-down');i.classList.toggle('ti-chevron-up');" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text-muted);padding:4px 0;width:100%;-webkit-tap-highlight-color:transparent;">
+        <i class="ti ti-chevron-down" style="font-size:14px;"></i> Completed jobs (${staffDoneJobs.length})
       </button>
-      <div id="staff-closed-jobs" style="display:none;margin-top:10px;">${completedStaffJobs.map(renderStaffCard).join('')}</div>
+      <div id="staff-done-jobs" style="display:none;margin-top:10px;">${staffDoneJobs.map(renderStaffCard).join('')}</div>
     </div>`;
   }
+
+  list.innerHTML=staffHtml;
 
   list.innerHTML=staffHtml;
 }
