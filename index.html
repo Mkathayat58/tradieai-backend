@@ -1285,14 +1285,24 @@ function renderEodSummary(containerId,jobs){
 
 // ── JOBS ──
 async function loadJobs(){
-  if(myRole==='supervisor'){const session=(await sb.auth.getSession()).data.session;const res=await fetch(BACKEND_URL+'/api/team/jobs',{headers:{'Authorization':'Bearer '+session.access_token}});allJobs=await res.json();}
-  else if(myRole==='team_member'){const session=(await sb.auth.getSession()).data.session;const res=await fetch(BACKEND_URL+'/api/jobs/assigned',{headers:{'Authorization':'Bearer '+session.access_token}});allJobs=await res.json();}
+  const session=(await sb.auth.getSession()).data.session;
+  const membersPromise=myRole!=='team_member'
+    ?fetch(BACKEND_URL+'/api/team/members',{headers:{'Authorization':'Bearer '+session.access_token}}).then(r=>r.json()).catch(()=>[])
+    :Promise.resolve([]);
+  if(myRole==='supervisor'){const res=await fetch(BACKEND_URL+'/api/team/jobs',{headers:{'Authorization':'Bearer '+session.access_token}});allJobs=await res.json();}
+  else if(myRole==='team_member'){const res=await fetch(BACKEND_URL+'/api/jobs/assigned',{headers:{'Authorization':'Bearer '+session.access_token}});allJobs=await res.json();}
   else{
-    const{data,error}=await sb.from('jobs').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
-    if(error){showToast('Could not load jobs — please refresh',true);}
-    allJobs=data||[];
+    const[jobsResult,membersResult]=await Promise.all([
+      sb.from('jobs').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}),
+      membersPromise
+    ]);
+    if(jobsResult.error)showToast('Could not load jobs — please refresh',true);
+    allJobs=jobsResult.data||[];
+    teamMembers=membersResult.filter(m=>m.status==='active');
+    renderAssigneeFilters();renderJobs();updatePipeline();renderJobsSummary();
+    return;
   }
-  if(myRole!=='team_member'){const session=(await sb.auth.getSession()).data.session;try{const res=await fetch(BACKEND_URL+'/api/team/members',{headers:{'Authorization':'Bearer '+session.access_token}});teamMembers=(await res.json()).filter(m=>m.status==='active');}catch(e){teamMembers=[];}renderAssigneeFilters();}
+  if(myRole!=='team_member'){teamMembers=(await membersPromise).filter(m=>m.status==='active');renderAssigneeFilters();}
   renderJobs();updatePipeline();renderJobsSummary();
 }
 function updatePipeline(){const total=allJobs.filter(j=>!['Completed','Paid','Declined'].includes(j.status)).reduce((s,j)=>s+(parseFloat(j.value)||0),0);document.getElementById('pipeline-value').textContent='$'+total.toLocaleString('en-AU');}
@@ -1433,9 +1443,10 @@ async function goJobs(){
   if(myRole==='supervisor')nav.innerHTML=supNav('jobs');
   else nav.innerHTML=ownerNav('jobs');
   currentAssigneeFilter='all';jobSearchQuery='';const si=document.getElementById('job-search-input');if(si)si.value='';
-  await loadJobs();goTo('screen-jobs');
-  if(jobsListPollInterval)clearInterval(jobsListPollInterval);
-jobsListPollInterval=setInterval(async()=>{if(!document.getElementById('screen-jobs').classList.contains('active')){clearInterval(jobsListPollInterval);return;}await loadJobs();},30000);
+  if(allJobs.length){renderJobs();updatePipeline();renderJobsSummary();goTo('screen-jobs');loadJobs();}
+  else{await loadJobs();goTo('screen-jobs');}
+if(jobsListPollInterval)clearInterval(jobsListPollInterval);
+jobsListPollInterval=setInterval(async()=>{if(!document.getElementById('screen-jobs').classList.contains('active')){clearInterval(jobsListPollInterval);return;}await loadJobs();},60000);
 }
 
 // ── CALENDAR ──
