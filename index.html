@@ -1021,9 +1021,27 @@ function cancelEditProfile(){document.getElementById('profile-view').style.displ
 async function saveProfileSettings(){const updated={firstname:document.getElementById('s-firstname').value.trim(),lastname:document.getElementById('s-lastname').value.trim(),name:document.getElementById('s-firstname').value.trim()+' '+document.getElementById('s-lastname').value.trim(),phone:document.getElementById('s-phone').value.trim(),bizname:document.getElementById('s-biz').value.trim(),trade:document.getElementById('s-trade').value,state:document.getElementById('s-state').value,address:document.getElementById('s-address').value.trim(),licence:document.getElementById('s-licence').value.trim(),abn:document.getElementById('s-abn').value.trim(),terms:document.getElementById('s-terms').value,bank_name:document.getElementById('s-bank-name').value.trim(),account_name:document.getElementById('s-account-name').value.trim(),bsb:document.getElementById('s-bsb').value.trim(),account_number:document.getElementById('s-account-number').value.trim(),pay_id:document.getElementById('s-pay-id').value.trim(),updated_at:new Date().toISOString()};const{error}=await sb.from('profiles').update(updated).eq('id',currentUser.id);if(error)return showToast('Could not save',true);userProfile={...userProfile,...updated};updateSettings();cancelEditProfile();showToast('Profile saved \u2713');initHome();}
 
 // ── HISTORY ──
-async function loadHistory(){const{data,error}=await sb.from('history').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(20);if(error||!data)return;localHistory=data.map(h=>({type:h.template,label:h.input.length>50?h.input.slice(0,47)+'...':h.input,time:new Date(h.created_at).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})+', '+new Date(h.created_at).toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'}),input:h.input,output:h.output}));renderRecent();}
+let historyOffset=0;const HISTORY_PAGE=20;
+async function loadHistory(append=false){
+  const{data,error}=await sb.from('history').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}).range(historyOffset,historyOffset+HISTORY_PAGE-1);
+  if(error||!data)return;
+  const mapped=data.map(h=>({type:h.template,label:h.input.length>50?h.input.slice(0,47)+'...':h.input,time:new Date(h.created_at).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})+', '+new Date(h.created_at).toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'}),input:h.input,output:h.output}));
+  if(append){localHistory=[...localHistory,...mapped];}else{localHistory=mapped;historyOffset=0;}
+  historyOffset+=data.length;
+  renderRecent();
+  if(document.getElementById('reports-history')?.style.display!=='none')renderHistoryPage(data.length===HISTORY_PAGE);
+}
+async function loadMoreHistory(){
+  await loadHistory(true);
+}
 async function loadChatHistory(){const{data}=await sb.from('history').select('*').eq('user_id',currentUser.id).eq('template','chat').order('created_at',{ascending:false}).limit(10);if(!data?.length)return;document.getElementById('chat-messages').innerHTML='';data.reverse().forEach(h=>{addChatMsg(h.input,'user');addChatMsg(h.output,'ai');chatHistory.push({role:'user',content:h.input},{role:'assistant',content:h.output});});}
-function renderHistoryPage(){const body=document.getElementById('history-body');if(!localHistory.length){body.innerHTML='<div class="empty-state" style="padding:40px 20px;">No history yet</div>';return;}const icons={quote:'ti-file-invoice',email:'ti-mail',jobad:'ti-briefcase',complaint:'ti-mood-angry',followup:'ti-clock',chat:'ti-message-2'};body.innerHTML='<div class="recent-list" style="margin:0 0 20px;">'+localHistory.map((h,i)=>`<div class="recent-item" onclick="viewResult(${i})"><div class="r-icon"><i class="ti ${icons[h.type]||'ti-file'}"></i></div><div class="r-info"><div class="r-title">${h.label}</div><div class="r-time">${h.time}</div></div><i class="ti ti-chevron-right" style="font-size:16px;color:var(--border);"></i></div>`).join('')+'</div>';}
+function renderHistoryPage(hasMore=false){
+  const body=document.getElementById('history-body');
+  if(!localHistory.length){body.innerHTML='<div class="empty-state" style="padding:40px 20px;">No history yet</div>';return;}
+  const icons={quote:'ti-file-invoice',email:'ti-mail',jobad:'ti-briefcase',complaint:'ti-mood-angry',followup:'ti-clock',chat:'ti-message-2'};
+  body.innerHTML='<div class="recent-list" style="margin:0 0 12px;">'+localHistory.map((h,i)=>`<div class="recent-item" onclick="viewResult(${i})"><div class="r-icon"><i class="ti ${icons[h.type]||'ti-file'}"></i></div><div class="r-info"><div class="r-title">${h.label}</div><div class="r-time">${h.time}</div></div><i class="ti ti-chevron-right" style="font-size:16px;color:var(--border);"></i></div>`).join('')+'</div>'
+  +(hasMore?'<div style="text-align:center;padding:8px 0 20px;"><button onclick="loadMoreHistory()" id="load-more-btn" style="background:none;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 24px;font-size:13px;font-weight:500;color:var(--text-mid);cursor:pointer;-webkit-tap-highlight-color:transparent;">Load more</button></div>':'<div style="text-align:center;padding:8px 0 20px;font-size:12px;color:var(--text-muted);">You\'ve reached the end</div>');
+}
 
 // ── TEMPLATE + AI ──
 function openTemplate(type){if(_isListening&&_recognition){_recognition.stop();}if(type==='chat'){loadChatHistory();goTo('screen-chat');return;}currentTemplate=type;const t=templates[type];document.getElementById('tpl-title').textContent=t.title;document.getElementById('tpl-hint').textContent=t.hint;document.getElementById('tpl-label').textContent=t.label;document.getElementById('job-input').placeholder=t.placeholder;document.getElementById('job-input').value='';document.getElementById('char-count').textContent='0';renderVoiceBtn();goTo('screen-template');setTimeout(()=>document.getElementById('job-input').focus(),300);}
@@ -1496,7 +1514,7 @@ function calNext(){calWeekStart.setDate(calWeekStart.getDate()+7);renderCalendar
 
 // ── NAV ──
 function goHome(){if(_isListening&&_recognition){_recognition.stop();}if(_chatListening&&_chatRecognition){_chatRecognition.stop();}if(myRole==='supervisor')return goSupervisorHome();if(myRole==='team_member')return goStaffHome();goTo('screen-home');}
-function goHistory(){goReports();switchReportsTab('history');}
+function goHistory(){historyOffset=0;localHistory=[];goReports();switchReportsTab('history');loadHistory();}
 
 function goReports(){
   renderReportsDashboard();
