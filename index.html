@@ -1375,7 +1375,7 @@ function filterByAssignee(a,btn){currentAssigneeFilter=a;document.querySelectorA
 function searchJobs(){jobSearchQuery=document.getElementById('job-search-input').value.toLowerCase().trim();renderJobs();}
 function renderJobs(){
   const list=document.getElementById('jobs-list');
-let filtered=currentFilter==='all'?allJobs.filter(j=>!['Completed','Paid','Invoiced','Declined'].includes(j.status)):allJobs.filter(j=>j.status===currentFilter);
+let filtered=currentFilter==='all'?[...allJobs]:allJobs.filter(j=>j.status===currentFilter);
   if(currentAssigneeFilter!=='all'){if(currentAssigneeFilter==='unassigned')filtered=filtered.filter(j=>!j.assigned_to);else filtered=filtered.filter(j=>j.assigned_to===currentAssigneeFilter);}
   if(jobSearchQuery)filtered=filtered.filter(j=>(j.customer_name||'').toLowerCase().includes(jobSearchQuery)||(j.job_address||'').toLowerCase().includes(jobSearchQuery));
   // Sort by date+time
