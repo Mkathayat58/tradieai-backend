@@ -1367,7 +1367,7 @@ let filtered=currentFilter==='all'?[...allJobs]:allJobs.filter(j=>j.status===cur
   // Sort by date+time
   filtered.sort((a,b)=>jobDateTime(b).localeCompare(jobDateTime(a)));
   if(!filtered.length){list.innerHTML='<div class="empty-state" style="padding:40px 20px;text-align:center;">No jobs found</div>';return;}
-  const closedStatuses=['Completed','Paid','Declined'];
+  const closedStatuses=['Completed','Paid','Invoiced','Declined'];
   const activeJobs=currentFilter==='all'?filtered.filter(j=>!closedStatuses.includes(j.status)):filtered;
   const closedJobs=currentFilter==='all'?filtered.filter(j=>closedStatuses.includes(j.status)):[];
   const renderCard=j=>{
