@@ -1292,7 +1292,7 @@ function renderBriefing(containerId,jobs,userId){
 // ── END OF DAY SUMMARY ──
 function renderEodSummary(containerId,jobs){
   const el=document.getElementById(containerId);if(!el)return;
-  const now=new Date();if(now.getHours()<15){el.innerHTML='';return;} // Show after 3pm
+  const now=new Date();if(now.getHours()<17){el.innerHTML='';return;} // Show after 5pm
   const todayStr=now.toISOString().slice(0,10);
   const completedToday=jobs.filter(j=>j.status==='Completed'&&j.updated_at&&j.updated_at.startsWith(todayStr)).length;
   const stillOpen=jobs.filter(j=>j.due_date===todayStr&&!['Completed','Paid','Declined'].includes(j.status)).length;
