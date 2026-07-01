@@ -754,6 +754,82 @@ app.get('/api/jobs/assigned', requireAuth, async (req, res) => {
   res.json(data || []);
 });
 
+// ── JOBS: DELETE ──
+app.delete('/api/jobs/:id', requireAuth, async (req, res) => {
+  try {
+    let profileId = req.user.id;
+    const staffCtx = await getStaffMember(req.user.id);
+    if (staffCtx) profileId = staffCtx.teams.owner_user_id;
+
+    // Get job details before deleting
+    const { data: job } = await supabase
+      .from('jobs')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+
+    // Get deleter name
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('firstname, name')
+      .eq('id', req.user.id)
+      .single();
+
+    const deletedByName = profile?.firstname || profile?.name || 'Unknown';
+
+    // Save to deleted_jobs before deleting
+    await supabase.from('deleted_jobs').insert({
+      job_number: job.job_number,
+      customer_name: job.customer_name,
+      description: job.description,
+      value: job.value,
+      status: job.status,
+      deleted_by_user_id: req.user.id,
+      deleted_by_name: deletedByName,
+      deleted_at: new Date().toISOString(),
+      owner_user_id: profileId
+    });
+
+    // Now delete the job
+    const { error } = await supabase
+      .from('jobs')
+      .delete()
+      .eq('id', req.params.id);
+
+    if (error) return res.status(400).json({ error: error.message });
+
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error('Delete job error:', err);
+    res.status(500).json({ error: 'Could not delete job' });
+  }
+});
+
+// ── JOBS: GET DELETED (for activity feed) ──
+app.get('/api/jobs/deleted', requireAuth, async (req, res) => {
+  try {
+    let profileId = req.user.id;
+    const staffCtx = await getStaffMember(req.user.id);
+    if (staffCtx) profileId = staffCtx.teams.owner_user_id;
+
+    const { data, error } = await supabase
+      .from('deleted_jobs')
+      .select('*')
+      .eq('owner_user_id', profileId)
+      .order('deleted_at', { ascending: false })
+      .limit(20);
+
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data || []);
+
+  } catch (err) {
+    res.status(500).json({ error: 'Could not get deleted jobs' });
+  }
+});
+
 // ── JOB ACTIVITY: LOG ──
 app.post('/api/jobs/:id/activity', requireAuth, async (req, res) => {
   const { action, user_name } = req.body;
