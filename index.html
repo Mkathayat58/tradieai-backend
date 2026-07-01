@@ -987,20 +987,6 @@ async function loadDeletedJobsActivity(){
   }
 }
 
-let _deletedJobs=[];
-
-async function loadDeletedJobsActivity(){
-  try{
-    const session=(await sb.auth.getSession()).data.session;
-    if(!session)return;
-    const res=await fetch(BACKEND_URL+'/api/jobs/deleted',{headers:{'Authorization':'Bearer '+session.access_token}});
-    _deletedJobs=await res.json();
-    renderRecent();
-  }catch(err){
-    console.log('Could not load deleted jobs');
-  }
-}
-
 function renderRecent(){
   const list=document.getElementById('recent-list');
   const icons={quote:'ti-file-invoice',email:'ti-mail',jobad:'ti-briefcase',complaint:'ti-mood-angry',followup:'ti-clock',chat:'ti-message-2'};
@@ -1527,23 +1513,6 @@ async function deleteJob(jobId){
   document.body.appendChild(ov);
 }
 
-async function confirmDeleteJob(jobId){
-  document.getElementById('delete-job-overlay')?.remove();
-  try{
-    const session=(await sb.auth.getSession()).data.session;
-    const res=await fetch(BACKEND_URL+'/api/jobs/'+jobId,{
-      method:'DELETE',
-      headers:{'Authorization':'Bearer '+session.access_token}
-    });
-    if(!res.ok)throw new Error('Could not delete job');
-    allJobs=allJobs.filter(j=>j.id!==jobId);
-    showToast('Job deleted \u2713');
-    await loadDeletedJobsActivity();
-    goJobs();
-  }catch(err){
-    showToast('Could not delete job',true);
-  }
-}
 async function handleDocUpload(event){const file=event.target.files[0];if(!file)return;if(file.size>10*1024*1024)return showToast('File must be under 10MB',true);showToast('Uploading...');const ext=file.name.split('.').pop();const path=`${currentUser.id}/${currentJob.id}/${Date.now()}.${ext}`;const{error}=await sb.storage.from('job-files').upload(path,file,{upsert:false});if(error){
   showToast('Upload failed — file may be too large or connection dropped',true);
   return;
