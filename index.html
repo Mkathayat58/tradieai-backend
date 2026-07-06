@@ -1555,16 +1555,14 @@ function confirmDeleteJob(jobId){
 
 async function executeDeleteJob(jobId){
   document.getElementById('delete-job-overlay')?.remove();
-  const j=allJobs.find(x=>x.id===jobId);
   showToast('Deleting job...');
   try{
-    // Log deletion before removing
-    await logActivity(jobId,'deleted job '+(j?.job_number||'')+' — '+(j?.customer_name||''));
-    // Delete related records first
-    await sb.from('job_documents').delete().eq('job_id',jobId);
-    // Delete the job
-    const{error}=await sb.from('jobs').delete().eq('id',jobId);
-    if(error)throw error;
+    const session=(await sb.auth.getSession()).data.session;
+    const res=await fetch(BACKEND_URL+'/api/jobs/'+jobId,{
+      method:'DELETE',
+      headers:{'Authorization':'Bearer '+session.access_token}
+    });
+    if(!res.ok)throw new Error('Delete failed');
     allJobs=allJobs.filter(x=>x.id!==jobId);
     currentJob=null;
     await loadDeletedJobsActivity();
