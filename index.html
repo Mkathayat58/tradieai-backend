@@ -1022,14 +1022,14 @@ function renderRecent(){
       sortDate:new Date(j.updated_at||j.created_at)
     }));
 
-  const docEntriesWithDate=localHistory.map((h,i)=>({
+const docEntriesWithDate=localHistory.map((h,i)=>({
     icon:icons[h.type]||'ti-file',
     title:h.label,
     subtitle:h.time,
     onclick:`viewResult(${i})`,
     type:'doc',
     sortDate:new Date(h.created_at||Date.now())
-  }));const mapped=data.map(h=>({type:h.template,label:h.input.length>50?h.input.slice(0,47)+'...':h.input,time:new Date(h.created_at).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})+', '+new Date(h.created_at).toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'}),input:h.input,output:h.output,created_at:h.created_at}));
+  }));
 
   // Merge all activity types and sort by actual recency, then cap at 4
   const combined=[...recentJobsWithDate,...deletedEntries,...docEntriesWithDate]
