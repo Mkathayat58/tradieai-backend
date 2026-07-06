@@ -595,7 +595,7 @@ app.put('/api/team/members/:id/role', requireAuth, async (req, res) => {
 
 // ── TEAM: ACTIVATE MEMBER VIA TOKEN ──
 app.post('/api/team/activate', requireAuth, async (req, res) => {
-  const { invite_token } = req.body;
+  const { invite_token } = req.body || {};
 
   let member;
 
