@@ -490,10 +490,17 @@ app.post('/api/team/invite', requireAuth, async (req, res) => {
   const { name, email, role } = req.body;
   if (!name || !email) return res.status(400).json({ error: 'Name and email required' });
 
-  // Validate role — default to team_member if not provided
-  const memberRole = (role === 'supervisor') ? 'supervisor' : 'team_member';
+  // Supervisors can only invite team_member, never another supervisor
+  const staffCtx = await getStaffMember(req.user.id);
+  const memberRole = (staffCtx && staffCtx.role === 'supervisor')
+    ? 'team_member'
+    : (role === 'supervisor' ? 'supervisor' : 'team_member');
 
-  const team = await getOrCreateTeam(req.user.id);
+  const ownerIdForTeam = (staffCtx && staffCtx.role === 'supervisor')
+    ? staffCtx.teams.owner_user_id
+    : req.user.id;
+
+  const team = await getOrCreateTeam(ownerIdForTeam);
   if (!team) return res.status(500).json({ error: 'Could not create team' });
 
   const { data: existing } = await supabase
