@@ -1322,7 +1322,7 @@ function toggleChatVoice(){
 function renderUpNext(containerId,jobs,userId){
   const el=document.getElementById(containerId);if(!el)return;
   const now=new Date();const todayStr=now.toISOString().slice(0,10);
-  let upcoming=jobs.filter(j=>j.due_date&&!['Completed','Paid','Declined'].includes(j.status));
+let upcoming=jobs.filter(j=>j.due_date&&!['Completed','Invoiced','Paid','Declined'].includes(j.status));
   if(userId)upcoming=upcoming.filter(j=>j.assigned_to===userId);
   upcoming.sort((a,b)=>jobDateTime(a).localeCompare(jobDateTime(b)));
   const show=upcoming.slice(0,3);
