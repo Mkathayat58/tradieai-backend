@@ -254,9 +254,14 @@ app.put('/api/staff/profile', requireAuth, async (req, res) => {
     .single();
   if (error) return res.status(400).json({ error: error.message });
 
-  // Also update the team_members record if phone changed
-  if (phone !== undefined) {
-    await supabase.from('team_members').update({ phone }).eq('user_id', req.user.id);
+  // Also update the team_members record so owner/supervisor can see it
+  const teamMemberSync = {};
+  if (phone !== undefined) teamMemberSync.phone = phone;
+  if (emergency_contact_name !== undefined) teamMemberSync.emergency_contact_name = emergency_contact_name;
+  if (emergency_contact_phone !== undefined) teamMemberSync.emergency_contact_phone = emergency_contact_phone;
+  if (license_number !== undefined) teamMemberSync.license_number = license_number;
+  if (Object.keys(teamMemberSync).length > 0) {
+    await supabase.from('team_members').update(teamMemberSync).eq('user_id', req.user.id);
   }
 
   res.json(data);
