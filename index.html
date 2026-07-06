@@ -1000,29 +1000,41 @@ function renderRecent(){
     type:'doc'
   }));
 
- // Build recent job entries (max 3) — sorted by updated_at or created_at
-  const recentJobs=[...allJobs]
+
+  // Build deleted job entries with real timestamps for proper sorting
+  const deletedEntries=(_deletedJobs||[]).map(d=>({
+    icon:'ti-trash',
+    title:d.job_number+' — '+d.customer_name+' (deleted)',
+    subtitle:'Deleted by '+d.deleted_by_name+' · '+new Date(d.deleted_at).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})+', '+new Date(d.deleted_at).toLocaleDateString('en-AU',{day:'numeric',month:'short'}),
+    onclick:'',
+    type:'deleted',
+    sortDate:new Date(d.deleted_at)
+  }));
+
+  const recentJobsWithDate=[...allJobs]
     .sort((a,b)=>new Date(b.updated_at||b.created_at)-new Date(a.updated_at||a.created_at))
-    .slice(0,3)
     .map(j=>({
       icon:'ti-briefcase',
       title:j.customer_name+' — '+j.job_number,
       subtitle:j.status+(j.due_date?' · Due '+new Date(j.due_date).toLocaleDateString('en-AU',{day:'numeric',month:'short'}):''),
       onclick:`viewJob('${j.id}')`,
-      type:'job'
+      type:'job',
+      sortDate:new Date(j.updated_at||j.created_at)
     }));
 
-  // Build deleted job entries
-  const deletedEntries=(_deletedJobs||[]).slice(0,2).map(d=>({
-    icon:'ti-trash',
-    title:d.job_number+' — '+d.customer_name+' (deleted)',
-    subtitle:'Deleted by '+d.deleted_by_name+' · '+new Date(d.deleted_at).toLocaleDateString('en-AU',{day:'numeric',month:'short'}),
-    onclick:'',
-    type:'deleted'
-  }));
+  const docEntriesWithDate=localHistory.map((h,i)=>({
+    icon:icons[h.type]||'ti-file',
+    title:h.label,
+    subtitle:h.time,
+    onclick:`viewResult(${i})`,
+    type:'doc',
+    sortDate:new Date(h.created_at||Date.now())
+  }));const mapped=data.map(h=>({type:h.template,label:h.input.length>50?h.input.slice(0,47)+'...':h.input,time:new Date(h.created_at).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})+', '+new Date(h.created_at).toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'}),input:h.input,output:h.output,created_at:h.created_at}));
 
-  // Interleave: show up to 5 items total
-  const combined=[...recentJobs,...deletedEntries,...docEntries].slice(0,5);
+  // Merge all activity types and sort by actual recency, then cap at 4
+  const combined=[...recentJobsWithDate,...deletedEntries,...docEntriesWithDate]
+    .sort((a,b)=>b.sortDate-a.sortDate)
+    .slice(0,4);
 
   if(!combined.length){
     list.innerHTML='<div class="empty-state">Your recent activity will appear here</div>';
@@ -1056,7 +1068,7 @@ let historyOffset=0;const HISTORY_PAGE=20;
 async function loadHistory(append=false){
   const{data,error}=await sb.from('history').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}).range(historyOffset,historyOffset+HISTORY_PAGE-1);
   if(error||!data)return;
-  const mapped=data.map(h=>({type:h.template,label:h.input.length>50?h.input.slice(0,47)+'...':h.input,time:new Date(h.created_at).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})+', '+new Date(h.created_at).toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'}),input:h.input,output:h.output}));
+  const mapped=data.map(h=>({type:h.template,label:h.input.length>50?h.input.slice(0,47)+'...':h.input,time:new Date(h.created_at).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})+', '+new Date(h.created_at).toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'}),input:h.input,output:h.output,created_at:h.created_at}));
   if(append){localHistory=[...localHistory,...mapped];}else{localHistory=mapped;historyOffset=0;}
   historyOffset+=data.length;
   renderRecent();
