@@ -1128,8 +1128,19 @@ app.post('/api/jobs/:id/generate-pdf', requireAuth, async (req, res) => {
 
     // Header band
     doc.rect(0, 0, doc.page.width, 110).fill(green);
-    doc.fillColor('#FFFFFF').fontSize(24).font('Helvetica-Bold')
-       .text(profile.bizname || profile.name || 'Tradie AI', 50, 30);
+if(profile.logo_url){
+      try{
+        const logoRes=await fetch(profile.logo_url);
+        const logoBuffer=Buffer.from(await logoRes.arrayBuffer());
+        doc.image(logoBuffer,50,20,{fit:[80,70],align:'left'});
+      }catch(e){
+        doc.fillColor('#FFFFFF').fontSize(24).font('Helvetica-Bold')
+           .text(profile.bizname || profile.name || 'Tradie AI', 50, 30);
+      }
+    }else{
+      doc.fillColor('#FFFFFF').fontSize(24).font('Helvetica-Bold')
+         .text(profile.bizname || profile.name || 'Tradie AI', 50, 30);
+    }
     doc.fontSize(13).font('Helvetica')
        .text(isInvoice ? 'INVOICE' : 'QUOTE', 0, 40, { align: 'right', width: doc.page.width - 50 });
     doc.fontSize(10)
