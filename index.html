@@ -1981,7 +1981,7 @@ async function loadTeamMembers(){
   const memberStats={};members.forEach(m=>{
     const mJobs=allJobs.filter(j=>j.assigned_to===m.user_id);
     const activeJobs=mJobs.filter(j=>!['Completed','Paid','Declined'].includes(j.status));
-    const overdueJobs=mJobs.filter(j=>j.due_date&&new Date(j.due_date)<new Date()&&!['Completed','Paid'].includes(j.status));
+   const overdueJobs=mJobs.filter(j=>j.due_date&&new Date(j.due_date)<new Date()&&!['Completed','Paid','Invoiced'].includes(j.status));
     memberStats[m.id]={active:activeJobs.length,overdue:overdueJobs.length};
   });
   list.innerHTML=members.map(m=>{
