@@ -1362,6 +1362,54 @@ app.post('/api/jobs', requireAuth, async (req, res) => {
   }
 });
 
+// ── JOBS: UPDATE (owner or supervisor — bypasses RLS via service key) ──
+app.put('/api/jobs/:id', requireAuth, async (req, res) => {
+  try {
+    let ownerId = req.user.id;
+    const staffCtx = await getStaffMember(req.user.id);
+    if (staffCtx) {
+      if (staffCtx.role !== 'supervisor') {
+        return res.status(403).json({ error: 'Only owners or supervisors can edit jobs' });
+      }
+      ownerId = staffCtx.teams.owner_user_id;
+    }
+
+    const {
+      assigned_to, job_address, customer_name, customer_phone, customer_email,
+      description, value, due_date, due_time, status, notes
+    } = req.body;
+
+    const { data: job, error } = await supabase
+      .from('jobs')
+      .update({
+        assigned_to: assigned_to || null,
+        job_address: job_address || '',
+        customer_name,
+        customer_phone: customer_phone || '',
+        customer_email: customer_email || '',
+        description,
+        value: parseFloat(value) || 0,
+        due_date: due_date || null,
+        due_time: due_time || null,
+        status: status || 'New',
+        notes: notes || '',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', req.params.id)
+      .eq('user_id', ownerId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+
+    res.json(job);
+  } catch (err) {
+    console.error('update job error:', err);
+    res.status(500).json({ error: 'Could not save job — please try again' });
+  }
+});
+
 // ── JOBS: NEXT NUMBER (server-side, prevents duplicates) ──
 app.get('/api/jobs/next-number', requireAuth, async (req, res) => {
   try {

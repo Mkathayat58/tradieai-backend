@@ -1462,11 +1462,27 @@ async function saveJob(){
   if(!customer)return showToast('Please enter a customer name');if(!desc)return showToast('Please describe the job');
   const btn=document.getElementById('job-save-btn');btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Saving...';
   const jobData={user_id:myRole==='supervisor'?staffContext.teams.owner_user_id:currentUser.id,assigned_to:document.getElementById('jf-assigned').value||null,job_address:document.getElementById('jf-job-address').value.trim(),customer_name:customer,customer_phone:document.getElementById('jf-phone').value.trim(),customer_email:document.getElementById('jf-email').value.trim(),description:desc,value:parseFloat(document.getElementById('jf-value').value)||0,due_date:document.getElementById('jf-due').value||null,due_time:document.getElementById('jf-due-time').value||null,status:document.getElementById('jf-status').value,notes:document.getElementById('jf-notes').value.trim(),updated_at:new Date().toISOString()};
-if(currentJob){const prevAssignee=currentJob.assigned_to;const{error}=await sb.from('jobs').update(jobData).eq('id',currentJob.id);if(error){showToast('Could not save',true);btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Save job';return;}currentJob={...currentJob,...jobData};
+if(currentJob){
+    const prevAssignee=currentJob.assigned_to;
+    try{
+      const session=(await sb.auth.getSession()).data.session;
+      const res=await fetch(BACKEND_URL+'/api/jobs/'+currentJob.id,{
+        method:'PUT',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+        body:JSON.stringify(jobData)
+      });
+      if(!res.ok){const e=await res.json();throw new Error(e.error||'Could not save job');}
+      currentJob=await res.json();
+    }catch(e){
+      showToast(e.message||'Could not save',true);
+      btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Save job';
+      return;
+    }
     if(jobData.assigned_to&&jobData.assigned_to!==prevAssignee){
       const assigneeName=getAssigneeName(jobData.assigned_to)||'staff member';
       await logActivity(currentJob.id,'assigned to '+assigneeName);
-    }}
+    }
+  }
  else{
     try{
       const session=(await sb.auth.getSession()).data.session;
