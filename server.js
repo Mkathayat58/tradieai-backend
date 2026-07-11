@@ -898,12 +898,23 @@ app.post('/api/team/resend-invite', requireAuth, async (req, res) => {
 app.get('/api/team/invite/:token', async (req, res) => {
   const { data, error } = await supabase
     .from('team_members')
-    .select('name, email, status, role')
+    .select('name, email, status, role, teams(owner_user_id)')
     .eq('invite_token', req.params.token)
     .single();
   if (error || !data) return res.status(404).json({ error: 'Invalid or expired invite link' });
   if (data.status === 'active') return res.status(400).json({ error: 'This invite has already been used' });
-  res.json({ name: data.name, email: data.email, role: data.role });
+
+  let bizname = null;
+  if (data.teams?.owner_user_id) {
+    const { data: ownerProfile } = await supabase
+      .from('profiles')
+      .select('bizname, name')
+      .eq('id', data.teams.owner_user_id)
+      .single();
+    bizname = ownerProfile?.bizname || ownerProfile?.name || null;
+  }
+
+  res.json({ name: data.name, email: data.email, role: data.role, bizname });
 });
 // ── PUSH: SAVE SUBSCRIPTION ──
 app.post('/api/push/subscribe', requireAuth, async (req, res) => {
