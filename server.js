@@ -1479,8 +1479,8 @@ app.post('/api/jobs/:id/payment-link', requireAuth, async (req, res) => {
         quantity: 1
       }],
       mode: 'payment',
-      success_url: `${process.env.FRONTEND_URL}?payment=success`,
-      cancel_url: `${process.env.FRONTEND_URL}?payment=cancelled`,
+success_url: `${process.env.FRONTEND_URL || 'https://tradieai-frontend.onrender.com'}?payment=success`,
+cancel_url: `${process.env.FRONTEND_URL || 'https://tradieai-frontend.onrender.com'}?payment=cancelled`,
       metadata: { job_id: job.id, owner_user_id: profileId }
     });
 
