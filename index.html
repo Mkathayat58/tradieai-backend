@@ -858,6 +858,9 @@ const emailLabel=j.customer_email||'customer';
     +'<button class="btn btn-outline" id="pdf-email-btn" style="display:none;" onclick="emailPdfToCustomer()">'
     +'<i class="ti ti-mail"></i> Email to '+emailLabel
     +'</button>'
+ +'<button class="btn btn-outline" id="pdf-paylink-btn" style="display:none;" onclick="createPaymentLink()">'
+    +'<i class="ti ti-link"></i> Get payment link'
+    +'</button>'
     +'<button class="btn btn-outline" style="margin-bottom:0;" onclick="closePdfModal()">'
     +'<i class="ti ti-x"></i> Cancel'
     +'</button>'
@@ -875,6 +878,8 @@ function selectPdfType(type){
   document.getElementById('pdf-email-btn').style.display='none';
   document.getElementById('pdf-generate-btn').style.display='flex';
   document.getElementById('pdf-status').textContent='';
+  const plBtn=document.getElementById('pdf-paylink-btn');
+  if(plBtn)plBtn.style.display=type==='invoice'?'flex':'none';
 }
 
 async function generatePdf(){
@@ -959,6 +964,27 @@ async function emailPdfToCustomer(){
     btn.disabled=false;
     btn.innerHTML=`<i class="ti ti-mail"></i> Email to ${j?.customer_email||'customer'}`;
     showToast(err.message||'Could not send email',true);
+  }
+}
+
+async function createPaymentLink(){
+  if(!_pdfJobId)return;
+  const btn=document.getElementById('pdf-paylink-btn');
+  btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Generating...';
+  try{
+    const session=(await sb.auth.getSession()).data.session;
+    const res=await fetch(`${BACKEND_URL}/api/jobs/${_pdfJobId}/payment-link`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token}
+    });
+    if(!res.ok){const e=await res.json();throw new Error(e.error||'Failed');}
+    const data=await res.json();
+    if(navigator.share){navigator.share({title:'Payment link',url:data.url});}
+    else{navigator.clipboard.writeText(data.url);showToast('Payment link copied \u2713');}
+    closePdfModal();
+  }catch(err){
+    btn.disabled=false;btn.innerHTML='<i class="ti ti-link"></i> Get payment link';
+    showToast(err.message||'Could not create payment link',true);
   }
 }
 
@@ -2149,12 +2175,18 @@ document.getElementById('staff-invite-greeting').textContent='Hi '+td.name+"! Yo
     }
   }
 
-  const{data:{session}}=await sb.auth.getSession();
+const{data:{session}}=await sb.auth.getSession();
   if(session){
     currentUser=session.user;
     await loadProfile();
     initPushNotifications();
   }else goTo('screen-landing');
+
+  // Handle Stripe payment return
+  const paymentStatus=new URLSearchParams(window.location.search).get('payment');
+  if(paymentStatus==='success')showToast('Payment received — job marked as Paid \u2713');
+  if(paymentStatus==='cancelled')showToast('Payment cancelled',true);
+  if(paymentStatus)history.replaceState(null,'',window.location.pathname);
 
   // Show "Add to home screen" banner on mobile browsers
   showA2hsBanner();
