@@ -397,6 +397,84 @@ app.post('/api/generate', requireAuth, async (req, res) => {
   }
 });
 
+// ── AI: STAFF CHAT (team member Ask AI — own usage pool) ──
+app.post('/api/staff-chat', requireAuth, async (req, res) => {
+  const { messages } = req.body;
+  if (!messages || !Array.isArray(messages)) return res.status(400).json({ error: 'Messages array required' });
+
+  const { data: profile } = await supabase.from('profiles').select('*').eq('id', req.user.id).single();
+  if (!profile) return res.status(404).json({ error: 'Profile not found' });
+
+  const limit = 50;
+  const now = new Date();
+  const resetDate = new Date(profile.usage_reset);
+  if (now >= resetDate) {
+    const nextReset = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+    await supabase.from('profiles').update({ usage_count: 0, usage_reset: nextReset }).eq('id', req.user.id);
+    profile.usage_count = 0;
+  }
+
+  if (profile.usage_count >= limit) {
+    return res.status(429).json({ error: 'Monthly message limit reached', limit });
+  }
+
+  const staffCtx = await getStaffMember(req.user.id);
+  const ownerId = staffCtx?.teams?.owner_user_id;
+  let ownerProfile = null;
+  if (ownerId) {
+    const { data } = await supabase.from('profiles').select('bizname, name, trade, state, licence, abn').eq('id', ownerId).single();
+    ownerProfile = data;
+  }
+
+  const base = ownerProfile
+    ? `Business: ${ownerProfile.bizname || ownerProfile.name} | Trade: ${ownerProfile.trade} | State: ${ownerProfile.state}`
+    : 'Australian trade business';
+
+  const systemPrompt = `You are a field assistant for a team member at an Australian trade business.
+${base}
+You help with:
+- Tidying up job notes or voice-dictated text
+- Drafting short messages to customers (running late, job done, need access)
+- Trade and safety questions (cable ratings, clearances, WHS, standards)
+- Cleaning up completion notes before submitting
+
+Keep answers short and practical — this person is on a job site.
+If asked about quoting, pricing decisions, complaint handling, or business management, politely say that is something to raise with their supervisor.
+Do not use Australian slang. Write in plain, clear English.`;
+
+  try {
+    const deepseekRes = await fetch(DEEPSEEK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}` },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        max_tokens: 400,
+        messages: [{ role: 'system', content: systemPrompt }, ...messages.slice(-10)]
+      })
+    });
+
+    if (!deepseekRes.ok) return res.status(502).json({ error: 'AI service error — please try again' });
+
+    const aiData = await deepseekRes.json();
+    const reply = aiData.choices[0].message.content;
+
+    await supabase.from('profiles').update({ usage_count: profile.usage_count + 1 }).eq('id', req.user.id);
+
+    await supabase.from('history').insert({
+      user_id: req.user.id,
+      template: 'chat',
+      input: messages[messages.length - 1]?.content || '',
+      output: reply,
+      created_at: new Date().toISOString()
+    });
+
+    res.json({ reply });
+  } catch (err) {
+    console.error('Staff chat error:', err);
+    res.status(500).json({ error: 'Something went wrong — please try again' });
+  }
+});
+
 // ── AI: CHAT (multi-turn) ──
 app.post('/api/chat', requireAuth, async (req, res) => {
   const { messages } = req.body;

@@ -601,6 +601,18 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     <button class="btn" onclick="staffSetPassword()"><i class="ti ti-check"></i> Set password &amp; join team</button>
   </div>
 </div>
+<!-- STAFF CHAT (Ask AI) -->
+<div class="screen" id="screen-staff-chat">
+  <div class="tpl-header"><button class="back-btn" onclick="goStaffHome()"><i class="ti ti-arrow-left"></i></button><span class="tpl-header-title">Ask AI</span></div>
+  <div class="chat-messages" id="staff-chat-messages"><div class="msg msg-ai">G'day! Ask me anything — job notes, safety questions, customer messages. I'm here to help.</div></div>
+  <div class="chat-input-row">
+    <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+      <textarea class="chat-textarea" id="staff-chat-input" placeholder="Ask anything..." rows="1" onkeydown="staffChatKey(event)" oninput="autoResize(this)"></textarea>
+    </div>
+    <button class="chat-send-btn" id="staff-chat-send" onclick="sendStaffChat()"><i class="ti ti-arrow-up"></i></button>
+  </div>
+</div>
+
 <!-- STAFF HOME -->
 <div class="screen" id="screen-staff-home">
   <div class="staff-home-header">
@@ -612,8 +624,9 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
   <div id="staff-briefing"></div>
     <div id="staff-jobs-list"><div class="empty-state" style="padding:40px 20px;text-align:center;color:var(--text-muted);">No jobs assigned yet</div></div>
   </div>
-  <nav class="bottom-nav">
+ <nav class="bottom-nav">
     <button class="nav-btn active" onclick="goStaffHome()"><i class="ti ti-briefcase"></i><span>My Jobs</span></button>
+    <button class="nav-btn" onclick="goStaffChat()"><i class="ti ti-sparkles"></i><span>Ask AI</span></button>
     <button class="nav-btn" onclick="goTo('screen-staff-profile')"><i class="ti ti-user"></i><span>My Profile</span></button>
   </nav>
 </div>
@@ -2103,6 +2116,62 @@ if(!visibleJobs.length){list.innerHTML='<div class="empty-state" style="padding:
 
   list.innerHTML=staffHtml;
 }
+// ── STAFF CHAT (Ask AI) ──
+let staffChatHistory=[];
+
+async function goStaffChat(){
+  goTo('screen-staff-chat');
+  await loadStaffChatHistory();
+}
+
+async function loadStaffChatHistory(){
+  const{data}=await sb.from('history').select('*').eq('user_id',currentUser.id).eq('template','chat').order('created_at',{ascending:false}).limit(10);
+  if(!data?.length)return;
+  const el=document.getElementById('staff-chat-messages');
+  el.innerHTML='';
+  data.reverse().forEach(h=>{
+    addStaffChatMsg(h.input,'user');
+    addStaffChatMsg(h.output,'ai');
+    staffChatHistory.push({role:'user',content:h.input},{role:'assistant',content:h.output});
+  });
+}
+
+async function sendStaffChat(){
+  const input=document.getElementById('staff-chat-input').value.trim();
+  if(!input)return;
+  document.getElementById('staff-chat-input').value='';
+  document.getElementById('staff-chat-send').disabled=true;
+  autoResize(document.getElementById('staff-chat-input'));
+  addStaffChatMsg(input,'user');
+  const thinking=addStaffChatMsg('...','ai');
+  staffChatHistory.push({role:'user',content:input});
+  try{
+    const session=(await sb.auth.getSession()).data.session;
+    const res=await fetch(BACKEND_URL+'/api/staff-chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({messages:staffChatHistory.slice(-10)})
+    });
+    const data=await res.json();
+    if(res.status===429){thinking.textContent='You have reached your 50 message limit for this month.';document.getElementById('staff-chat-send').disabled=false;scrollStaffChat();return;}
+    thinking.textContent=data.reply;
+    staffChatHistory.push({role:'assistant',content:data.reply});
+  }catch(e){thinking.textContent='Something went wrong — please try again.';}
+  document.getElementById('staff-chat-send').disabled=false;
+  scrollStaffChat();
+}
+
+function addStaffChatMsg(text,role){
+  const div=document.createElement('div');
+  div.className='msg msg-'+role;
+  div.textContent=text;
+  document.getElementById('staff-chat-messages').appendChild(div);
+  scrollStaffChat();
+  return div;
+}
+
+function scrollStaffChat(){const c=document.getElementById('staff-chat-messages');c.scrollTop=c.scrollHeight;}
+function staffChatKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendStaffChat();}}
 function goStaffHome(){if(myRole==='supervisor')return goSupervisorHome();loadStaffHome();goTo('screen-staff-home');}
 
 // ── SUPERVISOR HOME ──
@@ -2142,7 +2211,7 @@ async function populateStaffProfile(){
   document.getElementById('sp-usage-val').textContent=used+' / '+limit;
   // Nav
   const spNav=document.getElementById('sp-bottom-nav');
-  if(spNav){if(myRole==='supervisor')spNav.innerHTML=supNav('profile');else spNav.innerHTML=`<button class="nav-btn" onclick="goStaffHome()"><i class="ti ti-briefcase"></i><span>My Jobs</span></button><button class="nav-btn active" onclick="goTo('screen-staff-profile')"><i class="ti ti-user"></i><span>My Profile</span></button>`;}
+  if(spNav){if(myRole==='supervisor')spNav.innerHTML=supNav('profile');else spNav.innerHTML=`<button class="nav-btn" onclick="goStaffHome()"><i class="ti ti-briefcase"></i><span>My Jobs</span></button><button class="nav-btn" onclick="goStaffChat()"><i class="ti ti-sparkles"></i><span>Ask AI</span></button><button class="nav-btn active" onclick="goTo('screen-staff-profile')"><i class="ti ti-user"></i><span>My Profile</span></button>`;}
   document.getElementById('sp-back-btn').onclick=myRole==='supervisor'?goSupervisorHome:goStaffHome;
 }
 async function saveStaffProfile(){const session=(await sb.auth.getSession()).data.session;const ud={phone:document.getElementById('sp-phone').value.trim(),emergency_contact_name:document.getElementById('sp-ec-name').value.trim(),emergency_contact_phone:document.getElementById('sp-ec-phone').value.trim(),license_number:document.getElementById('sp-license').value.trim()};const res=await fetch(BACKEND_URL+'/api/staff/profile',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify(ud)});if(res.ok){const updated=await res.json();userProfile={...userProfile,...updated};showToast('Profile saved \u2713');}else showToast('Could not save',true);}
