@@ -1236,11 +1236,34 @@ app.post('/api/jobs/:id/email-pdf', requireAuth, async (req, res) => {
       ? `Please find your invoice attached.\n\n${paymentLink ? `Pay now: ${paymentLink}\n\n` : ''}Thank you for your business.\n\n${businessName}`
       : `Please find your quote attached. This quote is valid for 30 days.\n\nPlease don't hesitate to get in touch if you have any questions.\n\n${businessName}`;
 
-  await resend.emails.send({
+const htmlBody = isInvoice ? `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;">
+        <h2 style="color:#0F6E56;">${businessName}</h2>
+        <p>Please find your invoice attached.</p>
+        ${paymentLink ? `
+        <div style="margin:24px 0;">
+          <a href="${paymentLink}" style="background:#0F6E56;color:#ffffff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px;display:inline-block;">
+            Pay now
+          </a>
+        </div>
+        <p style="font-size:12px;color:#888;">Or copy this link: <a href="${paymentLink}">${paymentLink}</a></p>
+        ` : ''}
+        <p>Thank you for your business.</p>
+        <p style="color:#555;">${businessName}</p>
+      </div>` : `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;">
+        <h2 style="color:#0F6E56;">${businessName}</h2>
+        <p>Please find your quote attached. This quote is valid for 30 days.</p>
+        <p>Please don't hesitate to get in touch if you have any questions.</p>
+        <p style="color:#555;">${businessName}</p>
+      </div>`;
+
+    await resend.emails.send({
       from: `${businessName} <noreply@mailoncall.net>`,
       to: customerEmail,
       subject,
       text: bodyText,
+      html: htmlBody,
       attachments: [{
         filename: filename || `${type}.pdf`,
         content: pdf
