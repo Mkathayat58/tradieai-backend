@@ -1192,11 +1192,48 @@ app.post('/api/jobs/:id/email-pdf', requireAuth, async (req, res) => {
       .eq('id', profileId)
       .single();
 
-    const businessName = profile?.bizname || profile?.name || 'Tradie AI';
+ const businessName = profile?.bizname || profile?.name || 'Tradie AI';
     const isInvoice = type === 'invoice';
     const subject = isInvoice ? `Invoice from ${businessName}` : `Quote from ${businessName}`;
+
+    // Generate payment link for invoices
+    let paymentLink = null;
+    if (isInvoice) {
+      try {
+        const { data: job } = await supabase.from('jobs').select('*').eq('id', req.params.id).single();
+        if (job && parseFloat(job.value || 0) > 0) {
+          const existingSession = job.stripe_session_id
+            ? await stripe.checkout.sessions.retrieve(job.stripe_session_id).catch(() => null)
+            : null;
+          if (existingSession && existingSession.status === 'open') {
+            paymentLink = existingSession.url;
+          } else {
+            const session = await stripe.checkout.sessions.create({
+              payment_method_types: ['card'],
+              line_items: [{
+                price_data: {
+                  currency: 'aud',
+                  product_data: { name: `Invoice — ${job.job_number}`, description: job.description },
+                  unit_amount: Math.round(parseFloat(job.value) * 100)
+                },
+                quantity: 1
+              }],
+              mode: 'payment',
+              success_url: `${process.env.FRONTEND_URL || 'https://tradieai-frontend.onrender.com'}?payment=success`,
+              cancel_url: `${process.env.FRONTEND_URL || 'https://tradieai-frontend.onrender.com'}?payment=cancelled`,
+              metadata: { job_id: job.id, owner_user_id: profileId }
+            });
+            paymentLink = session.url;
+            await supabase.from('jobs').update({ stripe_payment_link: session.url, stripe_session_id: session.id }).eq('id', job.id);
+          }
+        }
+      } catch (err) {
+        console.error('Payment link in email error:', err);
+      }
+    }
+
     const bodyText = isInvoice
-      ? `Please find your invoice attached.\n\nThank you for your business.\n\n${businessName}`
+      ? `Please find your invoice attached.\n\n${paymentLink ? `Pay now: ${paymentLink}\n\n` : ''}Thank you for your business.\n\n${businessName}`
       : `Please find your quote attached. This quote is valid for 30 days.\n\nPlease don't hesitate to get in touch if you have any questions.\n\n${businessName}`;
 
   await resend.emails.send({
