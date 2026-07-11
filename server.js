@@ -593,23 +593,24 @@ app.get('/api/team/members', requireAuth, async (req, res) => {
   }
   if (!team) return res.json([]);
 
-  const { data, error } = await supabase
+ const { data, error } = await supabase
     .from('team_members')
     .select('*')
     .eq('team_id', team.id)
+    .neq('status', 'removed')
     .order('invited_at', { ascending: false });
   if (error) return res.status(400).json({ error: error.message });
   res.json(data || []);
 });
 
-// ── TEAM: REMOVE MEMBER (owner only) ──
+// ── TEAM: REMOVE MEMBER (owner only — soft delete) ──
 app.delete('/api/team/members/:id', requireAuth, async (req, res) => {
   const team = await getOrCreateTeam(req.user.id);
   if (!team) return res.status(404).json({ error: 'Team not found' });
 
   const { error } = await supabase
     .from('team_members')
-    .delete()
+    .update({ status: 'removed', removed_at: new Date().toISOString() })
     .eq('id', req.params.id)
     .eq('team_id', team.id);
   if (error) return res.status(400).json({ error: error.message });
