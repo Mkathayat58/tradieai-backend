@@ -1293,6 +1293,75 @@ app.get('/api/jobs/:id/timesheets', requireAuth, async (req, res) => {
   }
 });
 
+// ── JOBS: CREATE (owner or supervisor — bypasses RLS via service key) ──
+app.post('/api/jobs', requireAuth, async (req, res) => {
+  try {
+    let ownerId = req.user.id;
+    const staffCtx = await getStaffMember(req.user.id);
+    if (staffCtx) {
+      if (staffCtx.role !== 'supervisor') {
+        return res.status(403).json({ error: 'Only owners or supervisors can create jobs' });
+      }
+      ownerId = staffCtx.teams.owner_user_id;
+    }
+
+    const {
+      assigned_to, job_address, customer_name, customer_phone, customer_email,
+      description, value, due_date, due_time, status, notes
+    } = req.body;
+
+    if (!customer_name || !description) {
+      return res.status(400).json({ error: 'Customer name and description are required' });
+    }
+
+    const { data: team, error: teamErr } = await supabase
+      .from('teams')
+      .select('id, job_counter')
+      .eq('owner_user_id', ownerId)
+      .single();
+    if (teamErr || !team) throw teamErr || new Error('Team not found');
+
+    const nextCounter = (team.job_counter || 0) + 1;
+    await supabase.from('teams').update({ job_counter: nextCounter }).eq('id', team.id);
+    const job_number = `JOB-${String(nextCounter).padStart(4, '0')}`;
+
+    const { data: job, error } = await supabase
+      .from('jobs')
+      .insert({
+        user_id: ownerId,
+        job_number,
+        assigned_to: assigned_to || null,
+        job_address: job_address || '',
+        customer_name,
+        customer_phone: customer_phone || '',
+        customer_email: customer_email || '',
+        description,
+        value: parseFloat(value) || 0,
+        due_date: due_date || null,
+        due_time: due_time || null,
+        status: status || 'New',
+        notes: notes || '',
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await supabase.from('job_activity').insert({
+      job_id: job.id,
+      user_id: req.user.id,
+      user_name: req.user.email,
+      action: 'job created'
+    });
+
+    res.json(job);
+  } catch (err) {
+    console.error('create job error:', err);
+    res.status(500).json({ error: 'Could not create job — please try again' });
+  }
+});
+
 // ── JOBS: NEXT NUMBER (server-side, prevents duplicates) ──
 app.get('/api/jobs/next-number', requireAuth, async (req, res) => {
   try {

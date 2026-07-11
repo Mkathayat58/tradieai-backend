@@ -1467,23 +1467,21 @@ if(currentJob){const prevAssignee=currentJob.assigned_to;const{error}=await sb.f
       const assigneeName=getAssigneeName(jobData.assigned_to)||'staff member';
       await logActivity(currentJob.id,'assigned to '+assigneeName);
     }}
-  else{
-    // Generate job number server-side to avoid duplicates
+ else{
     try{
       const session=(await sb.auth.getSession()).data.session;
-      const numRes=await fetch(BACKEND_URL+'/api/jobs/next-number',{
-        headers:{'Authorization':'Bearer '+session.access_token}
+      const res=await fetch(BACKEND_URL+'/api/jobs',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+        body:JSON.stringify(jobData)
       });
-      if(!numRes.ok) throw new Error('Could not generate job number');
-      const{job_number}=await numRes.json();
-      jobData.job_number=job_number;
+      if(!res.ok){const e=await res.json();throw new Error(e.error||'Could not save job');}
+      currentJob=await res.json();
     }catch(e){
-      // Fallback to timestamp-based number if backend unavailable
-      jobData.job_number='JOB-'+Date.now().toString().slice(-6);
+      showToast(e.message||'Could not save job — please try again',true);
+      btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Save job';
+      return;
     }
-    const{data,error}=await sb.from('jobs').insert(jobData).select().single();
-    if(error){showToast('Could not save job — please try again',true);btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Save job';return;}
-    currentJob=data;
   }
   btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Save job';await loadJobs();if(!currentJob.job_number){await logActivity(currentJob.id,'job created');}
     showToast('Job saved \u2713');viewJob(currentJob.id);
