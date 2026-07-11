@@ -36,6 +36,10 @@ const webpush = require('web-push');
 // ── RESEND EMAIL SETUP ──
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// ── STRIPE SETUP ──
+const Stripe = require('stripe');
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
 // ── WEB PUSH SETUP ──
 if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(
@@ -1437,7 +1441,103 @@ app.get('/api/jobs/next-number', requireAuth, async (req, res) => {
     res.status(500).json({ error: 'Could not generate job number' });
   }
 });
+// ── STRIPE: CREATE PAYMENT LINK FOR INVOICE ──
+app.post('/api/jobs/:id/payment-link', requireAuth, async (req, res) => {
+  try {
+    const { data: job } = await supabase
+      .from('jobs')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+    if (!job) return res.status(404).json({ error: 'Job not found' });
 
+    let profileId = req.user.id;
+    const staffCtx = await getStaffMember(req.user.id);
+    if (staffCtx) profileId = staffCtx.teams.owner_user_id;
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('bizname, name')
+      .eq('id', profileId)
+      .single();
+
+    const businessName = profile?.bizname || profile?.name || 'Tradie AI';
+    const jobValue = Math.round(parseFloat(job.value || 0) * 100); // cents
+    if (jobValue <= 0) return res.status(400).json({ error: 'Job has no value set' });
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'aud',
+          product_data: {
+            name: `Invoice — ${job.job_number}`,
+            description: job.description
+          },
+          unit_amount: jobValue
+        },
+        quantity: 1
+      }],
+      mode: 'payment',
+      success_url: `${process.env.FRONTEND_URL}?payment=success`,
+      cancel_url: `${process.env.FRONTEND_URL}?payment=cancelled`,
+      metadata: { job_id: job.id, owner_user_id: profileId }
+    });
+
+    // Save payment link to job
+    await supabase.from('jobs').update({
+      stripe_payment_link: session.url,
+      stripe_session_id: session.id
+    }).eq('id', job.id);
+
+    await supabase.from('job_activity').insert({
+      job_id: job.id,
+      user_id: req.user.id,
+      user_name: businessName,
+      action: 'payment link created'
+    });
+
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error('Payment link error:', err);
+    res.status(500).json({ error: 'Could not create payment link' });
+  }
+});
+
+// ── STRIPE: WEBHOOK (auto-mark job as Paid on payment) ──
+app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    console.error('Webhook signature error:', err.message);
+    return res.status(400).json({ error: 'Webhook signature failed' });
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    const jobId = session.metadata?.job_id;
+    const ownerId = session.metadata?.owner_user_id;
+    if (!jobId) return res.json({ received: true });
+
+    await supabase.from('jobs').update({
+      status: 'Paid',
+      updated_at: new Date().toISOString()
+    }).eq('id', jobId);
+
+    await supabase.from('job_activity').insert({
+      job_id: jobId,
+      user_id: ownerId,
+      user_name: 'Auto',
+      action: 'payment received via Stripe — job marked Paid'
+    });
+
+    await sendPushToUser(ownerId, 'Payment received', `Invoice paid via Stripe`, '/');
+  }
+
+  res.json({ received: true });
+});
 
 // ══════════════════════════════════════════════════
 // ── AUTOMATION ENGINE ──
