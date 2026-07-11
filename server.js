@@ -12,6 +12,41 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+// ── STRIPE WEBHOOK — must be before express.json() ──
+app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    console.error('Webhook signature error:', err.message);
+    return res.status(400).json({ error: 'Webhook signature failed' });
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    const jobId = session.metadata?.job_id;
+    const ownerId = session.metadata?.owner_user_id;
+    if (!jobId) return res.json({ received: true });
+
+    await supabase.from('jobs').update({
+      status: 'Paid',
+      updated_at: new Date().toISOString()
+    }).eq('id', jobId);
+
+    await supabase.from('job_activity').insert({
+      job_id: jobId,
+      user_id: ownerId,
+      user_name: 'Auto',
+      action: 'payment received via Stripe — job marked Paid'
+    });
+
+    await sendPushToUser(ownerId, 'Payment received', `Invoice paid via Stripe`, '/');
+  }
+
+  res.json({ received: true });
+});
+
 app.use(express.json());
 
 // ── SUPABASE ──
@@ -1504,40 +1539,6 @@ cancel_url: `${process.env.FRONTEND_URL || 'https://tradieai-frontend.onrender.c
   }
 });
 
-// ── STRIPE: WEBHOOK (auto-mark job as Paid on payment) ──
-app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-  const sig = req.headers['stripe-signature'];
-  let event;
-  try {
-    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
-  } catch (err) {
-    console.error('Webhook signature error:', err.message);
-    return res.status(400).json({ error: 'Webhook signature failed' });
-  }
-
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object;
-    const jobId = session.metadata?.job_id;
-    const ownerId = session.metadata?.owner_user_id;
-    if (!jobId) return res.json({ received: true });
-
-    await supabase.from('jobs').update({
-      status: 'Paid',
-      updated_at: new Date().toISOString()
-    }).eq('id', jobId);
-
-    await supabase.from('job_activity').insert({
-      job_id: jobId,
-      user_id: ownerId,
-      user_name: 'Auto',
-      action: 'payment received via Stripe — job marked Paid'
-    });
-
-    await sendPushToUser(ownerId, 'Payment received', `Invoice paid via Stripe`, '/');
-  }
-
-  res.json({ received: true });
-});
 
 // ══════════════════════════════════════════════════
 // ── AUTOMATION ENGINE ──
