@@ -1296,18 +1296,23 @@ app.get('/api/jobs/:id/timesheets', requireAuth, async (req, res) => {
 // ── JOBS: NEXT NUMBER (server-side, prevents duplicates) ──
 app.get('/api/jobs/next-number', requireAuth, async (req, res) => {
   try {
-    const ownerId = req.user.id;
+    let ownerId = req.user.id;
+    const staffCtx = await getStaffMember(req.user.id);
+    if (staffCtx) ownerId = staffCtx.teams.owner_user_id;
 
-    // Count all jobs for this owner to get next number
-    const { count, error } = await supabase
-      .from('jobs')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', ownerId);
+    // Use a running counter on the team, not a live row count,
+    // so deleted jobs never cause a number to be reused
+    const { data: team, error: teamErr } = await supabase
+      .from('teams')
+      .select('id, job_counter')
+      .eq('owner_user_id', ownerId)
+      .single();
+    if (teamErr || !team) throw teamErr || new Error('Team not found');
 
-    if (error) throw error;
+    const nextCounter = (team.job_counter || 0) + 1;
+    await supabase.from('teams').update({ job_counter: nextCounter }).eq('id', team.id);
 
-    // Format as JOB-0001, JOB-0042 etc.
-    const nextNum = String((count || 0) + 1).padStart(4, '0');
+    const nextNum = String(nextCounter).padStart(4, '0');
     res.json({ job_number: `JOB-${nextNum}` });
 
   } catch (err) {
