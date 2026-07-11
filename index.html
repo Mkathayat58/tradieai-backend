@@ -609,8 +609,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     <div class="home-sub" id="staff-role-label">Your assigned jobs</div>
   </div>
   <div style="flex:1;overflow-y:auto;padding:16px;">
-    <div id="staff-briefing"></div>
-    <div id="staff-up-next"></div>
+  <div id="staff-briefing"></div>
     <div id="staff-jobs-list"><div class="empty-state" style="padding:40px 20px;text-align:center;color:var(--text-muted);">No jobs assigned yet</div></div>
   </div>
   <nav class="bottom-nav">
@@ -2030,8 +2029,7 @@ async function loadStaffHome(){
  const res=await fetch(BACKEND_URL+'/api/jobs/assigned',{headers:{'Authorization':'Bearer '+session.access_token}});
   const jobs=await res.json();allJobs=jobs;
   const cutoff=new Date(Date.now()-48*60*60*1000);const visibleJobs=jobs.filter(j=>{if(['Completed','Invoiced','Paid'].includes(j.status)){const updated=new Date(j.updated_at||j.created_at);return updated>cutoff;}return!['Declined'].includes(j.status);});
-  renderBriefing('staff-briefing',visibleJobs,currentUser.id);
-  renderUpNext('staff-up-next',jobs,currentUser.id);
+renderBriefing('staff-briefing',visibleJobs,currentUser.id);
   const list=document.getElementById('staff-jobs-list');
 if(!visibleJobs.length){list.innerHTML='<div class="empty-state" style="padding:40px 20px;">No jobs assigned yet</div>';return;}
 
