@@ -1609,16 +1609,17 @@ app.post('/api/jobs', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Customer name and description are required' });
     }
 
-    const { data: team, error: teamErr } = await supabase
+ const { data: team, error: teamErr } = await supabase
       .from('teams')
-      .select('id, job_counter')
+      .select('id')
       .eq('owner_user_id', ownerId)
       .single();
     if (teamErr || !team) throw teamErr || new Error('Team not found');
 
-    const nextCounter = (team.job_counter || 0) + 1;
-    await supabase.from('teams').update({ job_counter: nextCounter }).eq('id', team.id);
-    const job_number = `JOB-${String(nextCounter).padStart(4, '0')}`;
+    const { data: counterData, error: counterErr } = await supabase
+      .rpc('increment_job_counter', { p_team_id: team.id });
+    if (counterErr || !counterData) throw counterErr || new Error('Could not generate job number');
+    const job_number = `JOB-${String(counterData).padStart(4, '0')}`;
 
     const { data: job, error } = await supabase
       .from('jobs')
