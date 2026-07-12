@@ -2347,7 +2347,7 @@ async function loadQuoteDetails(token,action){
   }
 }
 
-async function respondToQuote(action){
+window.respondToQuote=async function(action){
   document.getElementById('qa-accept-btn').disabled=true;
   document.getElementById('qa-decline-btn').disabled=true;
   try{
