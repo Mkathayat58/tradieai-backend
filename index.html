@@ -2469,12 +2469,12 @@ async function saveStaffProfile(){const session=(await sb.auth.getSession()).dat
 (async()=>{
  const urlParams=new URLSearchParams(window.location.search),inviteToken=urlParams.get('invite');
 
-  // Handle quote accept/decline links
-  const quoteAction=urlParams.get('quote_action'),quoteToken=urlParams.get('token');
-  if(quoteAction&&quoteToken){
+// Handle quote links — single ?quote=TOKEN param
+  const quoteParam=urlParams.get('quote');
+  if(quoteParam){
     history.replaceState(null,'',window.location.pathname);
     goTo('screen-quote-accept');
-    await loadQuoteDetails(quoteToken,quoteAction);
+    await loadQuoteDetails(quoteParam);
     return;
   }
   if(inviteToken){const tokenRes=await fetch(BACKEND_URL+'/api/team/invite/'+inviteToken);if(tokenRes.ok){const td=await tokenRes.json();sessionStorage.setItem('invite_token',inviteToken);sessionStorage.setItem('invite_name',td.name);sessionStorage.setItem('invite_email',td.email);sessionStorage.setItem('invite_role',td.role||'team_member');history.replaceState(null,'',window.location.pathname);document.getElementById('staff-invite-email').value=td.email;if(td.bizname)document.getElementById('staff-invite-org-title').textContent='Join '+td.bizname;
@@ -2519,8 +2519,8 @@ const{data:{session}}=await sb.auth.getSession();
   // Show "Add to home screen" banner on mobile browsers
   showA2hsBanner();
 
-async function loadQuoteDetails(token,action){
-  _quoteToken=token;_quoteAction=action;
+async function loadQuoteDetails(token){
+  _quoteToken=token;
   try{
     const res=await fetch(BACKEND_URL+'/api/quote/'+token);
     const job=await res.json();
@@ -2534,11 +2534,15 @@ async function loadQuoteDetails(token,action){
       return;
     }
     const value=parseFloat(job.value||0).toFixed(2);
-    document.getElementById('qa-title').textContent='Quote from your tradie';
-    document.getElementById('qa-sub').innerHTML=`<strong>${job.job_number}</strong><br><br>${job.description}<br><br><strong>$${value} inc GST</strong><br><br>Would you like to accept or decline this quote?`;
-    if(action==='decline'){
-      document.getElementById('qa-accept-btn').style.display='none';
-    }
+    document.getElementById('qa-title').textContent='Quote from '+job.customer_name.split(' ')[0];
+    document.getElementById('qa-sub').innerHTML=`
+      <div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius);padding:16px;margin:12px 0 20px;text-align:left;">
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Job</div>
+        <div style="font-size:14px;color:var(--text);margin-bottom:12px;">${job.description}</div>
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Amount</div>
+        <div style="font-size:28px;font-weight:700;color:var(--green);">$${value} <span style="font-size:13px;font-weight:400;color:var(--text-muted);">inc GST</span></div>
+      </div>
+      <div style="font-size:14px;color:var(--text-muted);">Would you like to accept or decline this quote?</div>`;
   }catch(e){
     document.getElementById('qa-loading').style.display='none';
     document.getElementById('qa-content').style.display='block';
