@@ -640,13 +640,12 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 <div class="screen" id="screen-staff-chat">
   <div class="tpl-header"><button class="back-btn" onclick="goStaffHome()"><i class="ti ti-arrow-left"></i></button><span class="tpl-header-title">Ask AI</span></div>
   <div class="chat-messages" id="staff-chat-messages"><div class="msg msg-ai">G'day! Ask me anything — job notes, safety questions, customer messages. I'm here to help.</div></div>
- <div class="chat-input-row">
-    <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
-      <textarea class="chat-textarea" id="staff-chat-input" placeholder="Ask anything..." rows="1" onkeydown="staffChatKey(event)" oninput="autoResize(this)"></textarea>
-      <button id="staff-chat-voice-btn" onclick="toggleStaffChatVoice()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:12px;padding:2px 4px;display:inline-flex;align-items:center;gap:6px;-webkit-tap-highlight-color:transparent;align-self:flex-start;">
-        <svg id="staff-chat-mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="21"/><line x1="9" y1="21" x2="15" y2="21"/></svg>
+<div class="chat-input-row">
+    <div style="flex:1;display:flex;align-items:flex-end;border:1.5px solid var(--border);border-radius:20px;background:var(--surface2);padding-right:4px;">
+      <textarea class="chat-textarea" id="staff-chat-input" placeholder="Ask anything..." rows="1" onkeydown="staffChatKey(event)" oninput="autoResize(this)" style="border:none;background:transparent;border-radius:20px;flex:1;"></textarea>
+      <button id="staff-chat-voice-btn" onclick="toggleStaffChatVoice()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);padding:8px 6px;display:inline-flex;align-items:center;flex-shrink:0;-webkit-tap-highlight-color:transparent;">
+        <svg id="staff-chat-mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="21"/><line x1="9" y1="21" x2="15" y2="21"/></svg>
         <div class="voice-wave" id="staff-chat-voice-wave"><span></span><span></span><span></span><span></span><span></span></div>
-        <span id="staff-chat-voice-label">Tap to speak</span>
       </button>
     </div>
     <button class="chat-send-btn" id="staff-chat-send" onclick="sendStaffChat()"><i class="ti ti-arrow-up"></i></button>
