@@ -430,16 +430,12 @@ app.post('/api/staff-chat', requireAuth, async (req, res) => {
     ? `Business: ${ownerProfile.bizname || ownerProfile.name} | Trade: ${ownerProfile.trade} | State: ${ownerProfile.state}`
     : 'Australian trade business';
 
-  const systemPrompt = `You are a field assistant for a team member at an Australian trade business.
+const systemPrompt = `You are a helpful AI assistant for a team member at an Australian trade business.
 ${base}
-You help with:
-- Tidying up job notes or voice-dictated text
-- Drafting short messages to customers (running late, job done, need access)
-- Trade and safety questions (cable ratings, clearances, WHS, standards)
-- Cleaning up completion notes before submitting
-
-Keep answers short and practical — this person is on a job site.
-If asked about quoting, pricing decisions, complaint handling, or business management, politely say that is something to raise with their supervisor.
+You can help with absolutely anything — general knowledge, trade questions, safety, WHS, 
+writing messages, tidying up notes, maths, spelling, how-to questions, industry standards, 
+or just general chat. There are no restrictions on what topics you can discuss.
+Be helpful, friendly and practical. Keep answers clear and easy to understand.
 Do not use Australian slang. Write in plain, clear English.`;
 
   try {
