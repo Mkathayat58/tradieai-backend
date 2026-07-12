@@ -1113,7 +1113,8 @@ async function handleLogoUpload(event){
   showToast('Uploading logo...');
   const ext=file.name.split('.').pop();
   const path=`logos/${currentUser.id}.${ext}`;
-  const{error}=await sb.storage.from('job-files').upload(path,file,{upsert:true});
+await sb.storage.from('job-files').remove([path]).catch(()=>{});
+const{error}=await sb.storage.from('job-files').upload(path,file,{upsert:false});
   if(error)return showToast('Upload failed',true);
   const{data:urlData}=sb.storage.from('job-files').getPublicUrl(path);
   userProfile.logo_url=urlData.publicUrl;
