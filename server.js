@@ -709,11 +709,10 @@ app.get('/api/team/members', requireAuth, async (req, res) => {
   }
   if (!team) return res.json([]);
 
- const { data, error } = await supabase
+const { data, error } = await supabase
     .from('team_members')
     .select('*')
     .eq('team_id', team.id)
-    .neq('status', 'removed')
     .order('invited_at', { ascending: false });
   if (error) return res.status(400).json({ error: error.message });
   res.json(data || []);
