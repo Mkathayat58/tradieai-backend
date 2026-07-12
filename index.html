@@ -2548,7 +2548,11 @@ async function loadQuoteDetails(token,action){
   }
 }
 
-window.respondToQuote=async function(action){
+// moved outside IIFE — must be global so inline onclick can find it
+
+})();
+
+async function respondToQuote(action){
   document.getElementById('qa-accept-btn').disabled=true;
   document.getElementById('qa-decline-btn').disabled=true;
   try{
@@ -2571,8 +2575,6 @@ window.respondToQuote=async function(action){
     alert('Something went wrong — please try again.');
   }
 }
-
-})();
 
 async function doResetPassword(){
   hideError('reset-error');
