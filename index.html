@@ -1471,7 +1471,7 @@ function renderEodSummary(containerId,jobs){
   const todayStr=now.toISOString().slice(0,10);
   const completedToday=jobs.filter(j=>j.status==='Completed'&&j.updated_at&&j.updated_at.startsWith(todayStr)).length;
   const stillOpen=jobs.filter(j=>j.due_date===todayStr&&!['Completed','Paid','Declined'].includes(j.status)).length;
-  const overdue=jobs.filter(j=>j.due_date&&j.due_date<todayStr&&!['Completed','Paid','Declined'].includes(j.status)).length;
+const overdue=jobs.filter(j=>j.due_date&&j.due_date<todayStr&&['Accepted','In Progress'].includes(j.status)).length;
   if(!completedToday&&!stillOpen&&!overdue){el.innerHTML='';return;}
   el.innerHTML=`<div style="margin-bottom:16px;"><div class="section-label">End of day summary</div><div class="detail-section"><div class="detail-row"><span class="detail-label"><i class="ti ti-circle-check"></i>Completed today</span><span class="detail-val" style="color:var(--green);">${completedToday}</span></div><div class="detail-row"><span class="detail-label"><i class="ti ti-clock"></i>Still open today</span><span class="detail-val">${stillOpen}</span></div>${overdue?`<div class="detail-row"><span class="detail-label"><i class="ti ti-alert-triangle"></i>Overdue</span><span class="detail-val" style="color:var(--red);">${overdue}</span></div>`:''}</div></div>`;
 }
