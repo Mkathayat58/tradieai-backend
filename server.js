@@ -1013,6 +1013,59 @@ app.post('/api/team/resend-invite', requireAuth, async (req, res) => {
 });
 
 // ── TEAM: VALIDATE INVITE TOKEN (public) ──
+// ── QUOTE: ACCEPT/DECLINE (public — no auth required) ──
+app.post('/api/quote/:token/respond', async (req, res) => {
+  const { action } = req.body;
+  if (!['accept', 'decline'].includes(action)) {
+    return res.status(400).json({ error: 'Invalid action' });
+  }
+
+  const { data: job, error } = await supabase
+    .from('jobs')
+    .select('*')
+    .eq('quote_token', req.params.token)
+    .single();
+
+  if (error || !job) return res.status(404).json({ error: 'Quote not found' });
+  if (job.quote_token_used) return res.status(400).json({ error: 'This quote has already been responded to' });
+  if (job.status !== 'Quoted') return res.status(400).json({ error: 'This quote is no longer available' });
+
+  const newStatus = action === 'accept' ? 'Accepted' : 'Declined';
+
+  await supabase.from('jobs').update({
+    status: newStatus,
+    quote_token_used: true,
+    updated_at: new Date().toISOString()
+  }).eq('id', job.id);
+
+  await supabase.from('job_activity').insert({
+    job_id: job.id,
+    user_id: job.user_id,
+    user_name: job.customer_name,
+    action: `customer ${action}ed the quote via email link`
+  });
+
+  await sendPushToUser(
+    job.user_id,
+    action === 'accept' ? 'Quote accepted!' : 'Quote declined',
+    `${job.customer_name} ${action}ed the quote for ${job.job_number}`,
+    '/'
+  );
+
+  res.json({ success: true, status: newStatus, customer_name: job.customer_name, job_number: job.job_number });
+});
+
+// ── QUOTE: GET DETAILS (public — for acceptance page) ──
+app.get('/api/quote/:token', async (req, res) => {
+  const { data: job, error } = await supabase
+    .from('jobs')
+    .select('job_number, customer_name, description, value, status, quote_token_used')
+    .eq('quote_token', req.params.token)
+    .single();
+
+  if (error || !job) return res.status(404).json({ error: 'Quote not found' });
+  res.json(job);
+});
 app.get('/api/team/invite/:token', async (req, res) => {
   const { data, error } = await supabase
     .from('team_members')
@@ -1694,6 +1747,14 @@ cancel_url: `${process.env.FRONTEND_URL || 'https://tradieai-frontend.onrender.c
 // ── AUTOMATION ENGINE ──
 // ══════════════════════════════════════════════════
 
+// ── QUOTE TOKEN GENERATOR ──
+async function ensureQuoteToken(jobId) {
+  const crypto = require('crypto');
+  const token = crypto.randomBytes(32).toString('hex');
+  await supabase.from('jobs').update({ quote_token: token }).eq('id', jobId);
+  return token;
+}
+
 // ── CUSTOMER STATUS EMAIL HELPER ──
 async function sendCustomerStatusEmail(job, profile, newStatus) {
   if (!job.customer_email) return;
@@ -1703,10 +1764,15 @@ async function sendCustomerStatusEmail(job, profile, newStatus) {
   const dueDate = job.due_date ? new Date(job.due_date).toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' }) : '';
   const phone = profile.phone || '';
 
+const frontendUrl = process.env.FRONTEND_URL || 'https://tradieai-frontend.onrender.com';
+  const quoteToken = job.quote_token || await ensureQuoteToken(job.id);
+  const acceptUrl = `${frontendUrl}?quote_action=accept&token=${quoteToken}`;
+  const declineUrl = `${frontendUrl}?quote_action=decline&token=${quoteToken}`;
+
   const msgs = {
     'Quoted': {
       subject: 'Quote from ' + businessName,
-      body: 'Hi ' + firstName + ',\n\nThanks for getting in touch. We\'ve prepared a quote for you.\n\nJob: ' + job.description + '\nAmount: $' + value + ' inc GST\n\nPlease let us know if you\'d like to go ahead.\n\nCheers,\n' + businessName
+      body: 'Hi ' + firstName + ',\n\nThanks for getting in touch. We\'ve prepared a quote for you.\n\nJob: ' + job.description + '\nAmount: $' + value + ' inc GST\n\nAccept this quote: ' + acceptUrl + '\nDecline this quote: ' + declineUrl + '\n\nCheers,\n' + businessName
     },
     'Accepted': {
       subject: 'Job confirmed — ' + businessName,

@@ -240,6 +240,28 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
   <button class="a2hs-dismiss" onclick="dismissA2hs()" aria-label="Dismiss"><i class="ti ti-x"></i></button>
 </div>
 
+<!-- QUOTE ACCEPTANCE -->
+<div class="screen" id="screen-quote-accept">
+  <div class="verify-body">
+    <div id="qa-loading">
+      <div class="verify-icon"><i class="ti ti-file-invoice"></i></div>
+      <div class="verify-title">Loading quote...</div>
+    </div>
+    <div id="qa-content" style="display:none;width:100%;max-width:400px;">
+      <div class="verify-icon" id="qa-icon"><i class="ti ti-file-invoice"></i></div>
+      <div class="verify-title" id="qa-title">Quote from your tradie</div>
+      <div class="verify-sub" id="qa-sub"></div>
+      <div id="qa-actions">
+        <button class="btn" id="qa-accept-btn" onclick="respondToQuote('accept')"><i class="ti ti-check"></i> Accept quote</button>
+        <button class="btn btn-danger" id="qa-decline-btn" onclick="respondToQuote('decline')"><i class="ti ti-x"></i> Decline quote</button>
+      </div>
+      <div id="qa-done" style="display:none;">
+        <div class="verify-sub" id="qa-done-msg"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- LANDING -->
 <div class="screen active" id="screen-landing">
 <div class="landing-body">
@@ -2243,7 +2265,16 @@ async function saveStaffProfile(){const session=(await sb.auth.getSession()).dat
 
 // ── INIT ──
 (async()=>{
-  const urlParams=new URLSearchParams(window.location.search),inviteToken=urlParams.get('invite');
+ const urlParams=new URLSearchParams(window.location.search),inviteToken=urlParams.get('invite');
+
+  // Handle quote accept/decline links
+  const quoteAction=urlParams.get('quote_action'),quoteToken=urlParams.get('token');
+  if(quoteAction&&quoteToken){
+    history.replaceState(null,'',window.location.pathname);
+    goTo('screen-quote-accept');
+    await loadQuoteDetails(quoteToken,quoteAction);
+    return;
+  }
   if(inviteToken){const tokenRes=await fetch(BACKEND_URL+'/api/team/invite/'+inviteToken);if(tokenRes.ok){const td=await tokenRes.json();sessionStorage.setItem('invite_token',inviteToken);sessionStorage.setItem('invite_name',td.name);sessionStorage.setItem('invite_email',td.email);sessionStorage.setItem('invite_role',td.role||'team_member');history.replaceState(null,'',window.location.pathname);document.getElementById('staff-invite-email').value=td.email;if(td.bizname)document.getElementById('staff-invite-org-title').textContent='Join '+td.bizname;
 document.getElementById('staff-invite-greeting').textContent='Hi '+td.name+"! You've been invited"+(td.bizname?' to join '+td.bizname:'')+'.';document.getElementById('staff-invite-role-hint').textContent=td.role==='supervisor'?"You're joining as a Supervisor.":"Set your password below to access your assigned jobs.";goTo('screen-staff-setpassword');}else{showToast('Invalid or expired invite link',true);goTo('screen-landing');}return;}
 
@@ -2285,6 +2316,61 @@ const{data:{session}}=await sb.auth.getSession();
 
   // Show "Add to home screen" banner on mobile browsers
   showA2hsBanner();
+let _quoteToken=null,_quoteAction=null;
+
+async function loadQuoteDetails(token,action){
+  _quoteToken=token;_quoteAction=action;
+  try{
+    const res=await fetch(BACKEND_URL+'/api/quote/'+token);
+    const job=await res.json();
+    document.getElementById('qa-loading').style.display='none';
+    document.getElementById('qa-content').style.display='block';
+    if(!res.ok||job.quote_token_used||job.status!=='Quoted'){
+      document.getElementById('qa-icon').innerHTML='<i class="ti ti-alert-circle"></i>';
+      document.getElementById('qa-title').textContent='Quote unavailable';
+      document.getElementById('qa-sub').textContent='This quote has already been responded to or is no longer available.';
+      document.getElementById('qa-actions').style.display='none';
+      return;
+    }
+    const value=parseFloat(job.value||0).toFixed(2);
+    document.getElementById('qa-title').textContent='Quote from your tradie';
+    document.getElementById('qa-sub').innerHTML=`<strong>${job.job_number}</strong><br><br>${job.description}<br><br><strong>$${value} inc GST</strong><br><br>Would you like to accept or decline this quote?`;
+    if(action==='decline'){
+      document.getElementById('qa-accept-btn').style.display='none';
+    }
+  }catch(e){
+    document.getElementById('qa-loading').style.display='none';
+    document.getElementById('qa-content').style.display='block';
+    document.getElementById('qa-title').textContent='Something went wrong';
+    document.getElementById('qa-sub').textContent='Please try the link again or contact your tradie directly.';
+    document.getElementById('qa-actions').style.display='none';
+  }
+}
+
+async function respondToQuote(action){
+  document.getElementById('qa-accept-btn').disabled=true;
+  document.getElementById('qa-decline-btn').disabled=true;
+  try{
+    const res=await fetch(BACKEND_URL+'/api/quote/'+_quoteToken+'/respond',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action})
+    });
+    const data=await res.json();
+    document.getElementById('qa-actions').style.display='none';
+    document.getElementById('qa-done').style.display='block';
+    document.getElementById('qa-icon').innerHTML=action==='accept'?'<i class="ti ti-circle-check" style="color:var(--green);"></i>':'<i class="ti ti-circle-x" style="color:var(--red);"></i>';
+    document.getElementById('qa-title').textContent=action==='accept'?'Quote accepted!':'Quote declined';
+    document.getElementById('qa-done-msg').textContent=action==='accept'
+      ?'Thank you! Your tradie will be in touch shortly to confirm the details.'
+      :'Your response has been recorded. Feel free to contact your tradie if you change your mind.';
+  }catch(e){
+    document.getElementById('qa-accept-btn').disabled=false;
+    document.getElementById('qa-decline-btn').disabled=false;
+    alert('Something went wrong — please try again.');
+  }
+}
+
 })();
 
 async function doResetPassword(){
