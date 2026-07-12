@@ -409,6 +409,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     <div style="display:flex;gap:0;border-top:0.5px solid rgba(255,255,255,0.15);margin-top:12px;">
       <button id="reports-tab-overview" onclick="switchReportsTab('overview')" style="flex:1;background:rgba(255,255,255,0.15);border:none;color:#E1F5EE;font-size:13px;font-weight:600;padding:10px;cursor:pointer;border-bottom:2px solid #E1F5EE;">Overview</button>
       <button id="reports-tab-history" onclick="switchReportsTab('history')" style="flex:1;background:none;border:none;color:var(--green-mid);font-size:13px;font-weight:500;padding:10px;cursor:pointer;border-bottom:2px solid transparent;">History</button>
+      <button id="reports-tab-customers" onclick="switchReportsTab('customers')" style="flex:1;background:none;border:none;color:var(--green-mid);font-size:13px;font-weight:500;padding:10px;cursor:pointer;border-bottom:2px solid transparent;">Customers</button>
     </div>
   </div>
 
@@ -463,11 +464,16 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 
   </div>
 
-  <!-- History panel -->
+<!-- History panel -->
   <div id="reports-history" style="flex:1;overflow-y:auto;display:none;">
     <div class="settings-body" id="history-body" style="padding:16px;">
       <div class="empty-state" style="padding:40px 20px;">No history yet</div>
     </div>
+  </div>
+
+  <!-- Customers panel -->
+  <div id="reports-customers" style="flex:1;overflow-y:auto;display:none;padding:16px;">
+    <div class="empty-state" style="padding:40px 20px;">Loading...</div>
   </div>
 
   <nav class="bottom-nav">
@@ -1763,31 +1769,226 @@ function goReports(){
 function switchReportsTab(tab){
   const overview=document.getElementById('reports-overview');
   const history=document.getElementById('reports-history');
+  const customers=document.getElementById('reports-customers');
   const tabOv=document.getElementById('reports-tab-overview');
   const tabHi=document.getElementById('reports-tab-history');
+  const tabCu=document.getElementById('reports-tab-customers');
+
+  // Hide all panels
+  overview.style.display='none';
+  history.style.display='none';
+  customers.style.display='none';
+
+  // Reset all tabs
+  [tabOv,tabHi,tabCu].forEach(t=>{if(!t)return;t.style.background='none';t.style.color='var(--green-mid)';t.style.fontWeight='500';t.style.borderBottom='2px solid transparent';});
+
+  // Activate selected
   if(tab==='overview'){
     overview.style.display='block';
-    history.style.display='none';
     tabOv.style.background='rgba(255,255,255,0.15)';
     tabOv.style.color='#E1F5EE';
     tabOv.style.fontWeight='600';
     tabOv.style.borderBottom='2px solid #E1F5EE';
-    tabHi.style.background='none';
-    tabHi.style.color='var(--green-mid)';
-    tabHi.style.fontWeight='500';
-    tabHi.style.borderBottom='2px solid transparent';
-  }else{
-    overview.style.display='none';
+  }else if(tab==='history'){
     history.style.display='block';
-    tabOv.style.background='none';
-    tabOv.style.color='var(--green-mid)';
-    tabOv.style.fontWeight='500';
-    tabOv.style.borderBottom='2px solid transparent';
     tabHi.style.background='rgba(255,255,255,0.15)';
     tabHi.style.color='#E1F5EE';
     tabHi.style.fontWeight='600';
     tabHi.style.borderBottom='2px solid #E1F5EE';
+  }else if(tab==='customers'){
+    customers.style.display='block';
+    tabCu.style.background='rgba(255,255,255,0.15)';
+    tabCu.style.color='#E1F5EE';
+    tabCu.style.fontWeight='600';
+    tabCu.style.borderBottom='2px solid #E1F5EE';
+    loadCustomers();
   }
+}
+
+// ── CUSTOMERS ──
+let _customers=[];
+
+async function loadCustomers(){
+  const el=document.getElementById('reports-customers');
+  if(!el)return;
+  el.innerHTML='<div class="empty-state" style="padding:40px 20px;">Loading...</div>';
+  try{
+    const session=(await sb.auth.getSession()).data.session;
+    const res=await fetch(BACKEND_URL+'/api/customers',{headers:{'Authorization':'Bearer '+session.access_token}});
+    if(!res.ok)throw new Error();
+    _customers=await res.json();
+    renderCustomers();
+  }catch(e){
+    el.innerHTML='<div class="empty-state" style="padding:40px 20px;">Could not load customers</div>';
+  }
+}
+
+function renderCustomers(){
+  const el=document.getElementById('reports-customers');
+  if(!el)return;
+
+  if(!_customers.length){
+    el.innerHTML=`
+      <div class="empty-state" style="padding:32px 20px 16px;">No customers yet</div>
+      <button class="btn" style="margin:0 0 16px;" onclick="showAddCustomer()"><i class="ti ti-plus"></i> Add customer</button>`;
+    return;
+  }
+
+  const totalRevenue=_customers.reduce((s,c)=>s+(c.total_value||0),0);
+  const totalJobs=_customers.reduce((s,c)=>s+(c.job_count||0),0);
+
+  el.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+      <div class="reports-metric-card">
+        <div class="reports-metric-label">Customers</div>
+        <div class="reports-metric-value">${_customers.length}</div>
+        <div class="reports-metric-sub">${totalJobs} total jobs</div>
+      </div>
+      <div class="reports-metric-card">
+        <div class="reports-metric-label">Lifetime value</div>
+        <div class="reports-metric-value" style="color:var(--green);">$${totalRevenue.toLocaleString('en-AU',{minimumFractionDigits:0,maximumFractionDigits:0})}</div>
+        <div class="reports-metric-sub">All customers</div>
+      </div>
+    </div>
+    <button class="btn" style="margin-bottom:16px;" onclick="showAddCustomer()"><i class="ti ti-plus"></i> Add customer</button>
+    <div class="section-label">All customers</div>
+    <div class="detail-section" style="margin-bottom:20px;">
+      ${_customers.map(c=>`
+        <div class="detail-row" style="cursor:pointer;" onclick="showCustomerDetail('${c.id}')">
+          <span class="detail-label">
+            <span style="width:30px;height:30px;border-radius:50%;background:var(--green-light);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--green);flex-shrink:0;">
+              ${escapeHtml(c.name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase())}
+            </span>
+            <span>
+              <span style="display:block;font-size:13px;font-weight:600;color:var(--text);">${escapeHtml(c.name)}</span>
+              <span style="display:block;font-size:11px;color:var(--text-muted);">${c.job_count} job${c.job_count!==1?'s':''}</span>
+            </span>
+          </span>
+          <span class="detail-val" style="color:var(--green);font-weight:600;">$${(c.total_value||0).toLocaleString('en-AU',{minimumFractionDigits:0,maximumFractionDigits:0})}</span>
+        </div>`).join('')}
+    </div>`;
+}
+
+function showCustomerDetail(id){
+  const c=_customers.find(x=>x.id===id);
+  if(!c)return;
+  document.getElementById('cust-overlay')?.remove();
+  const ov=document.createElement('div');
+  ov.id='cust-overlay';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:flex-end;';
+  ov.innerHTML=`<div style="background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px max(env(safe-area-inset-bottom),24px);width:100%;max-height:85dvh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="font-size:17px;font-weight:700;color:var(--text);">${escapeHtml(c.name)}</div>
+      <button onclick="document.getElementById('cust-overlay').remove()" style="background:none;border:none;cursor:pointer;padding:4px;"><i class="ti ti-x" style="font-size:20px;color:var(--text-muted);"></i></button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">
+      <div class="reports-metric-card" style="padding:10px 12px;">
+        <div class="reports-metric-label">Jobs</div>
+        <div class="reports-metric-value" style="font-size:20px;">${c.job_count}</div>
+      </div>
+      <div class="reports-metric-card" style="padding:10px 12px;">
+        <div class="reports-metric-label">Revenue</div>
+        <div class="reports-metric-value" style="font-size:16px;color:var(--green);">$${(c.total_value||0).toLocaleString('en-AU',{minimumFractionDigits:0,maximumFractionDigits:0})}</div>
+      </div>
+      <div class="reports-metric-card" style="padding:10px 12px;">
+        <div class="reports-metric-label">Last job</div>
+        <div class="reports-metric-value" style="font-size:14px;">${c.last_job_date?new Date(c.last_job_date).toLocaleDateString('en-AU',{day:'numeric',month:'short'}):'—'}</div>
+      </div>
+    </div>
+    <div class="detail-section" style="margin-bottom:16px;">
+      ${c.phone?`<div class="detail-row"><span class="detail-label"><i class="ti ti-phone"></i>Phone</span><a href="tel:${escapeHtml(c.phone)}" style="font-size:13px;color:var(--green);font-weight:500;text-decoration:none;">${escapeHtml(c.phone)}</a></div>`:''}
+      ${c.email?`<div class="detail-row"><span class="detail-label"><i class="ti ti-mail"></i>Email</span><span class="detail-val">${escapeHtml(c.email)}</span></div>`:''}
+      ${c.address?`<div class="detail-row"><span class="detail-label"><i class="ti ti-map-pin"></i>Address</span><span class="detail-val" style="white-space:normal;text-align:right;">${escapeHtml(c.address)}</span></div>`:''}
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn" style="flex:1;margin-bottom:0;" onclick="document.getElementById('cust-overlay').remove();newJobFromCustomer('${c.id}')"><i class="ti ti-plus"></i> New job</button>
+      <button class="btn btn-danger" style="flex:1;margin-bottom:0;" onclick="confirmDeleteCustomer('${c.id}','${escapeHtml(c.name)}')"><i class="ti ti-trash"></i> Remove</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+
+function showAddCustomer(){
+  document.getElementById('add-cust-overlay')?.remove();
+  const ov=document.createElement('div');
+  ov.id='add-cust-overlay';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:flex-end;';
+  ov.innerHTML=`<div style="background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px max(env(safe-area-inset-bottom),24px);width:100%;max-height:90dvh;overflow-y:auto;">
+    <div style="font-size:17px;font-weight:700;color:var(--text);margin-bottom:16px;">Add customer</div>
+    <div class="field"><label>Full name *</label><input type="text" id="nc-name" placeholder="e.g. John Smith" autocomplete="off"></div>
+    <div class="field"><label>Phone</label><input type="tel" id="nc-phone" placeholder="e.g. 0412 345 678"></div>
+    <div class="field"><label>Email</label><input type="email" id="nc-email" placeholder="e.g. john@email.com"></div>
+    <div class="field"><label>Address</label><input type="text" id="nc-address" placeholder="e.g. 123 Smith St, Melbourne"></div>
+    <button class="btn" id="nc-save-btn" onclick="saveNewCustomer()"><i class="ti ti-check"></i> Save customer</button>
+    <button class="btn btn-outline" style="margin-bottom:0;" onclick="document.getElementById('add-cust-overlay').remove()"><i class="ti ti-x"></i> Cancel</button>
+  </div>`;
+  document.body.appendChild(ov);
+  setTimeout(()=>document.getElementById('nc-name')?.focus(),300);
+}
+
+async function saveNewCustomer(){
+  const name=document.getElementById('nc-name')?.value.trim();
+  if(!name)return showToast('Name is required',true);
+  const btn=document.getElementById('nc-save-btn');
+  btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Saving...';
+  try{
+    const session=(await sb.auth.getSession()).data.session;
+    const res=await fetch(BACKEND_URL+'/api/customers',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({
+        name,
+        phone:document.getElementById('nc-phone')?.value.trim()||null,
+        email:document.getElementById('nc-email')?.value.trim()||null,
+        address:document.getElementById('nc-address')?.value.trim()||null
+      })
+    });
+    if(!res.ok)throw new Error((await res.json()).error||'Failed');
+    document.getElementById('add-cust-overlay')?.remove();
+    await loadCustomers();
+    showToast('Customer saved \u2713');
+  }catch(e){
+    btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Save customer';
+    showToast(e.message||'Could not save customer',true);
+  }
+}
+
+function confirmDeleteCustomer(id,name){
+  const ov=document.createElement('div');
+  ov.id='del-cust-overlay';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1001;display:flex;align-items:flex-end;';
+  ov.innerHTML=`<div style="background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px max(env(safe-area-inset-bottom),24px);width:100%;">
+    <div style="font-size:17px;font-weight:700;margin-bottom:6px;">Remove ${escapeHtml(name)}?</div>
+    <div style="font-size:14px;color:var(--text-muted);margin-bottom:20px;">Their contact record will be removed. Existing jobs are not affected.</div>
+    <button class="btn btn-danger" style="margin-bottom:12px;" onclick="executeDeleteCustomer('${id}')"><i class="ti ti-trash"></i> Yes, remove</button>
+    <button class="btn btn-outline" style="margin-bottom:0;" onclick="document.getElementById('del-cust-overlay').remove()"><i class="ti ti-x"></i> Cancel</button>
+  </div>`;
+  document.body.appendChild(ov);
+}
+
+async function executeDeleteCustomer(id){
+  document.getElementById('del-cust-overlay')?.remove();
+  document.getElementById('cust-overlay')?.remove();
+  try{
+    const session=(await sb.auth.getSession()).data.session;
+    const res=await fetch(BACKEND_URL+'/api/customers/'+id,{method:'DELETE',headers:{'Authorization':'Bearer '+session.access_token}});
+    if(!res.ok)throw new Error();
+    await loadCustomers();
+    showToast('Customer removed \u2713');
+  }catch(e){
+    showToast('Could not remove customer',true);
+  }
+}
+
+function newJobFromCustomer(id){
+  const c=_customers.find(x=>x.id===id);
+  if(!c)return;
+  goNewJob();
+  // goNewJob calls goTo which is synchronous, field population can happen immediately after
+  if(c.name)document.getElementById('jf-customer').value=c.name;
+  if(c.phone)document.getElementById('jf-phone').value=c.phone;
+  if(c.email)document.getElementById('jf-email').value=c.email;
+  if(c.address)document.getElementById('jf-job-address').value=c.address;
 }
 let _rptFilter='month';
 

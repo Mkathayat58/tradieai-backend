@@ -2041,6 +2041,82 @@ async function runDailyCronTasks() {
   });
 }
 
+// ── CUSTOMERS ──
+app.get('/api/customers', requireAuth, async (req, res) => {
+  try {
+    let ownerId = req.user.id;
+    const staffCtx = await getStaffMember(req.user.id);
+    if (staffCtx) ownerId = staffCtx.teams.owner_user_id;
+
+    const { data: customers, error } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('owner_user_id', ownerId)
+      .order('name', { ascending: true });
+
+    if (error) throw error;
+
+    const { data: jobs } = await supabase
+      .from('jobs')
+      .select('customer_name, customer_email, value, status, created_at')
+      .eq('user_id', ownerId);
+
+    const enriched = customers.map(c => {
+      const cJobs = jobs?.filter(j => j.customer_email && j.customer_email === c.email) || [];
+      const totalValue = cJobs.reduce((sum, j) => sum + (parseFloat(j.value) || 0), 0);
+      const lastJob = cJobs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+      return { ...c, job_count: cJobs.length, total_value: totalValue, last_job_date: lastJob?.created_at || null };
+    });
+
+    res.json(enriched);
+  } catch (err) {
+    console.error('customers error:', err);
+    res.status(500).json({ error: 'Could not load customers' });
+  }
+});
+
+app.post('/api/customers', requireAuth, async (req, res) => {
+  try {
+    let ownerId = req.user.id;
+    const staffCtx = await getStaffMember(req.user.id);
+    if (staffCtx) ownerId = staffCtx.teams.owner_user_id;
+
+    const { name, phone, email, address } = req.body;
+    if (!name) return res.status(400).json({ error: 'Name is required' });
+
+    const { data, error } = await supabase
+      .from('customers')
+      .insert({ owner_user_id: ownerId, name, phone: phone||null, email: email||null, address: address||null })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    console.error('create customer error:', err);
+    res.status(500).json({ error: 'Could not create customer' });
+  }
+});
+
+app.delete('/api/customers/:id', requireAuth, async (req, res) => {
+  try {
+    let ownerId = req.user.id;
+    const staffCtx = await getStaffMember(req.user.id);
+    if (staffCtx) ownerId = staffCtx.teams.owner_user_id;
+
+    const { error } = await supabase
+      .from('customers')
+      .delete()
+      .eq('id', req.params.id)
+      .eq('owner_user_id', ownerId);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Could not delete customer' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Tradie AI backend running on port ${PORT}`);
 
