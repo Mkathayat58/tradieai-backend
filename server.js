@@ -607,6 +607,48 @@ async function getStaffContext(userId) {
   return getStaffMember(userId);
 }
 
+// ── JOB SCOPE HELPER — resolves ownerId and fetches job, enforcing ownership ──
+// Returns { job, ownerId } or throws with a status code attached
+async function getJobScoped(jobId, userId, { allowTeamMember = false } = {}) {
+  const staffCtx = await getStaffMember(userId);
+
+  // Team members can only access jobs assigned to them
+  if (staffCtx && staffCtx.role === 'team_member') {
+    if (!allowTeamMember) {
+      const err = new Error('Access denied');
+      err.status = 403;
+      throw err;
+    }
+    const { data: job } = await supabase
+      .from('jobs')
+      .select('*')
+      .eq('id', jobId)
+      .eq('assigned_to', userId)
+      .single();
+    if (!job) {
+      const err = new Error('Job not found');
+      err.status = 404;
+      throw err;
+    }
+    return { job, ownerId: staffCtx.teams.owner_user_id };
+  }
+
+  // Supervisors and owners — scope to owner's jobs
+  const ownerId = staffCtx ? staffCtx.teams.owner_user_id : userId;
+  const { data: job } = await supabase
+    .from('jobs')
+    .select('*')
+    .eq('id', jobId)
+    .eq('user_id', ownerId)
+    .single();
+  if (!job) {
+    const err = new Error('Job not found');
+    err.status = 404;
+    throw err;
+  }
+  return { job, ownerId };
+}
+
 // ── TEAM: INVITE STAFF ──
 app.post('/api/team/invite', requireAuth, async (req, res) => {
   const { name, email, role } = req.body;
@@ -887,18 +929,18 @@ app.get('/api/jobs/assigned', requireAuth, async (req, res) => {
 // ── JOBS: DELETE ──
 app.delete('/api/jobs/:id', requireAuth, async (req, res) => {
   try {
-    let profileId = req.user.id;
+    // Only owners and supervisors can delete — scoped to their team's jobs
     const staffCtx = await getStaffMember(req.user.id);
-    if (staffCtx) profileId = staffCtx.teams.owner_user_id;
+    if (staffCtx && staffCtx.role === 'team_member') {
+      return res.status(403).json({ error: 'Team members cannot delete jobs' });
+    }
 
-    // Get job details before deleting
-    const { data: job } = await supabase
-      .from('jobs')
-      .select('*')
-      .eq('id', req.params.id)
-      .single();
-
-    if (!job) return res.status(404).json({ error: 'Job not found' });
+    let job, profileId;
+    try {
+      ({ job, ownerId: profileId } = await getJobScoped(req.params.id, req.user.id));
+    } catch (e) {
+      return res.status(e.status || 404).json({ error: e.message });
+    }
 
     // Get deleter name
     const { data: profile } = await supabase
@@ -964,6 +1006,8 @@ app.get('/api/jobs/deleted', requireAuth, async (req, res) => {
 app.post('/api/jobs/:id/activity', requireAuth, async (req, res) => {
   const { action, user_name } = req.body;
   if (!action) return res.status(400).json({ error: 'Action required' });
+  try { await getJobScoped(req.params.id, req.user.id, { allowTeamMember: true }); }
+  catch (e) { return res.status(e.status || 404).json({ error: e.message }); }
 
   const { data, error } = await supabase.from('job_activity').insert({
     job_id: req.params.id,
@@ -977,6 +1021,9 @@ app.post('/api/jobs/:id/activity', requireAuth, async (req, res) => {
 
 // ── JOB ACTIVITY: GET ──
 app.get('/api/jobs/:id/activity', requireAuth, async (req, res) => {
+  try { await getJobScoped(req.params.id, req.user.id, { allowTeamMember: true }); }
+  catch (e) { return res.status(e.status || 404).json({ error: e.message }); }
+
   const { data, error } = await supabase
     .from('job_activity')
     .select('*')
@@ -1146,16 +1193,12 @@ app.post('/api/jobs/:id/generate-pdf', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Type must be quote or invoice' });
     }
 
-    const { data: job, error: jobError } = await supabase
-      .from('jobs')
-      .select('*')
-      .eq('id', req.params.id)
-      .single();
-    if (jobError || !job) return res.status(404).json({ error: 'Job not found' });
-
-    let profileId = req.user.id;
-    const staffCtx = await getStaffMember(req.user.id);
-    if (staffCtx) profileId = staffCtx.teams.owner_user_id;
+    let job, profileId;
+    try {
+      ({ job, ownerId: profileId } = await getJobScoped(req.params.id, req.user.id));
+    } catch (e) {
+      return res.status(e.status || 404).json({ error: e.message });
+    }
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
@@ -1325,9 +1368,12 @@ app.post('/api/jobs/:id/email-pdf', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'PDF data and customer email required' });
     }
 
-    let profileId = req.user.id;
-    const staffCtx = await getStaffMember(req.user.id);
-    if (staffCtx) profileId = staffCtx.teams.owner_user_id;
+    let profileId;
+    try {
+      ({ ownerId: profileId } = await getJobScoped(req.params.id, req.user.id));
+    } catch (e) {
+      return res.status(e.status || 404).json({ error: e.message });
+    }
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -1432,6 +1478,8 @@ const htmlBody = isInvoice ? `
 app.post('/api/jobs/:id/timesheets/clockin', requireAuth, async (req, res) => {
   try {
     const { user_name } = req.body;
+    try { await getJobScoped(req.params.id, req.user.id, { allowTeamMember: true }); }
+    catch (e) { return res.status(e.status || 404).json({ error: e.message }); }
 
     // Check if already clocked in
     const { data: existing } = await supabase
@@ -1476,6 +1524,8 @@ app.post('/api/jobs/:id/timesheets/clockin', requireAuth, async (req, res) => {
 app.post('/api/jobs/:id/timesheets/clockout', requireAuth, async (req, res) => {
   try {
     const { user_name } = req.body;
+    try { await getJobScoped(req.params.id, req.user.id, { allowTeamMember: true }); }
+    catch (e) { return res.status(e.status || 404).json({ error: e.message }); }
 
     // Find active clock in
     const { data: entry } = await supabase
@@ -1522,6 +1572,9 @@ app.post('/api/jobs/:id/timesheets/clockout', requireAuth, async (req, res) => {
 // ── JOBS: TIMESHEETS — GET ──
 app.get('/api/jobs/:id/timesheets', requireAuth, async (req, res) => {
   try {
+    try { await getJobScoped(req.params.id, req.user.id, { allowTeamMember: true }); }
+    catch (e) { return res.status(e.status || 404).json({ error: e.message }); }
+
     const { data, error } = await supabase
       .from('job_timesheets')
       .select('*')
@@ -1682,16 +1735,12 @@ app.get('/api/jobs/next-number', requireAuth, async (req, res) => {
 // ── STRIPE: CREATE PAYMENT LINK FOR INVOICE ──
 app.post('/api/jobs/:id/payment-link', requireAuth, async (req, res) => {
   try {
-    const { data: job } = await supabase
-      .from('jobs')
-      .select('*')
-      .eq('id', req.params.id)
-      .single();
-    if (!job) return res.status(404).json({ error: 'Job not found' });
-
-    let profileId = req.user.id;
-    const staffCtx = await getStaffMember(req.user.id);
-    if (staffCtx) profileId = staffCtx.teams.owner_user_id;
+    let job, profileId;
+    try {
+      ({ job, ownerId: profileId } = await getJobScoped(req.params.id, req.user.id));
+    } catch (e) {
+      return res.status(e.status || 404).json({ error: e.message });
+    }
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -1941,9 +1990,21 @@ app.post('/api/jobs/:id/update-status', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'Invalid status' });
   }
 
-  let profileId = req.user.id;
+  // Team members can only update status on jobs assigned to them
+  // and only to In Progress or Completed
   const staffCtx = await getStaffMember(req.user.id);
-  if (staffCtx) profileId = staffCtx.teams.owner_user_id;
+  if (staffCtx && staffCtx.role === 'team_member') {
+    if (!['In Progress', 'Completed'].includes(status)) {
+      return res.status(403).json({ error: 'Team members can only set In Progress or Completed' });
+    }
+  }
+
+  let scopedJob, profileId;
+  try {
+    ({ job: scopedJob, ownerId: profileId } = await getJobScoped(req.params.id, req.user.id, { allowTeamMember: true }));
+  } catch (e) {
+    return res.status(e.status || 404).json({ error: e.message });
+  }
 
   const updateData = { status: status, updated_at: new Date().toISOString() };
   if (status === 'Invoiced') updateData.invoiced_at = new Date().toISOString();
@@ -1953,6 +2014,7 @@ app.post('/api/jobs/:id/update-status', requireAuth, async (req, res) => {
     .from('jobs')
     .update(updateData)
     .eq('id', req.params.id)
+    .eq('user_id', profileId)
     .select()
     .single();
   if (error) return res.status(400).json({ error: error.message });
