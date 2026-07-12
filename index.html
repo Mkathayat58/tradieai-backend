@@ -733,6 +733,7 @@ sb.auth.onAuthStateChange(async(event,session)=>{
 let currentUser=null,userProfile=null,currentTemplate='quote',chatHistory=[],localHistory=[],allJobs=[],currentJob=null;
 let currentFilter='all',currentAssigneeFilter='all',jobSearchQuery='',teamMembers=[],ownerPlanInfo=null,myRole='owner',staffContext=null;
 let calWeekStart=null;
+let _quoteToken=null,_quoteAction=null;
 function escapeHtml(s){return s==null?'':String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
 const templates={
@@ -2316,7 +2317,6 @@ const{data:{session}}=await sb.auth.getSession();
 
   // Show "Add to home screen" banner on mobile browsers
   showA2hsBanner();
-let _quoteToken=null,_quoteAction=null;
 
 async function loadQuoteDetails(token,action){
   _quoteToken=token;_quoteAction=action;
