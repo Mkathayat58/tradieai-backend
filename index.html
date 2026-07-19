@@ -818,7 +818,7 @@ async function loadProfile(){
   const session=(await sb.auth.getSession()).data.session;
   const roleRes=await fetch(BACKEND_URL+'/api/team/my-role',{headers:{'Authorization':'Bearer '+session.access_token}});
   const roleData=await roleRes.json();myRole=roleData.role;staffContext=roleData.member||null;
-  if(myRole==='team_member'||myRole==='supervisor'){
+  if(myRole==='team_member'||myRole==='supervisor'||myRole==='owner'){
     await fetch(BACKEND_URL+'/api/team/activate',{method:'POST',headers:{'Authorization':'Bearer '+session.access_token}});
     if(error||!data){await sb.from('profiles').upsert({id:currentUser.id,email:currentUser.email,name:roleData.member?.name||'',firstname:roleData.member?.name?.split(' ')[0]||'',plan:'free',usage_count:0,usage_reset:new Date(new Date().getFullYear(),new Date().getMonth()+1,1).toISOString()});const{data:p}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();userProfile=p;}else{userProfile=data;}
     if(myRole==='supervisor'||myRole==='owner'){await loadSupervisorHome();goTo('screen-supervisor-home');}else{await loadStaffHome();goTo('screen-staff-home');}return;
@@ -1505,6 +1505,11 @@ async function loadJobs(){
     :Promise.resolve([]);
   if(myRole==='supervisor'){const res=await fetch(BACKEND_URL+'/api/team/jobs',{headers:{'Authorization':'Bearer '+session.access_token}});allJobs=await res.json();}
   else if(myRole==='team_member'){const res=await fetch(BACKEND_URL+'/api/jobs/assigned',{headers:{'Authorization':'Bearer '+session.access_token}});allJobs=await res.json();}
+  else if(myRole==='owner'&&staffContext){
+    // Co-owner — load via team jobs endpoint same as supervisor
+    const res=await fetch(BACKEND_URL+'/api/team/jobs',{headers:{'Authorization':'Bearer '+session.access_token}});
+    allJobs=await res.json();
+  }
   else{
     const[jobsResult,membersResult]=await Promise.all([
       sb.from('jobs').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}),
@@ -1579,7 +1584,7 @@ async function saveJob(){
   const customer=document.getElementById('jf-customer').value.trim(),desc=document.getElementById('jf-description').value.trim();
   if(!customer)return showToast('Please enter a customer name');if(!desc)return showToast('Please describe the job');
   const btn=document.getElementById('job-save-btn');btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Saving...';
-  const jobData={user_id:myRole==='supervisor'?staffContext.teams.owner_user_id:currentUser.id,assigned_to:document.getElementById('jf-assigned').value||null,job_address:document.getElementById('jf-job-address').value.trim(),customer_name:customer,customer_phone:document.getElementById('jf-phone').value.trim(),customer_email:document.getElementById('jf-email').value.trim(),description:desc,value:parseFloat(document.getElementById('jf-value').value)||0,due_date:document.getElementById('jf-due').value||null,due_time:document.getElementById('jf-due-time').value||null,status:document.getElementById('jf-status').value,notes:document.getElementById('jf-notes').value.trim(),updated_at:new Date().toISOString()};
+  const jobData={user_id:(myRole==='supervisor'||myRole==='owner')&&staffContext?staffContext.teams.owner_user_id:currentUser.id,assigned_to:document.getElementById('jf-assigned').value||null,job_address:document.getElementById('jf-job-address').value.trim(),customer_name:customer,customer_phone:document.getElementById('jf-phone').value.trim(),customer_email:document.getElementById('jf-email').value.trim(),description:desc,value:parseFloat(document.getElementById('jf-value').value)||0,due_date:document.getElementById('jf-due').value||null,due_time:document.getElementById('jf-due-time').value||null,status:document.getElementById('jf-status').value,notes:document.getElementById('jf-notes').value.trim(),updated_at:new Date().toISOString()};
 if(currentJob){
     const prevAssignee=currentJob.assigned_to;
     try{
