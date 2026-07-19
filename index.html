@@ -632,7 +632,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
       <div class="settings-card" style="padding:16px;">
         <div class="field" style="margin-bottom:12px;"><label>Full name</label><input type="text" id="invite-name" placeholder="e.g. Dave Smith"></div>
         <div class="field" style="margin-bottom:12px;"><label>Email address</label><input type="email" id="invite-email" placeholder="e.g. dave@email.com"></div>
-        <div class="field" style="margin-bottom:12px;" id="invite-role-field"><label>Role</label><select id="invite-role"><option value="team_member">Team Member — sees assigned jobs only</option><option value="supervisor">Supervisor — sees all jobs, can assign &amp; use AI</option></select></div>
+        <div class="field" style="margin-bottom:12px;" id="invite-role-field"><label>Role</label><select id="invite-role"><option value="team_member">Team Member — sees assigned jobs only</option><option value="supervisor">Supervisor — sees all jobs, can assign &amp; use AI</option><option value="owner">Owner — full access, same as you</option></select></div>
         <button class="btn" style="margin-bottom:0;" onclick="inviteStaff()"><i class="ti ti-send"></i> Send invite</button>
       </div>
     </div>
@@ -665,7 +665,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     </div>
     <button class="chat-send-btn" id="staff-chat-send" onclick="sendStaffChat()"><i class="ti ti-arrow-up"></i></button>
   </div>
-</div>
+</div><select id="invite-role"><option value="team_member">Team Member — sees assigned jobs only</option><option value="supervisor">Supervisor — sees all jobs, can assign &amp; use AI</option><option value="owner">Owner — full access, same as you</option></select>
 
 <!-- STAFF HOME -->
 <div class="screen" id="screen-staff-home">
@@ -822,7 +822,7 @@ async function loadProfile(){
   if(myRole==='team_member'||myRole==='supervisor'){
     await fetch(BACKEND_URL+'/api/team/activate',{method:'POST',headers:{'Authorization':'Bearer '+session.access_token}});
     if(error||!data){await sb.from('profiles').upsert({id:currentUser.id,email:currentUser.email,name:roleData.member?.name||'',firstname:roleData.member?.name?.split(' ')[0]||'',plan:'free',usage_count:0,usage_reset:new Date(new Date().getFullYear(),new Date().getMonth()+1,1).toISOString()});const{data:p}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();userProfile=p;}else{userProfile=data;}
-    if(myRole==='supervisor'){await loadSupervisorHome();goTo('screen-supervisor-home');}else{await loadStaffHome();goTo('screen-staff-home');}return;
+    if(myRole==='supervisor'||myRole==='owner'){await loadSupervisorHome();goTo('screen-supervisor-home');}else{await loadStaffHome();goTo('screen-staff-home');}return;
   }
   if(error||!data){goTo('screen-onboard');return;}
 userProfile=data;await loadJobs();initHome();await loadHistory();goTo('screen-home');

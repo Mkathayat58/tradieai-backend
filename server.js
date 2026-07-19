@@ -649,7 +649,7 @@ async function getStaffMember(userId) {
     .select('*, teams(owner_user_id)')
     .eq('user_id', userId)
     .eq('status', 'active')
-    .in('role', ['supervisor', 'team_member'])
+   .in('role', ['owner', 'supervisor', 'team_member'])
     .single();
   return data || null;
 }
@@ -657,6 +657,11 @@ async function getStaffMember(userId) {
 // Legacy alias
 async function getStaffContext(userId) {
   return getStaffMember(userId);
+}
+
+// Helper — true if staff member has owner-level access
+function isOwnerLevel(staffCtx) {
+  return staffCtx && (staffCtx.role === 'supervisor' || staffCtx.role === 'owner');
 }
 
 // ── JOB SCOPE HELPER — resolves ownerId and fetches job, enforcing ownership ──
@@ -879,7 +884,7 @@ app.get('/api/team/my-role', requireAuth, async (req, res) => {
 // ── JOBS: GET ALL TEAM JOBS (for supervisors) ──
 app.get('/api/team/jobs', requireAuth, async (req, res) => {
   const staffCtx = await getStaffMember(req.user.id);
-  if (!staffCtx || staffCtx.role !== 'supervisor') {
+  if (!staffCtx || !isOwnerLevel(staffCtx)) {
     return res.status(403).json({ error: 'Supervisors only' });
   }
 
@@ -897,7 +902,7 @@ app.get('/api/team/jobs', requireAuth, async (req, res) => {
 app.put('/api/team/jobs/:id/assign', requireAuth, async (req, res) => {
   const { assigned_to } = req.body;
   const staffCtx = await getStaffMember(req.user.id);
-  if (!staffCtx || staffCtx.role !== 'supervisor') {
+  if (!staffCtx || !isOwnerLevel(staffCtx)) {
     return res.status(403).json({ error: 'Supervisors only' });
   }
 
@@ -915,9 +920,9 @@ app.put('/api/team/jobs/:id/assign', requireAuth, async (req, res) => {
 
 // ── JOBS: SUPERVISOR UPDATE STATUS ──
 app.put('/api/team/jobs/:id/status', requireAuth, async (req, res) => {
-  const { status } = req.body;
+const { status } = req.body;
   const staffCtx = await getStaffMember(req.user.id);
-  if (!staffCtx || staffCtx.role !== 'supervisor') {
+  if (!staffCtx || !isOwnerLevel(staffCtx)) {
     return res.status(403).json({ error: 'Supervisors only' });
   }
 
@@ -952,7 +957,7 @@ app.put('/api/team/jobs/:id/status', requireAuth, async (req, res) => {
 // ── TEAM: GET CUSTOMERS (for supervisors) ──
 app.get('/api/team/customers', requireAuth, async (req, res) => {
   const staffCtx = await getStaffMember(req.user.id);
-  if (!staffCtx || staffCtx.role !== 'supervisor') {
+  if (!staffCtx || !isOwnerLevel(staffCtx)) {
     return res.status(403).json({ error: 'Supervisors only' });
   }
 
@@ -1885,9 +1890,9 @@ app.get('/api/jobs/:id/timesheets', requireAuth, async (req, res) => {
 app.post('/api/jobs', requireAuth, async (req, res) => {
   try {
     let ownerId = req.user.id;
-    const staffCtx = await getStaffMember(req.user.id);
+   const staffCtx = await getStaffMember(req.user.id);
     if (staffCtx) {
-      if (staffCtx.role !== 'supervisor') {
+      if (!isOwnerLevel(staffCtx)) {
         return res.status(403).json({ error: 'Only owners or supervisors can create jobs' });
       }
       ownerId = staffCtx.teams.owner_user_id;
@@ -1955,9 +1960,9 @@ app.post('/api/jobs', requireAuth, async (req, res) => {
 app.put('/api/jobs/:id', requireAuth, async (req, res) => {
   try {
     let ownerId = req.user.id;
-    const staffCtx = await getStaffMember(req.user.id);
+   const staffCtx = await getStaffMember(req.user.id);
     if (staffCtx) {
-      if (staffCtx.role !== 'supervisor') {
+      if (!isOwnerLevel(staffCtx)) {
         return res.status(403).json({ error: 'Only owners or supervisors can edit jobs' });
       }
       ownerId = staffCtx.teams.owner_user_id;
