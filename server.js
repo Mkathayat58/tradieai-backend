@@ -1117,6 +1117,40 @@ app.post('/api/team/members/:id/reactivate', requireAuth, async (req, res) => {
       .single();
     if (error) return res.status(400).json({ error: error.message });
     if (!member) return res.status(404).json({ error: 'Member not found' });
+
+    // Send reactivation email via Resend
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('bizname, name, phone')
+        .eq('id', ownerId)
+        .single();
+      const businessName = profile?.bizname || profile?.name || 'Your team';
+      const firstName = member.name.split(' ')[0];
+      const loginUrl = process.env.FRONTEND_URL || 'https://tradieai-frontend.onrender.com';
+
+      await resend.emails.send({
+        from: `${businessName} <noreply@mailoncall.net>`,
+        to: member.email,
+        subject: `You've been reactivated on ${businessName}`,
+        text: `Hi ${firstName},\n\nGood news — your access to ${businessName} on Tradie AI has been reactivated.\n\nYou can log back in here:\n${loginUrl}\n\nCheers,\n${businessName}`,
+        html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;">
+          <h2 style="color:#0F6E56;margin-bottom:4px;">${businessName}</h2>
+          <p style="color:#555;margin-bottom:24px;">Your access has been reactivated</p>
+          <div style="background:#F4F3EF;border-radius:12px;padding:20px;margin-bottom:24px;">
+            <p style="font-size:15px;color:#1A1A1A;margin:0;">Hi ${firstName},</p>
+            <p style="font-size:14px;color:#555;margin:12px 0 0;">Good news — your access to <strong>${businessName}</strong> on Tradie AI has been reactivated. You can log back in using your existing email and password.</p>
+          </div>
+          <a href="${loginUrl}" style="display:block;background:#0F6E56;color:#ffffff;text-align:center;padding:16px;border-radius:10px;text-decoration:none;font-weight:600;font-size:16px;margin-bottom:12px;">Log back in</a>
+          <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
+          <p style="font-size:13px;color:#555;">Cheers,<br><strong>${businessName}</strong>${profile?.phone ? '<br>' + profile.phone : ''}</p>
+        </div>`
+      });
+    } catch (emailErr) {
+      console.error('Reactivation email error:', emailErr);
+      // Don't block reactivation if email fails
+    }
+
     res.json({ success: true, member });
   } catch (err) {
     console.error('Reactivate member error:', err);
