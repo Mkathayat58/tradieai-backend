@@ -2688,8 +2688,14 @@ document.getElementById('staff-invite-greeting').textContent='Hi '+td.name+"! Yo
 const{data:{session}}=await sb.auth.getSession();
   if(session){
     currentUser=session.user;
-    await loadProfile();
-    initPushNotifications();
+    try{
+      await loadProfile();
+      initPushNotifications();
+    }catch(e){
+      console.error('loadProfile error:',e);
+      showToast('Could not load your profile — please try again',true);
+      goTo('screen-landing');
+    }
   }else goTo('screen-landing');
 
   // Handle Stripe payment return
