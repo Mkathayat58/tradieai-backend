@@ -314,6 +314,21 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
   <div class="auth-body"><div class="error-msg" id="forgot-error"></div><div class="field"><label>Email address</label><input type="email" id="fp-email" placeholder="your@email.com" autocomplete="email"></div><button class="btn" onclick="doForgot()"><i class="ti ti-mail"></i> Send reset link</button></div>
   <div class="auth-footer"><button class="link-btn" onclick="goTo('screen-login')">Back to log in</button></div>
 </div>
+<!-- ACCEPT INVITE (shown when team member clicks invite link) -->
+<div class="screen" id="screen-accept-invite">
+  <div class="auth-header">
+    <div class="auth-logo">Tradie AI</div>
+    <div class="auth-title">Set up your account</div>
+    <div class="auth-sub" id="invite-sub">You've been invited to join the team. Choose a password to get started.</div>
+  </div>
+  <div class="auth-body">
+    <div class="error-msg" id="invite-error"></div>
+    <div class="field"><label>Password</label><div class="password-wrap"><input type="password" id="invite-password" placeholder="Min. 8 characters" autocomplete="new-password"><button class="eye-btn" onclick="togglePw('invite-password',this)"><i class="ti ti-eye"></i></button></div></div>
+    <div class="field"><label>Confirm password</label><div class="password-wrap"><input type="password" id="invite-confirm" placeholder="Re-enter password" autocomplete="new-password"><button class="eye-btn" onclick="togglePw('invite-confirm',this)"><i class="ti ti-eye"></i></button></div></div>
+    <button class="btn" id="invite-btn" onclick="doAcceptInvite()"><i class="ti ti-user-check"></i> Set up my account</button>
+  </div>
+</div>
+
 <!-- RESET PASSWORD (shown after clicking email link) -->
 <div class="screen" id="screen-reset-password">
   <div class="auth-header"><div class="auth-title">Set new password</div><div class="auth-sub">Choose a strong password for your account</div></div>
@@ -2259,7 +2274,35 @@ async function toggleClock(){
 }
 
 // ── STAFF PASSWORD ──
-async function staffSetPassword(){const pw=document.getElementById('staff-pw').value,confirm=document.getElementById('staff-pw-confirm').value;if(pw.length<8)return showError('staff-pw-error','Password must be at least 8 characters.');if(pw!==confirm)return showError('staff-pw-error','Passwords do not match.');hideError('staff-pw-error');const inviteToken=sessionStorage.getItem('invite_token'),inviteEmail=sessionStorage.getItem('invite_email');if(!inviteEmail)return showError('staff-pw-error','Please use the invite link again.');const{error:signUpError}=await sb.auth.signUp({email:inviteEmail,password:pw});if(signUpError&&!signUpError.message.includes('already registered'))return showError('staff-pw-error',signUpError.message);const{data:signInData,error:signInError}=await sb.auth.signInWithPassword({email:inviteEmail,password:pw});if(signInError)return showError('staff-pw-error',signInError.message);currentUser=signInData.user;await fetch(BACKEND_URL+'/api/team/activate',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+signInData.session.access_token},body:JSON.stringify({invite_token:inviteToken})});['invite_token','invite_name','invite_email','invite_role'].forEach(k=>sessionStorage.removeItem(k));await loadProfile();}
+async function staffSetPassword(){
+  const pw=document.getElementById('staff-pw').value,confirm=document.getElementById('staff-pw-confirm').value;
+  if(pw.length<8)return showError('staff-pw-error','Password must be at least 8 characters.');
+  if(pw!==confirm)return showError('staff-pw-error','Passwords do not match.');
+  hideError('staff-pw-error');
+  const inviteToken=window._inviteToken||sessionStorage.getItem('invite_token');
+  if(!inviteToken)return showError('staff-pw-error','Invalid invite link — please use the link from your email.');
+  const btn=document.querySelector('#screen-staff-setpassword .btn:last-of-type');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Setting up...';}
+  try{
+    const res=await fetch(BACKEND_URL+'/api/team/accept-invite',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({token:inviteToken,password:pw})
+    });
+    const data=await res.json();
+    if(!res.ok){
+      if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Set password & join team';}
+      return showError('staff-pw-error',data.error||'Could not set up account');
+    }
+    window._inviteToken=null;
+    ['invite_token','invite_name','invite_email','invite_role'].forEach(k=>sessionStorage.removeItem(k));
+    showToast('Account ready — please log in \u2713');
+    goTo('screen-login');
+  }catch(e){
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Set password & join team';}
+    showError('staff-pw-error','Something went wrong — please try again.');
+  }
+}
 
 // ── TEAM MANAGEMENT ──
 async function goTeam(){
@@ -2309,7 +2352,7 @@ async function viewMemberDetail(memberId){
   goTo('screen-member-detail');
 }
 async function changeRole(id,role){const session=(await sb.auth.getSession()).data.session;const res=await fetch(BACKEND_URL+'/api/team/members/'+id+'/role',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({role})});if(res.ok)showToast('Role updated \u2713');else{showToast('Could not update',true);await loadTeamMembers();}}
-async function inviteStaff(){const name=document.getElementById('invite-name').value.trim(),email=document.getElementById('invite-email').value.trim(),role=document.getElementById('invite-role').value;if(!name)return showToast('Enter a name',true);if(!email)return showToast('Enter an email',true);const{data:{session}}=await sb.auth.getSession();if(!session)return showToast('Please log in again',true);const res=await fetch(BACKEND_URL+'/api/team/invite',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({name,email,role})});const data=await res.json();if(!res.ok)return showToast(data.error||'Could not invite',true);document.getElementById('invite-name').value='';document.getElementById('invite-email').value='';await loadTeamMembers();await populateAssignDropdown();showInviteLinkPopup(data.link,name);}
+async function inviteStaff(){const name=document.getElementById('invite-name').value.trim(),email=document.getElementById('invite-email').value.trim(),role=document.getElementById('invite-role').value;if(!name)return showToast('Enter a name',true);if(!email)return showToast('Enter an email',true);const{data:{session}}=await sb.auth.getSession();if(!session)return showToast('Please log in again',true);const btn=document.querySelector('#invite-section .btn');if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Sending...';}const res=await fetch(BACKEND_URL+'/api/team/invite',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({name,email,role})});const data=await res.json();if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-send"></i> Send invite';}if(!res.ok)return showToast(data.error||'Could not invite',true);document.getElementById('invite-name').value='';document.getElementById('invite-email').value='';await loadTeamMembers();await populateAssignDropdown();showToast('Invite sent to '+email+' \u2713');}
 function showInviteLinkPopup(link,name){document.getElementById('invite-link-overlay')?.remove();const ov=document.createElement('div');ov.id='invite-link-overlay';ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:flex-end;';ov.innerHTML=`<div style="background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px max(env(safe-area-inset-bottom),24px);width:100%;"><div style="font-size:17px;font-weight:700;margin-bottom:6px;">Invite link ready!</div><div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Share with <strong>${name}</strong> via WhatsApp or SMS.</div><div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-size:11px;word-break:break-all;margin-bottom:16px;">${link}</div><button class="btn" onclick="copyInviteLink('${link}')"><i class="ti ti-copy"></i> Copy link</button><button class="btn btn-outline" style="margin-bottom:8px;" onclick="shareInviteLink('${link}','${name}')"><i class="ti ti-share"></i> Share</button><button class="btn btn-outline" style="margin-bottom:0;" onclick="document.getElementById('invite-link-overlay').remove()"><i class="ti ti-x"></i> Close</button></div>`;document.body.appendChild(ov);}
 function copyInviteLink(link){navigator.clipboard.writeText(link).then(()=>showToast('Copied \u2713')).catch(()=>showToast('Copy failed',true));}
 function shareInviteLink(link,name){if(navigator.share)navigator.share({title:'Join my team',text:'Hi '+name+', join my team on Tradie AI:',url:link});else copyInviteLink(link);}
@@ -2533,6 +2576,15 @@ async function saveStaffProfile(){const session=(await sb.auth.getSession()).dat
   if(inviteToken){const tokenRes=await fetch(BACKEND_URL+'/api/team/invite/'+inviteToken);if(tokenRes.ok){const td=await tokenRes.json();sessionStorage.setItem('invite_token',inviteToken);sessionStorage.setItem('invite_name',td.name);sessionStorage.setItem('invite_email',td.email);sessionStorage.setItem('invite_role',td.role||'team_member');history.replaceState(null,'',window.location.pathname);document.getElementById('staff-invite-email').value=td.email;if(td.bizname)document.getElementById('staff-invite-org-title').textContent='Join '+td.bizname;
 document.getElementById('staff-invite-greeting').textContent='Hi '+td.name+"! You've been invited"+(td.bizname?' to join '+td.bizname:'')+'.';document.getElementById('staff-invite-role-hint').textContent=td.role==='supervisor'?"You're joining as a Supervisor.":"Set your password below to access your assigned jobs.";goTo('screen-staff-setpassword');}else{showToast('Invalid or expired invite link',true);goTo('screen-landing');}return;}
 
+// ── Detect invite link ──
+  const inviteToken=urlParams.get('invite');
+  if(inviteToken){
+    history.replaceState(null,'',window.location.pathname);
+    window._inviteToken=inviteToken;
+    goTo('screen-staff-setpassword');
+    return;
+  }
+
   // ── Detect password reset link ──
   // Supabase puts the token in the URL hash as #access_token=...&type=recovery
   const hash=window.location.hash;
@@ -2630,6 +2682,38 @@ async function respondToQuote(action){
     document.getElementById('qa-accept-btn').disabled=false;
     document.getElementById('qa-decline-btn').disabled=false;
     alert('Something went wrong — please try again.');
+  }
+}
+
+async function doAcceptInvite(){
+  hideError('invite-error');
+  const pw=document.getElementById('invite-password').value;
+  const confirm=document.getElementById('invite-confirm').value;
+  if(pw.length<8)return showError('invite-error','Password must be at least 8 characters.');
+  if(pw!==confirm)return showError('invite-error','Passwords do not match.');
+  if(!window._inviteToken)return showError('invite-error','Invalid invite link — please use the link from your email.');
+  const btn=document.getElementById('invite-btn');
+  btn.disabled=true;
+  btn.innerHTML='<i class="ti ti-loader"></i> Setting up...';
+  try{
+    const res=await fetch(BACKEND_URL+'/api/team/accept-invite',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({token:window._inviteToken,password:pw})
+    });
+    const data=await res.json();
+    if(!res.ok){
+      btn.disabled=false;
+      btn.innerHTML='<i class="ti ti-user-check"></i> Set up my account';
+      return showError('invite-error',data.error||'Could not set up account');
+    }
+    showToast('Account ready — please log in \u2713');
+    window._inviteToken=null;
+    goTo('screen-login');
+  }catch(e){
+    btn.disabled=false;
+    btn.innerHTML='<i class="ti ti-user-check"></i> Set up my account';
+    showError('invite-error','Something went wrong — please try again.');
   }
 }
 
