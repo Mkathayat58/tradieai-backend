@@ -112,7 +112,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
 .team-member-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;}
 .team-member-info{flex:1;min-width:0;}.team-member-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;}.team-member-email{font-size:12px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .team-status-badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;flex-shrink:0;}.team-status-pending{background:var(--amber-light);color:var(--amber);}.team-status-active{background:var(--green-light);color:var(--green-dark);}
-.team-role-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0;}.team-role-supervisor{background:var(--blue-light);color:var(--blue);}.team-role-team_member{background:var(--surface2);color:var(--text-muted);}.team-role-owner{background:var(--green-light);color:var(--green-dark);}
+.team-role-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;letter-spacing:.04em;flex-shrink:0;}.team-role-supervisor{background:var(--blue-light);color:var(--blue);}.team-role-team_member{background:var(--surface2);color:var(--text-muted);}
 .team-member-stats{display:flex;gap:12px;padding:8px 0 0;border-top:0.5px solid var(--border);}
 .team-stat{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-muted);}.team-stat i{font-size:13px;}.team-stat.warn{color:var(--red);font-weight:600;}
 .activity-log{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:12px;}.activity-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-bottom:0.5px solid var(--border);}.activity-item:last-child{border-bottom:none;}.activity-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;margin-top:5px;}.activity-text{font-size:13px;color:var(--text);flex:1;}.activity-time{font-size:11px;color:var(--text-muted);margin-top:2px;}
@@ -665,6 +665,7 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     </div>
     <button class="chat-send-btn" id="staff-chat-send" onclick="sendStaffChat()"><i class="ti ti-arrow-up"></i></button>
   </div>
+</div><select id="invite-role"><option value="team_member">Team Member — sees assigned jobs only</option><option value="supervisor">Supervisor — sees all jobs, can assign &amp; use AI</option><option value="owner">Owner — full access, same as you</option></select>
 
 <!-- STAFF HOME -->
 <div class="screen" id="screen-staff-home">
@@ -818,10 +819,15 @@ async function loadProfile(){
   const session=(await sb.auth.getSession()).data.session;
   const roleRes=await fetch(BACKEND_URL+'/api/team/my-role',{headers:{'Authorization':'Bearer '+session.access_token}});
   const roleData=await roleRes.json();myRole=roleData.role;staffContext=roleData.member||null;
-  if(myRole==='team_member'||myRole==='supervisor'||myRole==='owner'){
+  if(myRole==='team_member'||myRole==='supervisor'){
     await fetch(BACKEND_URL+'/api/team/activate',{method:'POST',headers:{'Authorization':'Bearer '+session.access_token}});
     if(error||!data){await sb.from('profiles').upsert({id:currentUser.id,email:currentUser.email,name:roleData.member?.name||'',firstname:roleData.member?.name?.split(' ')[0]||'',plan:'free',usage_count:0,usage_reset:new Date(new Date().getFullYear(),new Date().getMonth()+1,1).toISOString()});const{data:p}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();userProfile=p;}else{userProfile=data;}
-    if(myRole==='supervisor'||myRole==='owner'){await loadSupervisorHome();goTo('screen-supervisor-home');}else{await loadStaffHome();goTo('screen-staff-home');}return;
+    if(myRole==='supervisor'){await loadSupervisorHome();goTo('screen-supervisor-home');}else{await loadStaffHome();goTo('screen-staff-home');}return;
+  }
+  if(myRole==='owner'&&staffContext){
+    const{data:p}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();
+    userProfile=p||{plan:'free',usage_count:0};
+    await loadSupervisorHome();goTo('screen-supervisor-home');return;
   }
   if(error||!data){goTo('screen-onboard');return;}
 userProfile=data;await loadJobs();initHome();await loadHistory();goTo('screen-home');
@@ -1505,11 +1511,6 @@ async function loadJobs(){
     :Promise.resolve([]);
   if(myRole==='supervisor'){const res=await fetch(BACKEND_URL+'/api/team/jobs',{headers:{'Authorization':'Bearer '+session.access_token}});allJobs=await res.json();}
   else if(myRole==='team_member'){const res=await fetch(BACKEND_URL+'/api/jobs/assigned',{headers:{'Authorization':'Bearer '+session.access_token}});allJobs=await res.json();}
-  else if(myRole==='owner'&&staffContext){
-    // Co-owner — load via team jobs endpoint same as supervisor
-    const res=await fetch(BACKEND_URL+'/api/team/jobs',{headers:{'Authorization':'Bearer '+session.access_token}});
-    allJobs=await res.json();
-  }
   else{
     const[jobsResult,membersResult]=await Promise.all([
       sb.from('jobs').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}),
@@ -1584,7 +1585,7 @@ async function saveJob(){
   const customer=document.getElementById('jf-customer').value.trim(),desc=document.getElementById('jf-description').value.trim();
   if(!customer)return showToast('Please enter a customer name');if(!desc)return showToast('Please describe the job');
   const btn=document.getElementById('job-save-btn');btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Saving...';
-  const jobData={user_id:(myRole==='supervisor'||myRole==='owner')&&staffContext?staffContext.teams.owner_user_id:currentUser.id,assigned_to:document.getElementById('jf-assigned').value||null,job_address:document.getElementById('jf-job-address').value.trim(),customer_name:customer,customer_phone:document.getElementById('jf-phone').value.trim(),customer_email:document.getElementById('jf-email').value.trim(),description:desc,value:parseFloat(document.getElementById('jf-value').value)||0,due_date:document.getElementById('jf-due').value||null,due_time:document.getElementById('jf-due-time').value||null,status:document.getElementById('jf-status').value,notes:document.getElementById('jf-notes').value.trim(),updated_at:new Date().toISOString()};
+  const jobData={user_id:myRole==='supervisor'?staffContext.teams.owner_user_id:currentUser.id,assigned_to:document.getElementById('jf-assigned').value||null,job_address:document.getElementById('jf-job-address').value.trim(),customer_name:customer,customer_phone:document.getElementById('jf-phone').value.trim(),customer_email:document.getElementById('jf-email').value.trim(),description:desc,value:parseFloat(document.getElementById('jf-value').value)||0,due_date:document.getElementById('jf-due').value||null,due_time:document.getElementById('jf-due-time').value||null,status:document.getElementById('jf-status').value,notes:document.getElementById('jf-notes').value.trim(),updated_at:new Date().toISOString()};
 if(currentJob){
     const prevAssignee=currentJob.assigned_to;
     try{
@@ -2406,9 +2407,9 @@ async function loadTeamMembers(){
     memberStats[m.id]={active:activeJobs.length,overdue:overdueJobs.length};
   });
   list.innerHTML=members.map(m=>{
-    const roleLabel=m.role==='supervisor'?'Supervisor':m.role==='owner'?'Owner':'Team Member',roleClass='team-role-'+m.role;
+    const roleLabel=m.role==='supervisor'?'Supervisor':'Team Member',roleClass='team-role-'+m.role;
     const stats=memberStats[m.id]||{active:0,overdue:0};
-    const ownerActions=myRole==='owner'?`<div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">${m.status==='inactive'?`<button onclick="reactivateStaff('${m.id}','${m.name}')" style="background:var(--green-light);border:1px solid var(--green-mid);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;color:var(--green);cursor:pointer;display:flex;align-items:center;gap:4px;"><i class="ti ti-user-check" style="font-size:13px;"></i> Reactivate</button>`:`<select onchange="changeRole('${m.id}',this.value)" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);-webkit-appearance:none;"><option value="team_member" ${m.role==='team_member'?'selected':''}>Team Member</option><option value="supervisor" ${m.role==='supervisor'?'selected':''}>Supervisor</option><option value="owner" ${m.role==='owner'?'selected':''}>Owner</option></select>${m.status==='pending'?`<button onclick="resendInvite('${m.email}')" style="background:var(--green-light);border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--green);cursor:pointer;">Resend</button>`:''}<button onclick="removeStaff('${m.id}','${m.name}')" style="background:none;border:none;padding:4px;cursor:pointer;"><i class="ti ti-x" style="font-size:18px;color:var(--text-muted);"></i></button>`}</div>`:'';
+    const ownerActions=myRole==='owner'?`<div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">${m.status==='inactive'?`<button onclick="reactivateStaff('${m.id}','${m.name}')" style="background:var(--green-light);border:1px solid var(--green-mid);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;color:var(--green);cursor:pointer;display:flex;align-items:center;gap:4px;"><i class="ti ti-user-check" style="font-size:13px;"></i> Reactivate</button>`:`<select onchange="changeRole('${m.id}',this.value)" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);-webkit-appearance:none;"><option value="team_member" ${m.role==='team_member'?'selected':''}>Team Member</option><option value="supervisor" ${m.role==='supervisor'?'selected':''}>Supervisor</option></select>${m.status==='pending'?`<button onclick="resendInvite('${m.email}')" style="background:var(--green-light);border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--green);cursor:pointer;">Resend</button>`:''}<button onclick="removeStaff('${m.id}','${m.name}')" style="background:none;border:none;padding:4px;cursor:pointer;"><i class="ti ti-x" style="font-size:18px;color:var(--text-muted);"></i></button>`}</div>`:'';
     const viewDetailBtn=m.status==='active'?`<button onclick="viewMemberDetail('${m.id}')" style="background:none;border:none;color:var(--green);font-size:12px;font-weight:500;cursor:pointer;padding:0;margin-top:4px;">View details</button>`:'';
     return`<div class="team-member-card"><div class="team-member-top"><div class="team-member-info"><div class="team-member-name">${escapeHtml(m.name)}</div><div class="team-member-email">${escapeHtml(m.email)}</div></div><div style="display:flex;gap:6px;align-items:center;"><span class="team-role-badge ${roleClass}">${roleLabel}</span><span class="team-status-badge team-status-${m.status}">${m.status}</span>${m.phone?`<a href="tel:${m.phone}" style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;background:var(--green-light);border-radius:50%;text-decoration:none;"><i class="ti ti-phone" style="font-size:14px;color:var(--green);"></i></a>`:''}</div></div><div class="team-member-stats"><span class="team-stat"><i class="ti ti-briefcase"></i>${stats.active===0?'Available':stats.active+' active job'+(stats.active>1?'s':'')}</span>${stats.overdue>0?`<span class="team-stat warn"><i class="ti ti-alert-triangle"></i>${stats.overdue} overdue</span>`:''}</div>${viewDetailBtn}${ownerActions}</div>`;
   }).join('');
@@ -2430,26 +2431,7 @@ async function viewMemberDetail(memberId){
     <div class="settings-section"><div class="settings-section-title">Active jobs (${activeJobs.length})</div>${activeJobs.length?activeJobs.map(j=>`<div class="job-card" onclick="viewJob('${j.id}')" style="margin-bottom:8px;"><div class="job-card-top"><span class="job-num">${escapeHtml(j.job_number)}</span><span class="job-status-badge status-${j.status.replace(' ','-')}">${escapeHtml(j.status)}</span></div><div class="job-customer">${escapeHtml(j.customer_name)}</div></div>`).join(''):'<div class="empty-state">No active jobs</div>'}</div>`;
   goTo('screen-member-detail');
 }
-async function changeRole(id,role){
-  const roleNames={'owner':'Owner','supervisor':'Supervisor','team_member':'Team Member'};
-  const ov=document.createElement('div');
-  ov.id='change-role-overlay';
-  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:flex-end;';
-  ov.innerHTML=`<div style="background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px max(env(safe-area-inset-bottom),24px);width:100%;">
-    <div style="font-size:17px;font-weight:700;margin-bottom:6px;">Change role to ${roleNames[role]}?</div>
-    <div style="font-size:14px;color:var(--text-muted);margin-bottom:20px;">This will update their access level immediately.</div>
-    <button class="btn" style="margin-bottom:12px;" onclick="confirmChangeRole('${id}','${role}')"><i class="ti ti-check"></i> Yes, change role</button>
-    <button class="btn btn-outline" style="margin-bottom:0;" onclick="document.getElementById('change-role-overlay').remove();loadTeamMembers()"><i class="ti ti-x"></i> Cancel</button>
-  </div>`;
-  document.body.appendChild(ov);
-}
-async function confirmChangeRole(id,role){
-  document.getElementById('change-role-overlay')?.remove();
-  const session=(await sb.auth.getSession()).data.session;
-  const res=await fetch(BACKEND_URL+'/api/team/members/'+id+'/role',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({role})});
-  if(res.ok){showToast('Role updated \u2713');await loadTeamMembers();}
-  else{showToast('Could not update',true);await loadTeamMembers();}
-}
+async function changeRole(id,role){const session=(await sb.auth.getSession()).data.session;const res=await fetch(BACKEND_URL+'/api/team/members/'+id+'/role',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({role})});if(res.ok)showToast('Role updated \u2713');else{showToast('Could not update',true);await loadTeamMembers();}}
 async function inviteStaff(){const name=document.getElementById('invite-name').value.trim(),email=document.getElementById('invite-email').value.trim(),role=document.getElementById('invite-role').value;if(!name)return showToast('Enter a name',true);if(!email)return showToast('Enter an email',true);const{data:{session}}=await sb.auth.getSession();if(!session)return showToast('Please log in again',true);const btn=document.querySelector('#invite-section .btn');if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Sending...';}const res=await fetch(BACKEND_URL+'/api/team/invite',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({name,email,role})});const data=await res.json();if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-send"></i> Send invite';}if(!res.ok)return showToast(data.error||'Could not invite',true);document.getElementById('invite-name').value='';document.getElementById('invite-email').value='';await loadTeamMembers();await populateAssignDropdown();showToast('Invite sent to '+email+' \u2713');}
 function showInviteLinkPopup(link,name){document.getElementById('invite-link-overlay')?.remove();const ov=document.createElement('div');ov.id='invite-link-overlay';ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:flex-end;';ov.innerHTML=`<div style="background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px max(env(safe-area-inset-bottom),24px);width:100%;"><div style="font-size:17px;font-weight:700;margin-bottom:6px;">Invite link ready!</div><div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Share with <strong>${name}</strong> via WhatsApp or SMS.</div><div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-size:11px;word-break:break-all;margin-bottom:16px;">${link}</div><button class="btn" onclick="copyInviteLink('${link}')"><i class="ti ti-copy"></i> Copy link</button><button class="btn btn-outline" style="margin-bottom:8px;" onclick="shareInviteLink('${link}','${name}')"><i class="ti ti-share"></i> Share</button><button class="btn btn-outline" style="margin-bottom:0;" onclick="document.getElementById('invite-link-overlay').remove()"><i class="ti ti-x"></i> Close</button></div>`;document.body.appendChild(ov);}
 function copyInviteLink(link){navigator.clipboard.writeText(link).then(()=>showToast('Copied \u2713')).catch(()=>showToast('Copy failed',true));}
