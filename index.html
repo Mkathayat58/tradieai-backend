@@ -2588,14 +2588,6 @@ async function saveStaffProfile(){const session=(await sb.auth.getSession()).dat
   if(inviteToken){const tokenRes=await fetch(BACKEND_URL+'/api/team/invite/'+inviteToken);if(tokenRes.ok){const td=await tokenRes.json();sessionStorage.setItem('invite_token',inviteToken);sessionStorage.setItem('invite_name',td.name);sessionStorage.setItem('invite_email',td.email);sessionStorage.setItem('invite_role',td.role||'team_member');history.replaceState(null,'',window.location.pathname);document.getElementById('staff-invite-email').value=td.email;if(td.bizname)document.getElementById('staff-invite-org-title').textContent='Join '+td.bizname;
 document.getElementById('staff-invite-greeting').textContent='Hi '+td.name+"! You've been invited"+(td.bizname?' to join '+td.bizname:'')+'.';document.getElementById('staff-invite-role-hint').textContent=td.role==='supervisor'?"You're joining as a Supervisor.":"Set your password below to access your assigned jobs.";goTo('screen-staff-setpassword');}else{showToast('Invalid or expired invite link',true);goTo('screen-landing');}return;}
 
-// ── Detect invite link ──
-  const inviteToken=urlParams.get('invite');
-  if(inviteToken){
-    history.replaceState(null,'',window.location.pathname);
-    window._inviteToken=inviteToken;
-    goTo('screen-staff-setpassword');
-    return;
-  }
 
   // ── Detect password reset link ──
   // Supabase puts the token in the URL hash as #access_token=...&type=recovery
