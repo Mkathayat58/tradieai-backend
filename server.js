@@ -311,12 +311,10 @@ app.post('/api/generate', requireAuth, async (req, res) => {
   const { template, message } = req.body;
   if (!template || !message) return res.status(400).json({ error: 'Template and message required' });
 
-  // Check if user is a supervisor — if so, use the owner's profile for AI context
-  let profileUserId = req.user.id;
+// Each user has their own usage count — fetch caller's own profile
+  // But fetch owner profile separately for business context (bizname, trade etc)
+  const profileUserId = req.user.id;
   const staffCtx = await getStaffMember(req.user.id);
-  if (staffCtx && staffCtx.role === 'supervisor') {
-    profileUserId = staffCtx.teams.owner_user_id;
-  }
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
@@ -324,6 +322,17 @@ app.post('/api/generate', requireAuth, async (req, res) => {
     .eq('id', profileUserId)
     .single();
   if (profileError) return res.status(404).json({ error: 'Profile not found' });
+
+  // For AI context, use owner's business profile if supervisor/team member
+  let contextProfile = profile;
+  if (staffCtx?.teams?.owner_user_id) {
+    const { data: ownerProfile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', staffCtx.teams.owner_user_id)
+      .single();
+    if (ownerProfile) contextProfile = ownerProfile;
+  }
 
   // Reset usage if new month
   const now = new Date();
@@ -345,7 +354,7 @@ app.post('/api/generate', requireAuth, async (req, res) => {
   }
 
   try {
-    const systemPrompt = getSystemPrompt(template, profile);
+ const systemPrompt = getSystemPrompt(template, contextProfile);
     const deepseekRes = await fetch(DEEPSEEK_URL, {
       method: 'POST',
       headers: {
@@ -405,7 +414,7 @@ app.post('/api/staff-chat', requireAuth, async (req, res) => {
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', req.user.id).single();
   if (!profile) return res.status(404).json({ error: 'Profile not found' });
 
-  const limit = 50;
+const limit = PLAN_LIMITS[profile.plan] || PLAN_LIMITS.free;
   const now = new Date();
   const resetDate = new Date(profile.usage_reset);
   if (now >= resetDate) {
@@ -477,14 +486,22 @@ app.post('/api/chat', requireAuth, async (req, res) => {
   if (!messages || !Array.isArray(messages)) return res.status(400).json({ error: 'Messages array required' });
 
   // Supervisor uses owner's profile for context
-  let profileUserId = req.user.id;
+  const profileUserId = req.user.id;
   const staffCtx = await getStaffMember(req.user.id);
-  if (staffCtx && staffCtx.role === 'supervisor') {
-    profileUserId = staffCtx.teams.owner_user_id;
-  }
 
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', profileUserId).single();
   if (!profile) return res.status(404).json({ error: 'Profile not found' });
+
+  // Use owner profile for AI business context
+  let contextProfile = profile;
+  if (staffCtx?.teams?.owner_user_id) {
+    const { data: ownerProfile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', staffCtx.teams.owner_user_id)
+      .single();
+    if (ownerProfile) contextProfile = ownerProfile;
+  }
 
   const limit = PLAN_LIMITS[profile.plan] || PLAN_LIMITS.free;
   if (profile.usage_count >= limit) {
@@ -492,7 +509,7 @@ app.post('/api/chat', requireAuth, async (req, res) => {
   }
 
   try {
-    const systemPrompt = getSystemPrompt('chat', profile);
+    const systemPrompt = getSystemPrompt('chat', contextProfile);
     const deepseekRes = await fetch(DEEPSEEK_URL, {
       method: 'POST',
       headers: {
@@ -513,8 +530,7 @@ app.post('/api/chat', requireAuth, async (req, res) => {
 
     const aiData = await deepseekRes.json();
     const reply = aiData.choices[0].message.content;
-
-    await supabase.from('profiles').update({ usage_count: profile.usage_count + 1 }).eq('id', profileUserId);
+await supabase.from('profiles').update({ usage_count: profile.usage_count + 1 }).eq('id', req.user.id);
 
     res.json({ reply, usage: { used: profile.usage_count + 1, limit, plan: profile.plan } });
 
