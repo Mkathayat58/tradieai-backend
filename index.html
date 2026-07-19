@@ -825,7 +825,12 @@ async function loadProfile(){
     if(myRole==='supervisor'){await loadSupervisorHome();goTo('screen-supervisor-home');}else{await loadStaffHome();goTo('screen-staff-home');}return;
   }
   if(myRole==='owner'&&staffContext){
-    userProfile=data||{plan:'free',usage_count:0};
+    if(!data){
+      // Create profile for co-owner if it doesn't exist
+      await sb.from('profiles').upsert({id:currentUser.id,email:currentUser.email,name:staffContext.name||'',firstname:(staffContext.name||'').split(' ')[0]||'',plan:'free',usage_count:0,usage_reset:new Date(new Date().getFullYear(),new Date().getMonth()+1,1).toISOString()});
+      const{data:newP}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();
+      userProfile=newP||{id:currentUser.id,name:staffContext.name||'',plan:'free',usage_count:0};
+    }else{userProfile=data;}
     await loadSupervisorHome();goTo('screen-supervisor-home');return;
   }
   if(error||!data){goTo('screen-onboard');return;}
