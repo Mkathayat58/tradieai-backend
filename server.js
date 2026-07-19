@@ -2203,9 +2203,8 @@ async function sendCustomerStatusEmail(job, profile, newStatus) {
   const phone = profile.phone || '';
 
 const frontendUrl = process.env.FRONTEND_URL || 'https://tradieai-frontend.onrender.com';
-  const quoteToken = job.quote_token || await ensureQuoteToken(job.id);
-  const acceptUrl = `${frontendUrl}?quote_action=accept&token=${quoteToken}`;
-  const declineUrl = `${frontendUrl}?quote_action=decline&token=${quoteToken}`;
+ const quoteToken = job.quote_token || await ensureQuoteToken(job.id);
+  const quoteUrl = `${frontendUrl}?quote=${quoteToken}`;
 
   const msgs = {
    'Quoted': {

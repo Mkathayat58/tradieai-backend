@@ -1670,10 +1670,72 @@ const showClock=myRole!=='owner'&&['Accepted','In Progress'].includes(j.status);
 <div class="section-label">Activity timeline</div><div class="detail-section" id="activity-log" style="margin-bottom:12px;"><div class="empty-state" style="padding:16px;">Loading...</div></div>${myRole!=='team_member'?`<div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px;"><button class="btn btn-danger" onclick="confirmDeleteJob('${j.id}')"><i class="ti ti-trash"></i> Delete this job</button></div>`:''}</div>`;
 }
 function viewJobDoc(id,type){sb.from('job_documents').select('*').eq('id',id).single().then(({data})=>{if(!data)return;document.getElementById('result-doc').textContent=data.output;document.getElementById('result-title').textContent=type.charAt(0).toUpperCase()+type.slice(1);document.getElementById('result-badge').textContent=type;goTo('screen-result');});}
+function viewPhotoDoc(id,url,name){
+  document.getElementById('photo-viewer-overlay')?.remove();
+  const ov=document.createElement('div');
+  ov.id='photo-viewer-overlay';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:1000;display:flex;flex-direction:column;';
+  ov.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:max(env(safe-area-inset-top),16px) 16px 12px;">
+      <div style="font-size:13px;font-weight:500;color:#fff;max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(name)}</div>
+      <div style="display:flex;gap:12px;align-items:center;">
+        <a href="${escapeHtml(url)}" download="${escapeHtml(name)}" style="color:var(--green-mid);font-size:13px;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:4px;"><i class="ti ti-download" style="font-size:18px;"></i></a>
+        <button onclick="document.getElementById('photo-viewer-overlay').remove()" style="background:none;border:none;cursor:pointer;padding:4px;"><i class="ti ti-x" style="font-size:24px;color:#fff;"></i></button>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:0 16px;overflow:hidden;">
+      <img src="${escapeHtml(url)}" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;" loading="lazy">
+    </div>
+    <div style="padding:12px 16px max(env(safe-area-inset-bottom),16px);display:flex;gap:10px;">
+      <button onclick="deleteDocFromViewer('${id}')" style="flex:1;background:rgba(255,255,255,0.1);border:none;border-radius:var(--radius-sm);padding:12px;font-size:14px;font-weight:600;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="ti ti-trash"></i> Delete</button>
+    </div>`;
+  document.body.appendChild(ov);
+}
+function deleteDocFromViewer(id){
+  document.getElementById('photo-viewer-overlay')?.remove();
+  deleteDoc(id);
+}
 function confirmStatusUpdate(status){if(status===currentJob.status)return;const ov=document.createElement('div');ov.id='status-overlay';ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:flex-end;';ov.innerHTML=`<div style="background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px max(env(safe-area-inset-bottom),24px);width:100%;"><div style="font-size:17px;font-weight:700;margin-bottom:6px;">Update status?</div><div style="font-size:14px;color:var(--text-muted);margin-bottom:20px;">Change from <strong>${currentJob.status}</strong> to <strong>${status}</strong>?</div><button class="btn" onclick="applyStatusUpdate('${status}')"><i class="ti ti-check"></i> Yes, update</button><button class="btn btn-outline" style="margin-bottom:0;" onclick="document.getElementById('status-overlay').remove()"><i class="ti ti-x"></i> Cancel</button></div>`;document.body.appendChild(ov);}
 async function applyStatusUpdate(status){const ov=document.getElementById('status-overlay');if(ov)ov.remove();try{const session=(await sb.auth.getSession()).data.session;const res=await fetch(BACKEND_URL+'/api/jobs/'+currentJob.id+'/update-status',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({status:status})});if(!res.ok)throw new Error();const data=await res.json();if(data.job){currentJob=data.job;allJobs=allJobs.map(j=>j.id===currentJob.id?currentJob:j);}else{currentJob.status=status;allJobs=allJobs.map(j=>j.id===currentJob.id?{...j,status:status}:j);}}catch(e){await sb.from('jobs').update({status,updated_at:new Date().toISOString()}).eq('id',currentJob.id);currentJob.status=status;allJobs=allJobs.map(j=>j.id===currentJob.id?{...j,status:status}:j);}await logActivity(currentJob.id,'marked '+status);showToast('Status updated \u2713');await renderJobDetail();await loadActivityLog(currentJob.id);}
 function triggerDocUpload(){document.getElementById('doc-upload-input').click();}
-function renderDocsList(docs){const el=document.getElementById('docs-list');if(!el)return;if(!docs?.length){el.innerHTML='<div class="empty-state" style="padding:16px;">No documents yet</div>';return;}el.innerHTML=docs.map(d=>`<div class="doc-item" style="justify-content:space-between;"><div style="display:flex;align-items:flex-start;gap:10px;flex:1;min-width:0;" onclick="viewJobDoc('${d.id}','${d.type}')"><div class="r-icon"><i class="ti ${d.type==='photo'?'ti-photo':'ti-file-text'}"></i></div><div style="min-width:0;"><div class="r-title" style="font-size:13px;font-weight:500;">${escapeHtml(d.input)}</div><div class="r-time" style="font-size:11px;">${new Date(d.created_at).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'})}</div></div></div><button onclick="deleteDoc('${d.id}')" style="background:none;border:none;padding:4px;cursor:pointer;"><i class="ti ti-x" style="font-size:18px;color:var(--text-muted);"></i></button></div>`).join('');}
+function renderDocsList(docs){
+  const el=document.getElementById('docs-list');
+  if(!el)return;
+  if(!docs?.length){el.innerHTML='<div class="empty-state" style="padding:16px;">No documents yet</div>';return;}
+  
+  const photos=docs.filter(d=>d.type==='photo');
+  const others=docs.filter(d=>d.type!=='photo');
+  
+  let html='';
+  
+  // Photo grid
+  if(photos.length){
+    html+=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px;">
+      ${photos.map(d=>`
+        <div style="position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;cursor:pointer;" onclick="viewPhotoDoc('${d.id}','${escapeHtml(d.output)}','${escapeHtml(d.input)}')">
+          <img src="${escapeHtml(d.output)}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" onerror="this.parentElement.innerHTML='<div style=\'background:var(--surface2);width:100%;height:100%;display:flex;align-items:center;justify-content:center;\'><i class=\'ti ti-photo\' style=\'font-size:24px;color:var(--text-muted);\'></i></div>'">
+          <button onclick="event.stopPropagation();deleteDoc('${d.id}')" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.5);border:none;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;"><i class="ti ti-x" style="font-size:12px;color:#fff;"></i></button>
+        </div>`).join('')}
+    </div>`;
+  }
+  
+  // Document list
+  if(others.length){
+    html+=others.map(d=>`
+      <div class="doc-item" style="justify-content:space-between;">
+        <div style="display:flex;align-items:flex-start;gap:10px;flex:1;min-width:0;" onclick="viewJobDoc('${d.id}','${d.type}')">
+          <div class="r-icon"><i class="ti ti-file-text"></i></div>
+          <div style="min-width:0;">
+            <div class="r-title" style="font-size:13px;font-weight:500;">${escapeHtml(d.input)}</div>
+            <div class="r-time" style="font-size:11px;">${new Date(d.created_at).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'})}</div>
+          </div>
+        </div>
+        <button onclick="deleteDoc('${d.id}')" style="background:none;border:none;padding:4px;cursor:pointer;"><i class="ti ti-x" style="font-size:18px;color:var(--text-muted);"></i></button>
+      </div>`).join('');
+  }
+  
+  el.innerHTML=html;
+}
 async function deleteDoc(docId){const ov=document.createElement('div');ov.id='delete-doc-overlay';ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:flex-end;';ov.innerHTML=`<div style="background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px max(env(safe-area-inset-bottom),24px);width:100%;"><div style="font-size:17px;font-weight:700;margin-bottom:6px;">Delete document?</div><div style="font-size:14px;color:var(--text-muted);margin-bottom:20px;">This cannot be undone.</div><button class="btn btn-danger" style="margin-bottom:12px;" onclick="confirmDeleteDoc('${docId}')"><i class="ti ti-trash"></i> Yes, delete</button><button class="btn btn-outline" style="margin-bottom:0;" onclick="document.getElementById('delete-doc-overlay').remove()"><i class="ti ti-x"></i> Cancel</button></div>`;document.body.appendChild(ov);}
 async function confirmDeleteDoc(docId){document.getElementById('delete-doc-overlay')?.remove();const{data:info}=await sb.from('job_documents').select('input').eq('id',docId).single();await sb.from('job_documents').delete().eq('id',docId);await logActivity(currentJob.id,'deleted '+(info?.input||'document'));showToast('Deleted \u2713');const{data:docs}=await sb.from('job_documents').select('*').eq('job_id',currentJob.id).order('created_at',{ascending:false});renderDocsList(docs);}
 
