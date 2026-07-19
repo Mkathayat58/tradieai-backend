@@ -1854,7 +1854,7 @@ function calPrev(){calWeekStart.setDate(calWeekStart.getDate()-7);renderCalendar
 function calNext(){calWeekStart.setDate(calWeekStart.getDate()+7);renderCalendar();}
 
 // ── NAV ──
-function goHome(){if(_isListening&&_recognition){_recognition.stop();}if(_chatListening&&_chatRecognition){_chatRecognition.stop();}if(myRole==='supervisor'||(myRole==='owner'&&staffContext))return goSupervisorHome();if(myRole==='team_member')return goStaffHome();goTo('screen-home');}
+function goHome(){if(_isListening&&_recognition){_recognition.stop();}if(_chatListening&&_chatRecognition){_chatRecognition.stop();}if(myRole==='supervisor'||myRole==='owner')return goSupervisorHome();if(myRole==='team_member')return goStaffHome();goTo('screen-home');}
 async function goHistory(){historyOffset=0;localHistory=[];goReports();switchReportsTab('history');await loadDeletedJobsActivity();await loadHistory();}
 
 function goReports(){
@@ -2611,7 +2611,7 @@ async function loadSupervisorHome(){
   document.getElementById('sup-greeting').textContent="G'day "+(userProfile?.firstname||userProfile?.name||'')+' \uD83D\uDC4B';
   if(staffContext){
     const ownerId=staffContext.teams?.owner_user_id||staffContext.owner_user_id;
-    if(ownerId){try{const{data:op}=await sb.from('profiles').select('usage_count,plan').eq('id',ownerId).single();if(op){ownerPlanInfo=op;const used=op.usage_count||0,limit=PLAN_LIMITS[op.plan]||50;document.getElementById('sup-usage-count').textContent=used+' / '+limit;document.getElementById('sup-usage-bar').style.width=Math.min((used/limit)*100,100)+'%';}}catch(e){}}
+    if(ownerId){try{const{data:op}=await sb.from('profiles').select('usage_count,plan').eq('id',ownerId).single();if(op){ownerPlanInfo=op;const used=op.usage_count||0,limit=PLAN_LIMITS[op.plan]||50;document.getElementById('sup-usage-count').textContent=used+' / '+limit;document.getElementById('sup-usage-bar').style.width=Math.min((used/limit)*100,100)+'%';}}catch(e){console.error('Usage load error:',e);}}
   }
   // Load all jobs for briefing
   if(!allJobs.length)await loadJobs();
@@ -2688,14 +2688,8 @@ document.getElementById('staff-invite-greeting').textContent='Hi '+td.name+"! Yo
 const{data:{session}}=await sb.auth.getSession();
   if(session){
     currentUser=session.user;
-    try{
-      await loadProfile();
-      initPushNotifications();
-    }catch(e){
-      console.error('loadProfile error:',e);
-      showToast('Could not load your profile — please try again',true);
-      goTo('screen-landing');
-    }
+    await loadProfile();
+    initPushNotifications();
   }else goTo('screen-landing');
 
   // Handle Stripe payment return
