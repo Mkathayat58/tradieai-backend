@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -11,6 +12,45 @@ app.use(cors({
   origin: process.env.FRONTEND_URL || '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// ── RATE LIMITING ──
+// General API limit — 100 requests per minute per IP
+app.use('/api/', rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  message: { error: 'Too many requests — please slow down' },
+  standardHeaders: true,
+  legacyHeaders: false
+}));
+
+// Strict limit on AI endpoints — 20 per minute per IP
+app.use('/api/generate', rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  message: { error: 'Too many AI requests — please wait a moment' }
+}));
+app.use('/api/chat', rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  message: { error: 'Too many AI requests — please wait a moment' }
+}));
+app.use('/api/staff-chat', rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  message: { error: 'Too many AI requests — please wait a moment' }
+}));
+
+// Strict limit on auth endpoints — 10 per 15 minutes per IP
+app.use('/api/team/invite', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many invite attempts — please try again later' }
+}));
+app.use('/api/team/accept-invite', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many attempts — please try again later' }
 }));
 // ── STRIPE WEBHOOK — must be before express.json() ──
 app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
