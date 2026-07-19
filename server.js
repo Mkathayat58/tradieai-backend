@@ -725,7 +725,7 @@ app.delete('/api/team/members/:id', requireAuth, async (req, res) => {
 
   const { error } = await supabase
     .from('team_members')
-    .update({ status: 'removed', removed_at: new Date().toISOString() })
+.update({ status: 'inactive', removed_at: new Date().toISOString() })
     .eq('id', req.params.id)
     .eq('team_id', team.id);
   if (error) return res.status(400).json({ error: error.message });
@@ -1026,6 +1026,34 @@ app.get('/api/jobs/:id/activity', requireAuth, async (req, res) => {
     .order('created_at', { ascending: false });
   if (error) return res.status(400).json({ error: error.message });
   res.json(data || []);
+});
+
+// ── TEAM: REACTIVATE MEMBER ──
+app.post('/api/team/members/:id/reactivate', requireAuth, async (req, res) => {
+  try {
+    let ownerId = req.user.id;
+    const staffCtx = await getStaffMember(req.user.id);
+    if (staffCtx && staffCtx.role === 'supervisor') {
+      ownerId = staffCtx.teams.owner_user_id;
+    } else if (staffCtx && staffCtx.role === 'team_member') {
+      return res.status(403).json({ error: 'Team members cannot reactivate staff' });
+    }
+    const team = await getOrCreateTeam(ownerId);
+    if (!team) return res.status(404).json({ error: 'Team not found' });
+    const { data: member, error } = await supabase
+      .from('team_members')
+      .update({ status: 'active', removed_at: null })
+      .eq('id', req.params.id)
+      .eq('team_id', team.id)
+      .select()
+      .single();
+    if (error) return res.status(400).json({ error: error.message });
+    if (!member) return res.status(404).json({ error: 'Member not found' });
+    res.json({ success: true, member });
+  } catch (err) {
+    console.error('Reactivate member error:', err);
+    res.status(500).json({ error: 'Could not reactivate member' });
+  }
 });
 
 // ── TEAM: RESEND INVITE ──
