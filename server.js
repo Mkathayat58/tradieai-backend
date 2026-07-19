@@ -1056,6 +1056,118 @@ app.post('/api/team/members/:id/reactivate', requireAuth, async (req, res) => {
   }
 });
 
+// ── TEAM: SEND INVITE (via Resend, no Supabase email limits) ──
+app.post('/api/team/invite', requireAuth, async (req, res) => {
+  try {
+    const { email, name, role } = req.body;
+    if (!email || !name) return res.status(400).json({ error: 'Name and email required' });
+
+    // Resolve owner
+    let ownerId = req.user.id;
+    const staffCtx = await getStaffMember(req.user.id);
+    if (staffCtx && staffCtx.role === 'supervisor') {
+      ownerId = staffCtx.teams.owner_user_id;
+    } else if (staffCtx && staffCtx.role === 'team_member') {
+      return res.status(403).json({ error: 'Team members cannot invite staff' });
+    }
+
+    const team = await getOrCreateTeam(ownerId);
+    if (!team) return res.status(404).json({ error: 'Team not found' });
+
+    // Check if already an active/pending member
+    const { data: existing } = await supabase
+      .from('team_members')
+      .select('id, status')
+      .eq('team_id', team.id)
+      .eq('email', email)
+      .single();
+
+    if (existing && existing.status === 'active') {
+      return res.status(400).json({ error: 'This person is already an active team member' });
+    }
+    if (existing && existing.status === 'pending') {
+      return res.status(400).json({ error: 'An invite has already been sent to this email' });
+    }
+
+    // Get owner profile for email branding
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('bizname, name, phone')
+      .eq('id', ownerId)
+      .single();
+    const businessName = profile?.bizname || profile?.name || 'Your team';
+
+    // Create team member record (pending)
+    let memberId;
+    if (existing && existing.status === 'inactive') {
+      // Reuse existing record
+      const { data: updated } = await supabase
+        .from('team_members')
+        .update({ status: 'pending', name, role: role || 'team_member', invited_at: new Date().toISOString() })
+        .eq('id', existing.id)
+        .select()
+        .single();
+      memberId = updated.id;
+    } else {
+      const { data: member, error: memberErr } = await supabase
+        .from('team_members')
+        .insert({
+          team_id: team.id,
+          owner_user_id: ownerId,
+          name,
+          email,
+          role: role || 'team_member',
+          status: 'pending',
+          invited_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+      if (memberErr) return res.status(400).json({ error: memberErr.message });
+      memberId = member.id;
+    }
+
+    // Generate secure invite token
+    const token = require('crypto').randomBytes(32).toString('hex');
+    const { error: tokenErr } = await supabase
+      .from('invite_tokens')
+      .insert({
+        token,
+        email,
+        team_member_id: memberId,
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      });
+    if (tokenErr) return res.status(500).json({ error: 'Could not generate invite token' });
+
+    const inviteUrl = `${process.env.FRONTEND_URL || 'https://tradieai-frontend.onrender.com'}?invite=${token}`;
+    const firstName = name.split(' ')[0];
+
+    // Send invite email via Resend
+    await resend.emails.send({
+      from: `${businessName} <noreply@mailoncall.net>`,
+      to: email,
+      subject: `You've been invited to join ${businessName}`,
+      text: `Hi ${firstName},\n\n${businessName} has invited you to join their team on Tradie AI.\n\nClick the link below to set up your account:\n${inviteUrl}\n\nThis link expires in 7 days.\n\nCheers,\n${businessName}`,
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;">
+        <h2 style="color:#0F6E56;margin-bottom:4px;">${businessName}</h2>
+        <p style="color:#555;margin-bottom:24px;">You've been invited to join the team</p>
+        <div style="background:#F4F3EF;border-radius:12px;padding:20px;margin-bottom:24px;">
+          <p style="font-size:15px;color:#1A1A1A;margin:0;">Hi ${firstName},</p>
+          <p style="font-size:14px;color:#555;margin:12px 0 0;">${businessName} has invited you to join their team on Tradie AI — a job management app that keeps the whole team in sync.</p>
+        </div>
+        <a href="${inviteUrl}" style="display:block;background:#0F6E56;color:#ffffff;text-align:center;padding:16px;border-radius:10px;text-decoration:none;font-weight:600;font-size:16px;margin-bottom:12px;">Accept invite & set up account</a>
+        <p style="font-size:12px;color:#aaa;text-align:center;">This invite expires in 7 days.</p>
+        <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
+        <p style="font-size:13px;color:#555;">Cheers,<br><strong>${businessName}</strong>${profile?.phone ? '<br>' + profile.phone : ''}</p>
+      </div>`
+    });
+
+    res.json({ success: true, message: 'Invite sent via email' });
+  } catch (err) {
+    console.error('Invite error:', err);
+    res.status(500).json({ error: 'Could not send invite' });
+  }
+});
+
 // ── TEAM: RESEND INVITE ──
 app.post('/api/team/resend-invite', requireAuth, async (req, res) => {
   const { email } = req.body;
