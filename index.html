@@ -818,7 +818,7 @@ async function loadProfile(){
   const session=(await sb.auth.getSession()).data.session;
   const roleRes=await fetch(BACKEND_URL+'/api/team/my-role',{headers:{'Authorization':'Bearer '+session.access_token}});
   const roleData=await roleRes.json();myRole=roleData.role;staffContext=roleData.member||null;
-  if(myRole==='team_member'||myRole==='supervisor'){
+if(myRole==='team_member'||myRole==='supervisor'||myRole==='owner'&&staffContext){
     try{await fetch(BACKEND_URL+'/api/team/activate',{method:'POST',headers:{'Authorization':'Bearer '+session.access_token}});}catch(e){}
     if(error||!data){await sb.from('profiles').upsert({id:currentUser.id,email:currentUser.email,name:roleData.member?.name||'',firstname:roleData.member?.name?.split(' ')[0]||'',plan:'free',usage_count:0,usage_reset:new Date(new Date().getFullYear(),new Date().getMonth()+1,1).toISOString()});const{data:p}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();userProfile=p;}else{userProfile=data;}
     if(myRole==='supervisor'){try{await loadSupervisorHome();}catch(e){}goTo('screen-supervisor-home');}else{try{await loadStaffHome();}catch(e){}goTo('screen-staff-home');}return;
