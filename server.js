@@ -1028,6 +1028,74 @@ app.get('/api/jobs/:id/activity', requireAuth, async (req, res) => {
   res.json(data || []);
 });
 
+// ── TEAM: ACCEPT INVITE ──
+app.post('/api/team/accept-invite', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return res.status(400).json({ error: 'Token and password required' });
+    if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+
+    // Validate token
+    const { data: invite, error: tokenErr } = await supabase
+      .from('invite_tokens')
+      .select('*, team_members(*)')
+      .eq('token', token)
+      .single();
+
+    if (tokenErr || !invite) return res.status(400).json({ error: 'Invalid or expired invite link' });
+    if (invite.used_at) return res.status(400).json({ error: 'This invite has already been used' });
+    if (new Date(invite.expires_at) < new Date()) return res.status(400).json({ error: 'This invite has expired — ask your team owner to resend it' });
+
+    const member = invite.team_members;
+    if (!member) return res.status(400).json({ error: 'Team member record not found' });
+
+    // Check if user already exists in Supabase auth
+    const { data: existingUsers } = await supabase.auth.admin.listUsers();
+    const existingUser = existingUsers?.users?.find(u => u.email === invite.email);
+
+    let userId;
+    if (existingUser) {
+      const { error: updateErr } = await supabase.auth.admin.updateUserById(
+        existingUser.id, { password }
+      );
+      if (updateErr) return res.status(400).json({ error: updateErr.message });
+      userId = existingUser.id;
+    } else {
+      const { data: newUser, error: createErr } = await supabase.auth.admin.createUser({
+        email: invite.email,
+        password,
+        email_confirm: true,
+        user_metadata: { full_name: member.name }
+      });
+      if (createErr) return res.status(400).json({ error: createErr.message });
+      userId = newUser.user.id;
+      await supabase.from('profiles').upsert({
+        id: userId,
+        name: member.name,
+        email: invite.email,
+        created_at: new Date().toISOString()
+      });
+    }
+
+    // Activate team member
+    await supabase
+      .from('team_members')
+      .update({ status: 'active', user_id: userId, activated_at: new Date().toISOString() })
+      .eq('id', member.id);
+
+    // Mark token used
+    await supabase
+      .from('invite_tokens')
+      .update({ used_at: new Date().toISOString() })
+      .eq('token', token);
+
+    res.json({ success: true, message: 'Account set up successfully — you can now log in' });
+  } catch (err) {
+    console.error('Accept invite error:', err);
+    res.status(500).json({ error: 'Could not accept invite' });
+  }
+});
+
 // ── TEAM: REACTIVATE MEMBER ──
 app.post('/api/team/members/:id/reactivate', requireAuth, async (req, res) => {
   try {
