@@ -1249,7 +1249,11 @@ app.post('/api/team/invite', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'This person is already an active team member' });
     }
     if (existing && existing.status === 'pending') {
-      return res.status(400).json({ error: 'An invite has already been sent to this email' });
+     // Update role and resend — don't block re-invites
+      await supabase
+        .from('team_members')
+        .update({ role: role || 'team_member', name, invited_at: new Date().toISOString() })
+        .eq('id', existing.id);
     }
 
     // Get owner profile for email branding
