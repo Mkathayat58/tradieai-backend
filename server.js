@@ -796,8 +796,8 @@ app.delete('/api/team/members/:id', requireAuth, async (req, res) => {
 // ── TEAM: UPDATE MEMBER ROLE (owner only) ──
 app.put('/api/team/members/:id/role', requireAuth, async (req, res) => {
   const { role } = req.body;
-  if (!role || !['supervisor', 'team_member'].includes(role)) {
-    return res.status(400).json({ error: 'Invalid role. Must be supervisor or team_member.' });
+ if (!role || !['owner', 'supervisor', 'team_member'].includes(role)) {
+    return res.status(400).json({ error: 'Invalid role. Must be owner, supervisor or team_member.' });
   }
 
   const team = await getOrCreateTeam(req.user.id);
