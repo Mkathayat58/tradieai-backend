@@ -1511,6 +1511,7 @@ async function loadJobs(){
     ?fetch(BACKEND_URL+'/api/team/members',{headers:{'Authorization':'Bearer '+session.access_token}}).then(r=>r.json()).catch(()=>[])
     :Promise.resolve([]);
   if(myRole==='supervisor'){const res=await fetch(BACKEND_URL+'/api/team/jobs',{headers:{'Authorization':'Bearer '+session.access_token}});allJobs=await res.json();}
+  else if(myRole==='owner'&&staffContext){const res=await fetch(BACKEND_URL+'/api/team/jobs',{headers:{'Authorization':'Bearer '+session.access_token}});allJobs=await res.json();}
   else if(myRole==='team_member'){const res=await fetch(BACKEND_URL+'/api/jobs/assigned',{headers:{'Authorization':'Bearer '+session.access_token}});allJobs=await res.json();}
   else{
     const[jobsResult,membersResult]=await Promise.all([
