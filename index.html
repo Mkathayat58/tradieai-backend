@@ -2294,10 +2294,22 @@ async function staffSetPassword(){
       if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Set password & join team';}
       return showError('staff-pw-error',data.error||'Could not set up account');
     }
-    window._inviteToken=null;
+ window._inviteToken=null;
     ['invite_token','invite_name','invite_email','invite_role'].forEach(k=>sessionStorage.removeItem(k));
-    showToast('Account ready — please log in \u2713');
-    goTo('screen-login');
+    // Auto sign in after account setup
+    const email=document.getElementById('staff-invite-email').value||document.getElementById('staff-pw').value;
+    const{data:signInData,error:signInError}=await sb.auth.signInWithPassword({
+      email:document.getElementById('staff-invite-email').value,
+      password:pw
+    });
+    if(signInError||!signInData?.session){
+      showToast('Account ready — please log in \u2713');
+      goTo('screen-login');
+      return;
+    }
+    currentUser=signInData.user;
+    showToast('Welcome to the team \u2713');
+    await loadProfile();
   }catch(e){
     if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-check"></i> Set password & join team';}
     showError('staff-pw-error','Something went wrong — please try again.');
