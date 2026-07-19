@@ -834,10 +834,10 @@ app.post('/api/team/activate', requireAuth, async (req, res) => {
       .from('team_members')
       .update({ status: 'active', user_id: req.user.id, joined_at: new Date().toISOString() })
       .eq('email', req.user.email)
-      .eq('status', 'pending')
+      .in('status', ['pending', 'active'])
       .select('*, teams(owner_user_id)')
       .single();
-    if (error || !data) return res.status(404).json({ error: 'No pending invite found' });
+    if (error || !data) return res.status(200).json({ success: true, member: null });
     member = data;
   }
 
