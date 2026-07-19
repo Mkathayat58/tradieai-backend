@@ -758,6 +758,10 @@ app.post('/api/team/invite', requireAuth, async (req, res) => {
 
 // ── TEAM: LIST MEMBERS ──
 app.get('/api/team/members', requireAuth, async (req, res) => {
+  try {
+    const staffCtx = await getStaffMember(req.user.id);
+    const ownerId = staffCtx ? staffCtx.teams.owner_user_id : req.user.id;
+    const team = await getOrCreateTeam(ownerId);
   // Check if user is a supervisor — if so, get their team
   const staffCtx = await getStaffMember(req.user.id);
   let team;
