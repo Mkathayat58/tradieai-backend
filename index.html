@@ -822,16 +822,14 @@ async function loadProfile(){
   if(myRole==='team_member'||myRole==='supervisor'){
     await fetch(BACKEND_URL+'/api/team/activate',{method:'POST',headers:{'Authorization':'Bearer '+session.access_token}});
     if(error||!data){await sb.from('profiles').upsert({id:currentUser.id,email:currentUser.email,name:roleData.member?.name||'',firstname:roleData.member?.name?.split(' ')[0]||'',plan:'free',usage_count:0,usage_reset:new Date(new Date().getFullYear(),new Date().getMonth()+1,1).toISOString()});const{data:p}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();userProfile=p;}else{userProfile=data;}
-    if(myRole==='supervisor'||myRole==='owner'){await loadSupervisorHome();goTo('screen-supervisor-home');}else{await loadStaffHome();goTo('screen-staff-home');}return;
+    if(myRole==='supervisor'){await loadSupervisorHome();goTo('screen-supervisor-home');}else{await loadStaffHome();goTo('screen-staff-home');}return;
   }
   if(myRole==='owner'&&staffContext){
-    const{data:coOwnerProfile}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();
-    userProfile=coOwnerProfile||{plan:'free',usage_count:0};
+    userProfile=data||{plan:'free',usage_count:0};
     await loadSupervisorHome();goTo('screen-supervisor-home');return;
   }
-  const{data:ownerData,error:ownerError}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();
-  if(ownerError||!ownerData){goTo('screen-onboard');return;}
-userProfile=ownerData;await loadJobs();initHome();await loadHistory();goTo('screen-home');
+  if(error||!data){goTo('screen-onboard');return;}
+userProfile=data;await loadJobs();initHome();await loadHistory();goTo('screen-home');
 }
 async function saveProfile(profile){const{error}=await sb.from('profiles').upsert({id:currentUser.id,email:currentUser.email,...profile});if(error){showToast('Could not save profile',true);return false;}userProfile={...userProfile,...profile};return true;}
 
