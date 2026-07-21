@@ -761,8 +761,8 @@ app.get('/api/team/members', requireAuth, async (req, res) => {
   // Check if user is a supervisor — if so, get their team
   const staffCtx = await getStaffMember(req.user.id);
   let team;
-  if (staffCtx && staffCtx.role === 'supervisor') {
-    // Supervisor can view team members (read-only)
+if (staffCtx && isOwnerLevel(staffCtx)) {
+    // Supervisor or co-owner can view team members
     const { data } = await supabase.from('teams').select('*').eq('owner_user_id', staffCtx.teams.owner_user_id).single();
     team = data;
   } else {
