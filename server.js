@@ -865,12 +865,13 @@ app.get('/api/team/my-role', requireAuth, async (req, res) => {
   }
 
   // Check by email (pending — first login)
-  const { data: pendingMember } = await supabase
+  const { data: pendingMembers } = await supabase
     .from('team_members')
     .select('*, teams(owner_user_id)')
     .eq('email', req.user.email)
     .in('status', ['pending', 'active'])
-    .single();
+    .order('invited_at', { ascending: false });
+  const pendingMember = pendingMembers?.[0] || null;
 
   if (pendingMember) {
     return res.json({ role: pendingMember.role, owner_id: pendingMember.teams.owner_user_id, member: pendingMember });
