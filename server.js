@@ -649,8 +649,10 @@ async function getStaffMember(userId) {
     .select('*, teams(owner_user_id)')
     .eq('user_id', userId)
     .eq('status', 'active')
-   .in('role', ['owner', 'supervisor', 'team_member'])
-    .single();
+    .in('role', ['owner', 'supervisor', 'team_member'])
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
   return data || null;
 }
 
