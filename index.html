@@ -838,7 +838,8 @@ if(myRole==='team_member'||myRole==='supervisor'){
   }
   if(myRole==='owner'&&staffContext){
     if(!data){await sb.from('profiles').upsert({id:currentUser.id,email:currentUser.email,name:staffContext.name||'',firstname:(staffContext.name||'').split(' ')[0]||'',plan:'free',usage_count:0,usage_reset:new Date(new Date().getFullYear(),new Date().getMonth()+1,1).toISOString()});const{data:cp}=await sb.from('profiles').select('*').eq('id',currentUser.id).single();userProfile=cp||{plan:'free',usage_count:0};}else{userProfile=data;}
-    try{await loadSupervisorHome();}catch(e){}goTo('screen-supervisor-home');return;
+    try{const{data:ownerP}=await sb.from('profiles').select('*').eq('id',staffContext.teams.owner_user_id).single();if(ownerP){userProfile={...userProfile,...ownerP,id:currentUser.id,usage_count:userProfile.usage_count||0,plan:userProfile.plan||'free'};}}catch(e){}
+    await loadJobs();initHome();await loadHistory();goTo('screen-home');return;
   }
   if(error||!data){goTo('screen-onboard');return;}
 userProfile=data;await loadJobs();initHome();await loadHistory();goTo('screen-home');
@@ -1660,10 +1661,10 @@ async function viewJob(id){
   document.getElementById('jd-number').textContent=currentJob.job_number;
   document.getElementById('jd-edit-btn').style.display=myRole==='team_member'?'none':'';
   const nav=document.getElementById('jd-bottom-nav');
-  if(myRole==='supervisor'||myRole==='owner'){nav.innerHTML=supNav('jobs');nav.style.display='flex';}
+  if(myRole==='supervisor'){nav.innerHTML=supNav('jobs');nav.style.display='flex';}
   else if(myRole==='team_member'){nav.style.display='none';}
   else{nav.innerHTML=ownerNav('jobs');nav.style.display='flex';}
-  document.getElementById('jd-back-btn').onclick=(myRole==='supervisor'||myRole==='owner')?goSupervisorJobs:myRole==='team_member'?goStaffHome:goJobs;
+  document.getElementById('jd-back-btn').onclick=myRole==='supervisor'?goSupervisorJobs:myRole==='team_member'?goStaffHome:goJobs;
 await renderJobDetail();goTo('screen-job-detail');await loadActivityLog(currentJob.id);
   if(myRole!=='owner')await loadTimesheets(currentJob.id);
   _pollJobId=id;if(jobPollInterval)clearInterval(jobPollInterval);jobPollInterval=setInterval(pollJobUpdates,5000);
@@ -1729,7 +1730,7 @@ async function executeDeleteJob(jobId){
     currentJob=null;
     await loadDeletedJobsActivity();
     showToast('Job deleted ✓');
-    if(myRole==='supervisor'||myRole==='owner')goSupervisorJobs();
+    if(myRole==='supervisor')goSupervisorJobs();
     else goJobs();
   }catch(e){
     showToast('Could not delete job — please try again',true);
@@ -1744,7 +1745,7 @@ let jobsListPollInterval=null;
 async function goJobs(){
   document.getElementById('new-job-btn').style.display=myRole==='team_member'?'none':'flex';
   const nav=document.getElementById('jobs-bottom-nav');
-  if(myRole==='supervisor'||myRole==='owner')nav.innerHTML=supNav('jobs');
+  if(myRole==='supervisor')nav.innerHTML=supNav('jobs');
   else nav.innerHTML=ownerNav('jobs');
   currentAssigneeFilter='all';jobSearchQuery='';const si=document.getElementById('job-search-input');if(si)si.value='';
   if(allJobs.length){renderJobs();updatePipeline();renderJobsSummary();goTo('screen-jobs');loadJobs();}
@@ -1757,7 +1758,7 @@ jobsListPollInterval=setInterval(async()=>{if(!document.getElementById('screen-j
 function goCalendar(){
   if(!calWeekStart){const now=new Date();calWeekStart=new Date(now);calWeekStart.setDate(now.getDate()-now.getDay()+1);}
   const nav=document.getElementById('cal-bottom-nav');
-  if(myRole==='supervisor'||myRole==='owner')nav.innerHTML=supNav('calendar');
+  if(myRole==='supervisor')nav.innerHTML=supNav('calendar');
   else nav.innerHTML=ownerNav('calendar');
   renderCalendar();goTo('screen-calendar');
 }
@@ -1799,7 +1800,7 @@ function calPrev(){calWeekStart.setDate(calWeekStart.getDate()-7);renderCalendar
 function calNext(){calWeekStart.setDate(calWeekStart.getDate()+7);renderCalendar();}
 
 // ── NAV ──
-function goHome(){if(_isListening&&_recognition){_recognition.stop();}if(_chatListening&&_chatRecognition){_chatRecognition.stop();}if(myRole==='supervisor'||(myRole==='owner'&&staffContext))return goSupervisorHome();if(myRole==='team_member')return goStaffHome();goTo('screen-home');}
+function goHome(){if(_isListening&&_recognition){_recognition.stop();}if(_chatListening&&_chatRecognition){_chatRecognition.stop();}if(myRole==='supervisor')return goSupervisorHome();if(myRole==='team_member')return goStaffHome();goTo('screen-home');}
 async function goHistory(){historyOffset=0;localHistory=[];goReports();switchReportsTab('history');await loadDeletedJobsActivity();await loadHistory();}
 
 function goReports(){
@@ -2547,7 +2548,7 @@ function toggleStaffChatVoice(){
   _staffChatRecognition.onerror=()=>{_staffChatListening=false;showToast('Voice not available — please type instead',true);};
   _staffChatRecognition.start();
 }
-function goStaffHome(){if(myRole==='supervisor'||myRole==='owner')return goSupervisorHome();loadStaffHome();goTo('screen-staff-home');}
+function goStaffHome(){if(myRole==='supervisor')return goSupervisorHome();loadStaffHome();goTo('screen-staff-home');}
 
 // ── SUPERVISOR HOME ──
 async function loadSupervisorHome(){
@@ -2586,8 +2587,8 @@ async function populateStaffProfile(){
   document.getElementById('sp-usage-val').textContent=used+' / '+limit;
   // Nav
   const spNav=document.getElementById('sp-bottom-nav');
-  if(spNav){if(myRole==='supervisor'||myRole==='owner')spNav.innerHTML=supNav('profile');else spNav.innerHTML=`<button class="nav-btn" onclick="goStaffHome()"><i class="ti ti-briefcase"></i><span>My Jobs</span></button><button class="nav-btn" onclick="goStaffChat()"><i class="ti ti-sparkles"></i><span>Ask AI</span></button><button class="nav-btn active" onclick="goTo('screen-staff-profile')"><i class="ti ti-user"></i><span>My Profile</span></button>`;}
-  document.getElementById('sp-back-btn').onclick=(myRole==='supervisor'||myRole==='owner')?goSupervisorHome:goStaffHome;
+  if(spNav){if(myRole==='supervisor')spNav.innerHTML=supNav('profile');else spNav.innerHTML=`<button class="nav-btn" onclick="goStaffHome()"><i class="ti ti-briefcase"></i><span>My Jobs</span></button><button class="nav-btn" onclick="goStaffChat()"><i class="ti ti-sparkles"></i><span>Ask AI</span></button><button class="nav-btn active" onclick="goTo('screen-staff-profile')"><i class="ti ti-user"></i><span>My Profile</span></button>`;}
+  document.getElementById('sp-back-btn').onclick=myRole==='supervisor'?goSupervisorHome:myRole==='owner'?goSettings:goStaffHome;
 }
 async function saveStaffProfile(){const session=(await sb.auth.getSession()).data.session;const ud={phone:document.getElementById('sp-phone').value.trim(),emergency_contact_name:document.getElementById('sp-ec-name').value.trim(),emergency_contact_phone:document.getElementById('sp-ec-phone').value.trim(),license_number:document.getElementById('sp-license').value.trim()};const res=await fetch(BACKEND_URL+'/api/staff/profile',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify(ud)});if(res.ok){const updated=await res.json();userProfile={...userProfile,...updated};showToast('Profile saved \u2713');}else showToast('Could not save',true);}
 
