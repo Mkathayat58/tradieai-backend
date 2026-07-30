@@ -1329,28 +1329,53 @@ app.post('/api/team/invite', requireAuth, async (req, res) => {
 
 // ── TEAM: RESEND INVITE ──
 app.post('/api/team/resend-invite', requireAuth, async (req, res) => {
-  const { email } = req.body;
-  if (!email) return res.status(400).json({ error: 'Email required' });
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email required' });
 
-  const { error } = await supabase.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${process.env.FRONTEND_URL || 'https://tradieai-frontend.onrender.com'}/index.html`
-  });
+    // Find the team member
+    let ownerId = req.user.id;
+    const staffCtx = await getStaffMember(req.user.id);
+    if (staffCtx) ownerId = staffCtx.teams.owner_user_id;
+    const team = await getOrCreateTeam(ownerId);
 
-  if (error) {
-    const { data: users } = await supabase.auth.admin.listUsers();
-    const user = users?.users?.find(u => u.email === email);
-    if (user) {
-      const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-        type: 'magiclink',
-        email
+    const { data: member } = await supabase
+      .from('team_members')
+      .select('*')
+      .eq('email', email)
+      .eq('team_id', team.id)
+      .single();
+
+    if (!member) return res.status(404).json({ error: 'Team member not found' });
+
+    // Generate fresh invite token
+    const token = require('crypto').randomBytes(32).toString('hex');
+    await supabase.from('invite_tokens').insert({
+      token,
+      email,
+      team_member_id: member.id,
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+    });
+
+    const inviteUrl = `${process.env.FRONTEND_URL || 'https://tradieai-frontend.onrender.com'}?invite=${token}`;
+
+    // Send email too
+    try {
+      const { data: profile } = await supabase.from('profiles').select('bizname,name').eq('id', ownerId).single();
+      const businessName = profile?.bizname || profile?.name || 'Your team';
+      await resend.emails.send({
+        from: `${businessName} <noreply@mailoncall.net>`,
+        to: email,
+        subject: `Your invite to join ${businessName}`,
+        text: `Hi ${member.name.split(' ')[0]},\n\nHere is your invite link:\n${inviteUrl}\n\nThis link expires in 7 days.\n\nCheers,\n${businessName}`,
       });
-      if (linkError) return res.status(400).json({ error: linkError.message });
-      return res.json({ success: true, link: linkData.properties.action_link });
-    }
-    return res.status(400).json({ error: error.message });
-  }
+    } catch(e) { console.error('Resend email error:', e); }
 
-  res.json({ success: true });
+    res.json({ success: true, link: inviteUrl });
+  } catch(err) {
+    console.error('Resend invite error:', err);
+    res.status(500).json({ error: 'Could not resend invite' });
+  }
 });
 
 // ── TEAM: VALIDATE INVITE TOKEN (public) ──
