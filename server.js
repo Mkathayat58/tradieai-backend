@@ -1408,6 +1408,27 @@ app.get('/api/quote/:token', async (req, res) => {
   res.json(job);
 });
 app.get('/api/team/invite/:token', async (req, res) => {
+  // First try invite_tokens table (new flow)
+  const { data: invite } = await supabase
+    .from('invite_tokens')
+    .select('*, team_members(name, email, role, status, teams(owner_user_id))')
+    .eq('token', req.params.token)
+    .single();
+
+  if (invite && invite.team_members) {
+    if (invite.used_at) return res.status(400).json({ error: 'This invite has already been used' });
+    if (new Date(invite.expires_at) < new Date()) return res.status(400).json({ error: 'This invite has expired' });
+    const member = invite.team_members;
+    let bizname = null;
+    if (member.teams?.owner_user_id) {
+      const { data: ownerProfile } = await supabase
+        .from('profiles').select('bizname, name').eq('id', member.teams.owner_user_id).single();
+      bizname = ownerProfile?.bizname || ownerProfile?.name || null;
+    }
+    return res.json({ name: member.name, email: invite.email, role: member.role, bizname });
+  }
+
+  // Fallback: try old invite_token column on team_members
   const { data, error } = await supabase
     .from('team_members')
     .select('name, email, status, role, teams(owner_user_id)')
@@ -1419,13 +1440,9 @@ app.get('/api/team/invite/:token', async (req, res) => {
   let bizname = null;
   if (data.teams?.owner_user_id) {
     const { data: ownerProfile } = await supabase
-      .from('profiles')
-      .select('bizname, name')
-      .eq('id', data.teams.owner_user_id)
-      .single();
+      .from('profiles').select('bizname, name').eq('id', data.teams.owner_user_id).single();
     bizname = ownerProfile?.bizname || ownerProfile?.name || null;
   }
-
   res.json({ name: data.name, email: data.email, role: data.role, bizname });
 });
 // ── PUSH: SAVE SUBSCRIPTION ──
