@@ -2110,12 +2110,15 @@ app.post('/api/stripe/subscribe', requireAuth, async (req, res) => {
 // ── STRIPE: ADD TEAM MEMBER SEAT ──
 app.post('/api/stripe/add-seat', requireAuth, async (req, res) => {
   try {
+    const { name, email, role } = req.body;
     const { data: profile } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', req.user.id)
       .single();
     if (!profile) return res.status(404).json({ error: 'Profile not found' });
+
+    const businessName = profile.bizname || profile.name || 'Tradie AI';
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
@@ -2126,7 +2129,10 @@ app.post('/api/stripe/add-seat', requireAuth, async (req, res) => {
       cancel_url: `${process.env.FRONTEND_URL || 'https://tradieai-frontend.onrender.com'}?seat=cancelled`,
       metadata: {
         user_id: req.user.id,
-        plan_type: 'seat'
+        plan_type: 'seat',
+        invite_name: name || '',
+        invite_email: email || '',
+        invite_role: role || 'team_member'
       }
     });
 

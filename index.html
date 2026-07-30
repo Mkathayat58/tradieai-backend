@@ -2413,7 +2413,48 @@ async function viewMemberDetail(memberId){
   goTo('screen-member-detail');
 }
 async function changeRole(id,role){const roleNames={'owner':'Owner','supervisor':'Supervisor','team_member':'Team Member'};const ov=document.createElement('div');ov.id='change-role-overlay';ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:flex-end;';ov.innerHTML=`<div style="background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px max(env(safe-area-inset-bottom),24px);width:100%;"><div style="font-size:17px;font-weight:700;margin-bottom:6px;">Change role to ${roleNames[role]}?</div><div style="font-size:14px;color:var(--text-muted);margin-bottom:20px;">This will update their access level immediately.</div><button class="btn" style="margin-bottom:12px;" onclick="confirmChangeRole('${id}','${role}')"><i class="ti ti-check"></i> Yes, change role</button><button class="btn btn-outline" style="margin-bottom:0;" onclick="document.getElementById('change-role-overlay').remove();loadTeamMembers()"><i class="ti ti-x"></i> Cancel</button></div>`;document.body.appendChild(ov);}async function confirmChangeRole(id,role){document.getElementById('change-role-overlay')?.remove();const session=(await sb.auth.getSession()).data.session;const res=await fetch(BACKEND_URL+'/api/team/members/'+id+'/role',{method:'PUT',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({role})});if(res.ok){showToast('Role updated ✓');await loadTeamMembers();}else{showToast('Could not update',true);await loadTeamMembers();}}
-async function inviteStaff(){const name=document.getElementById('invite-name').value.trim(),email=document.getElementById('invite-email').value.trim(),role=document.getElementById('invite-role').value;if(!name)return showToast('Enter a name',true);if(!email)return showToast('Enter an email',true);const{data:{session}}=await sb.auth.getSession();if(!session)return showToast('Please log in again',true);const btn=document.querySelector('#invite-section .btn');if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Sending...';}const res=await fetch(BACKEND_URL+'/api/team/invite',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({name,email,role})});const data=await res.json();if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-send"></i> Send invite';}if(!res.ok)return showToast(data.error||'Could not invite',true);document.getElementById('invite-name').value='';document.getElementById('invite-email').value='';await loadTeamMembers();await populateAssignDropdown();showToast('Invite sent to '+email+' \u2713');}
+async function inviteStaff(){
+  const name=document.getElementById('invite-name').value.trim(),email=document.getElementById('invite-email').value.trim(),role=document.getElementById('invite-role').value;
+  if(!name)return showToast('Enter a name',true);
+  if(!email)return showToast('Enter an email',true);
+  const{data:{session}}=await sb.auth.getSession();
+  if(!session)return showToast('Please log in again',true);
+  const btn=document.querySelector('#invite-section .btn');
+
+  // Free plan — no seat charge, just invite
+  const currentPlan=userProfile?.plan||'free';
+  if(currentPlan==='free'||currentPlan==='starter'){
+    if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Sending...';}
+    const res=await fetch(BACKEND_URL+'/api/team/invite',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({name,email,role})});
+    const data=await res.json();
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-send"></i> Send invite';}
+    if(!res.ok)return showToast(data.error||'Could not invite',true);
+    document.getElementById('invite-name').value='';document.getElementById('invite-email').value='';
+    await loadTeamMembers();await populateAssignDropdown();
+    showToast('Invite sent to '+email+' \u2713');
+    return;
+  }
+
+  // Paid plan — go through Stripe seat checkout first
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Setting up payment...';}
+  try{
+    const res=await fetch(BACKEND_URL+'/api/stripe/add-seat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({name,email,role})
+    });
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||'Could not start payment');
+    // Store invite details in sessionStorage so webhook can complete it
+    sessionStorage.setItem('pending_invite_name',name);
+    sessionStorage.setItem('pending_invite_email',email);
+    sessionStorage.setItem('pending_invite_role',role);
+    window.location.href=data.url;
+  }catch(e){
+    if(btn){btn.disabled=false;btn.innerHTML='<i class="ti ti-send"></i> Send invite';}
+    showToast(e.message||'Could not start payment',true);
+  }
+}
 function showInviteLinkPopup(link,name){document.getElementById('invite-link-overlay')?.remove();const ov=document.createElement('div');ov.id='invite-link-overlay';ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:flex;align-items:flex-end;';ov.innerHTML=`<div style="background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px max(env(safe-area-inset-bottom),24px);width:100%;"><div style="font-size:17px;font-weight:700;margin-bottom:6px;">Invite link ready!</div><div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Share with <strong>${name}</strong> via WhatsApp or SMS.</div><div style="background:var(--surface2);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-size:11px;word-break:break-all;margin-bottom:16px;">${link}</div><button class="btn" onclick="copyInviteLink('${link}')"><i class="ti ti-copy"></i> Copy link</button><button class="btn btn-outline" style="margin-bottom:8px;" onclick="shareInviteLink('${link}','${name}')"><i class="ti ti-share"></i> Share</button><button class="btn btn-outline" style="margin-bottom:0;" onclick="document.getElementById('invite-link-overlay').remove()"><i class="ti ti-x"></i> Close</button></div>`;document.body.appendChild(ov);}
 function copyInviteLink(link){navigator.clipboard.writeText(link).then(()=>showToast('Copied \u2713')).catch(()=>showToast('Copy failed',true));}
 function shareInviteLink(link,name){if(navigator.share)navigator.share({title:'Join my team',text:'Hi '+name+', join my team on Tradie AI:',url:link});else copyInviteLink(link);}
@@ -2677,6 +2718,26 @@ const{data:{session}}=await sb.auth.getSession();
   const upgradeStatus=new URLSearchParams(window.location.search).get('upgrade');
   if(upgradeStatus==='success'){const upgradePlan=new URLSearchParams(window.location.search).get('plan');showToast((upgradePlan==='pro'?'Pro':'Power')+' plan activated \u2713');history.replaceState(null,'',window.location.pathname);}
   if(upgradeStatus==='cancelled'){showToast('Upgrade cancelled',true);history.replaceState(null,'',window.location.pathname);}
+
+  const seatStatus=new URLSearchParams(window.location.search).get('seat');
+  if(seatStatus==='success'){
+    history.replaceState(null,'',window.location.pathname);
+    const pendingName=sessionStorage.getItem('pending_invite_name');
+    const pendingEmail=sessionStorage.getItem('pending_invite_email');
+    const pendingRole=sessionStorage.getItem('pending_invite_role');
+    if(pendingName&&pendingEmail){
+      sessionStorage.removeItem('pending_invite_name');
+      sessionStorage.removeItem('pending_invite_email');
+      sessionStorage.removeItem('pending_invite_role');
+      const{data:{session}}=await sb.auth.getSession();
+      if(session){
+        const res=await fetch(BACKEND_URL+'/api/team/invite',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({name:pendingName,email:pendingEmail,role:pendingRole||'team_member'})});
+        if(res.ok){showToast('Payment confirmed — invite sent to '+pendingEmail+' \u2713');}
+        else{showToast('Payment taken but invite failed — contact support',true);}
+      }
+    }else{showToast('Seat payment confirmed \u2713');}
+  }
+  if(seatStatus==='cancelled'){showToast('Seat payment cancelled',true);history.replaceState(null,'',window.location.pathname);}
 
   // Show "Add to home screen" banner on mobile browsers
   showA2hsBanner();
