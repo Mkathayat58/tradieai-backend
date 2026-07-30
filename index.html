@@ -575,8 +575,8 @@ html,body{height:100dvh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
   <div class="upgrade-header"><div class="upgrade-back"><button class="back-btn" onclick="goHome()"><i class="ti ti-arrow-left"></i></button></div><div class="upgrade-title">Upgrade your plan</div><div class="upgrade-sub">More messages, more power</div></div>
   <div class="upgrade-body">
     <div class="plan-card"><div class="plan-name">Starter</div><div class="plan-price">Free</div><div class="plan-msgs">50 messages / month</div><ul class="plan-features"><li class="plan-feature"><i class="ti ti-check"></i>All 6 templates</li><li class="plan-feature"><i class="ti ti-check"></i>Quote, email, job ad, chat</li><li class="plan-feature"><i class="ti ti-check"></i>History saved to your account</li></ul><button class="btn btn-outline" disabled>Current plan</button></div>
-    <div class="plan-card featured"><div class="plan-badge">Most popular</div><div class="plan-name">Pro</div><div class="plan-price">$15<span>/month</span></div><div class="plan-msgs">500 messages / month</div><ul class="plan-features"><li class="plan-feature"><i class="ti ti-check"></i>Everything in Starter</li><li class="plan-feature"><i class="ti ti-check"></i>Priority AI responses</li><li class="plan-feature"><i class="ti ti-check"></i>Complaint &amp; follow-up templates</li><li class="plan-feature"><i class="ti ti-check"></i>Full history archive</li></ul><button class="btn" onclick="showToast('Stripe coming soon!')">Get Pro — $15/mo</button></div>
-    <div class="plan-card"><div class="plan-name">Power</div><div class="plan-price">$29<span>/month</span></div><div class="plan-msgs">2,000 messages / month</div><ul class="plan-features"><li class="plan-feature"><i class="ti ti-check"></i>Everything in Pro</li><li class="plan-feature"><i class="ti ti-check"></i>Priority support</li><li class="plan-feature"><i class="ti ti-check"></i>Custom templates (coming soon)</li></ul><button class="btn btn-outline" onclick="showToast('Coming soon!')">Get Power — $29/mo</button></div>
+    <div class="plan-card featured"><div class="plan-badge">Most popular</div><div class="plan-name">Pro</div><div class="plan-price">$9.99<span>/month</span></div><div class="plan-msgs">500 messages / month · +$9.99 per team member</div><ul class="plan-features"><li class="plan-feature"><i class="ti ti-check"></i>Everything in Starter</li><li class="plan-feature"><i class="ti ti-check"></i>Priority AI responses</li><li class="plan-feature"><i class="ti ti-check"></i>Team management</li><li class="plan-feature"><i class="ti ti-check"></i>Full history archive</li></ul><button class="btn" onclick="startUpgrade('pro')">Get Pro — $9.99/mo</button></div>
+    <div class="plan-card"><div class="plan-name">Power</div><div class="plan-price">$19.99<span>/month</span></div><div class="plan-msgs">2,000 messages / month · +$9.99 per team member</div><ul class="plan-features"><li class="plan-feature"><i class="ti ti-check"></i>Everything in Pro</li><li class="plan-feature"><i class="ti ti-check"></i>Priority support</li><li class="plan-feature"><i class="ti ti-check"></i>Unlimited history</li></ul><button class="btn btn-outline" onclick="startUpgrade('power')">Get Power — $19.99/mo</button></div>
   </div>
 </div>
 <!-- JOBS LIST -->
@@ -2170,6 +2170,26 @@ function renderReportsDashboard(){
 }
 function goSettings(){goTo('screen-settings');}
 function goUpgrade(){goTo('screen-upgrade');}
+async function startUpgrade(plan){
+  const btn=event.target;
+  btn.disabled=true;
+  btn.innerHTML='<i class="ti ti-loader"></i> Loading...';
+  try{
+    const session=(await sb.auth.getSession()).data.session;
+    const res=await fetch(BACKEND_URL+'/api/stripe/subscribe',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+      body:JSON.stringify({plan})
+    });
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||'Could not start checkout');
+    window.location.href=data.url;
+  }catch(e){
+    btn.disabled=false;
+    btn.innerHTML=plan==='pro'?'Get Pro — $9.99/mo':'Get Power — $19.99/mo';
+    showToast(e.message||'Could not start checkout',true);
+  }
+}
 
 // ── ACTIVITY LOG ──
 async function loadActivityLog(jobId){
@@ -2643,6 +2663,10 @@ const{data:{session}}=await sb.auth.getSession();
   if(paymentStatus==='success')showToast('Payment received — job marked as Paid \u2713');
   if(paymentStatus==='cancelled')showToast('Payment cancelled',true);
   if(paymentStatus)history.replaceState(null,'',window.location.pathname);
+
+  const upgradeStatus=new URLSearchParams(window.location.search).get('upgrade');
+  if(upgradeStatus==='success'){const upgradePlan=new URLSearchParams(window.location.search).get('plan');showToast((upgradePlan==='pro'?'Pro':'Power')+' plan activated \u2713');history.replaceState(null,'',window.location.pathname);}
+  if(upgradeStatus==='cancelled'){showToast('Upgrade cancelled',true);history.replaceState(null,'',window.location.pathname);}
 
   // Show "Add to home screen" banner on mobile browsers
   showA2hsBanner();

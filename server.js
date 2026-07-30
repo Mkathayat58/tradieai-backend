@@ -63,28 +63,61 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
     return res.status(400).json({ error: 'Webhook signature failed' });
   }
 
-  if (event.type === 'checkout.session.completed') {
+ if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
     const jobId = session.metadata?.job_id;
     const ownerId = session.metadata?.owner_user_id;
-    if (!jobId) return res.json({ received: true });
+    const planType = session.metadata?.plan_type;
+    const userId = session.metadata?.user_id;
 
-    await supabase.from('jobs').update({
-      status: 'Paid',
-      updated_at: new Date().toISOString()
-    }).eq('id', jobId);
+    // ── Job payment ──
+    if (jobId) {
+      await supabase.from('jobs').update({
+        status: 'Paid',
+        updated_at: new Date().toISOString()
+      }).eq('id', jobId);
 
-    await supabase.from('job_activity').insert({
-      job_id: jobId,
-      user_id: ownerId,
-      user_name: 'Auto',
-      action: 'payment received via Stripe — job marked Paid'
-    });
+      await supabase.from('job_activity').insert({
+        job_id: jobId,
+        user_id: ownerId,
+        user_name: 'Auto',
+        action: 'payment received via Stripe — job marked Paid'
+      });
 
-    await sendPushToUser(ownerId, 'Payment received', `Invoice paid via Stripe`, '/');
+      await sendPushToUser(ownerId, 'Payment received', 'Invoice paid via Stripe', '/');
+    }
+
+    // ── Plan upgrade ──
+    if (planType && userId) {
+      await supabase.from('profiles').update({
+        plan: planType,
+        stripe_customer_id: session.customer,
+        stripe_subscription_id: session.subscription,
+        updated_at: new Date().toISOString()
+      }).eq('id', userId);
+
+      await sendPushToUser(userId, 'Plan activated!', `Your ${planType} plan is now active`, '/');
+    }
   }
 
-  res.json({ received: true });
+  // ── Subscription cancelled ──
+  if (event.type === 'customer.subscription.deleted') {
+    const sub = event.data.object;
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('stripe_subscription_id', sub.id)
+      .single();
+    if (profile) {
+      await supabase.from('profiles').update({
+        plan: 'free',
+        stripe_subscription_id: null,
+        updated_at: new Date().toISOString()
+      }).eq('id', profile.id);
+    }
+  }
+
+  res.json({ received: true }); 
 });
 
 app.use(express.json());
@@ -2036,6 +2069,74 @@ app.get('/api/jobs/next-number', requireAuth, async (req, res) => {
     res.status(500).json({ error: 'Could not generate job number' });
   }
 });
+// ── STRIPE: CREATE PLAN SUBSCRIPTION ──
+app.post('/api/stripe/subscribe', requireAuth, async (req, res) => {
+  try {
+    const { plan } = req.body;
+    const priceMap = {
+      pro: process.env.STRIPE_PRICE_PRO,
+      power: process.env.STRIPE_PRICE_POWER
+    };
+    const priceId = priceMap[plan];
+    if (!priceId) return res.status(400).json({ error: 'Invalid plan' });
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', req.user.id)
+      .single();
+    if (!profile) return res.status(404).json({ error: 'Profile not found' });
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      customer_email: req.user.email,
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${process.env.FRONTEND_URL || 'https://tradieai-frontend.onrender.com'}?upgrade=success&plan=${plan}`,
+      cancel_url: `${process.env.FRONTEND_URL || 'https://tradieai-frontend.onrender.com'}?upgrade=cancelled`,
+      metadata: {
+        user_id: req.user.id,
+        plan_type: plan
+      }
+    });
+
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error('Subscribe error:', err);
+    res.status(500).json({ error: 'Could not create checkout session' });
+  }
+});
+
+// ── STRIPE: ADD TEAM MEMBER SEAT ──
+app.post('/api/stripe/add-seat', requireAuth, async (req, res) => {
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', req.user.id)
+      .single();
+    if (!profile) return res.status(404).json({ error: 'Profile not found' });
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      customer_email: req.user.email,
+      line_items: [{ price: process.env.STRIPE_PRICE_SEAT, quantity: 1 }],
+      success_url: `${process.env.FRONTEND_URL || 'https://tradieai-frontend.onrender.com'}?seat=success`,
+      cancel_url: `${process.env.FRONTEND_URL || 'https://tradieai-frontend.onrender.com'}?seat=cancelled`,
+      metadata: {
+        user_id: req.user.id,
+        plan_type: 'seat'
+      }
+    });
+
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error('Add seat error:', err);
+    res.status(500).json({ error: 'Could not create seat checkout' });
+  }
+});
+
 // ── STRIPE: CREATE PAYMENT LINK FOR INVOICE ──
 app.post('/api/jobs/:id/payment-link', requireAuth, async (req, res) => {
   try {
