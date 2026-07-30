@@ -740,54 +740,6 @@ async function getJobScoped(jobId, userId, { allowTeamMember = false } = {}) {
 }
 
 // ── TEAM: INVITE STAFF ──
-app.post('/api/team/invite', requireAuth, async (req, res) => {
-  const { name, email, role } = req.body;
-  if (!name || !email) return res.status(400).json({ error: 'Name and email required' });
-
-  // Supervisors can only invite team_member, never another supervisor
-  const staffCtx = await getStaffMember(req.user.id);
-  const memberRole = (staffCtx && staffCtx.role === 'supervisor')
-    ? 'team_member'
-    : (role === 'supervisor' ? 'supervisor' : 'team_member');
-
-  const ownerIdForTeam = (staffCtx && staffCtx.role === 'supervisor')
-    ? staffCtx.teams.owner_user_id
-    : req.user.id;
-
-  const team = await getOrCreateTeam(ownerIdForTeam);
-  if (!team) return res.status(500).json({ error: 'Could not create team' });
-
-  const { data: existing } = await supabase
-    .from('team_members')
-    .select('id')
-    .eq('team_id', team.id)
-    .eq('email', email)
-    .single();
-  if (existing) return res.status(400).json({ error: 'This person has already been invited' });
-
-  const crypto = require('crypto');
-  const inviteToken = crypto.randomBytes(32).toString('hex');
-
-  const { data: member, error: memberError } = await supabase
-    .from('team_members')
-    .insert({
-      team_id: team.id,
-      user_id: null,
-      name,
-      email,
-      role: memberRole,
-      status: 'pending',
-      invite_token: inviteToken
-    })
-    .select()
-    .single();
-  if (memberError) return res.status(400).json({ error: memberError.message });
-
-  const frontendUrl = process.env.FRONTEND_URL || 'https://tradieai-frontend.onrender.com';
-  const inviteLink = `${frontendUrl}?invite=${inviteToken}`;
-
-  res.json({ success: true, member, link: inviteLink });
-});
 
 // ── TEAM: LIST MEMBERS ──
 app.get('/api/team/members', requireAuth, async (req, res) => {
