@@ -1267,7 +1267,6 @@ app.post('/api/team/invite', requireAuth, async (req, res) => {
         .from('team_members')
         .insert({
           team_id: team.id,
-          owner_user_id: ownerId,
           name,
           email,
           role: role || 'team_member',
@@ -1296,26 +1295,32 @@ app.post('/api/team/invite', requireAuth, async (req, res) => {
     const firstName = name.split(' ')[0];
 
     // Send invite email via Resend
-    await resend.emails.send({
-      from: `${businessName} <noreply@mailoncall.net>`,
-      to: email,
-      subject: `You've been invited to join ${businessName}`,
-      text: `Hi ${firstName},\n\n${businessName} has invited you to join their team on Tradie AI.\n\nClick the link below to set up your account:\n${inviteUrl}\n\nThis link expires in 7 days.\n\nCheers,\n${businessName}`,
-      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;">
-        <h2 style="color:#0F6E56;margin-bottom:4px;">${businessName}</h2>
-        <p style="color:#555;margin-bottom:24px;">You've been invited to join the team</p>
-        <div style="background:#F4F3EF;border-radius:12px;padding:20px;margin-bottom:24px;">
-          <p style="font-size:15px;color:#1A1A1A;margin:0;">Hi ${firstName},</p>
-          <p style="font-size:14px;color:#555;margin:12px 0 0;">${businessName} has invited you to join their team on Tradie AI — a job management app that keeps the whole team in sync.</p>
-        </div>
-        <a href="${inviteUrl}" style="display:block;background:#0F6E56;color:#ffffff;text-align:center;padding:16px;border-radius:10px;text-decoration:none;font-weight:600;font-size:16px;margin-bottom:12px;">Accept invite & set up account</a>
-        <p style="font-size:12px;color:#aaa;text-align:center;">This invite expires in 7 days.</p>
-        <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
-        <p style="font-size:13px;color:#555;">Cheers,<br><strong>${businessName}</strong>${profile?.phone ? '<br>' + profile.phone : ''}</p>
-      </div>`
-    });
+    try {
+      await resend.emails.send({
+        from: `${businessName} <noreply@mailoncall.net>`,
+        to: email,
+        subject: `You've been invited to join ${businessName}`,
+        text: `Hi ${firstName},\n\n${businessName} has invited you to join their team on Tradie AI.\n\nClick the link below to set up your account:\n${inviteUrl}\n\nThis link expires in 7 days.\n\nCheers,\n${businessName}`,
+        html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;">
+          <h2 style="color:#0F6E56;margin-bottom:4px;">${businessName}</h2>
+          <p style="color:#555;margin-bottom:24px;">You've been invited to join the team</p>
+          <div style="background:#F4F3EF;border-radius:12px;padding:20px;margin-bottom:24px;">
+            <p style="font-size:15px;color:#1A1A1A;margin:0;">Hi ${firstName},</p>
+            <p style="font-size:14px;color:#555;margin:12px 0 0;">${businessName} has invited you to join their team on Tradie AI — a job management app that keeps the whole team in sync.</p>
+          </div>
+          <a href="${inviteUrl}" style="display:block;background:#0F6E56;color:#ffffff;text-align:center;padding:16px;border-radius:10px;text-decoration:none;font-weight:600;font-size:16px;margin-bottom:12px;">Accept invite & set up account</a>
+          <p style="font-size:12px;color:#aaa;text-align:center;">This invite expires in 7 days.</p>
+          <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
+          <p style="font-size:13px;color:#555;">Cheers,<br><strong>${businessName}</strong>${profile?.phone ? '<br>' + profile.phone : ''}</p>
+        </div>`
+      });
+    } catch (emailErr) {
+      console.error('Email send error:', emailErr);
+      // Don't fail — still return the link so owner can share manually
+    }
 
-    res.json({ success: true, message: 'Invite sent via email' });
+    // Always return the invite link so owner can share it manually too
+    res.json({ success: true, message: 'Invite sent', link: inviteUrl });
   } catch (err) {
     console.error('Invite error:', err);
     res.status(500).json({ error: 'Could not send invite' });
