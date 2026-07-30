@@ -2729,11 +2729,21 @@ const{data:{session}}=await sb.auth.getSession();
       sessionStorage.removeItem('pending_invite_name');
       sessionStorage.removeItem('pending_invite_email');
       sessionStorage.removeItem('pending_invite_role');
-      const{data:{session}}=await sb.auth.getSession();
-      if(session){
-        const res=await fetch(BACKEND_URL+'/api/team/invite',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},body:JSON.stringify({name:pendingName,email:pendingEmail,role:pendingRole||'team_member'})});
+      try{
+        // Refresh session first — it may have expired during Stripe checkout
+        await sb.auth.refreshSession();
+        const{data:{session}}=await sb.auth.getSession();
+        if(!session)throw new Error('Session expired — please log in again and resend the invite');
+        const res=await fetch(BACKEND_URL+'/api/team/invite',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token},
+          body:JSON.stringify({name:pendingName,email:pendingEmail,role:pendingRole||'team_member'})
+        });
+        const data=await res.json();
         if(res.ok){showToast('Payment confirmed — invite sent to '+pendingEmail+' \u2713');}
-        else{showToast('Payment taken but invite failed — contact support',true);}
+        else{showToast('Payment taken — '+( data.error||'invite failed. Contact support'),true);}
+      }catch(e){
+        showToast(e.message||'Payment taken but invite failed — contact support',true);
       }
     }else{showToast('Seat payment confirmed \u2713');}
   }
