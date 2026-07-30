@@ -2431,7 +2431,7 @@ async function inviteStaff(){
     if(!res.ok)return showToast(data.error||'Could not invite',true);
     document.getElementById('invite-name').value='';document.getElementById('invite-email').value='';
     await loadTeamMembers();await populateAssignDropdown();
-    showToast('Invite sent to '+email+' \u2713');
+    if(data.link)showInviteLinkPopup(data.link,name);else showToast('Invite sent to '+email+' \u2713');
     return;
   }
 
