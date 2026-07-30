@@ -2169,7 +2169,17 @@ function renderReportsDashboard(){
   }
 }
 function goSettings(){goTo('screen-settings');}
-function goUpgrade(){goTo('screen-upgrade');}
+function goUpgrade(){
+  goTo('screen-upgrade');
+  const plan=userProfile?.plan||'free';
+  // Reset all buttons first
+  const starterBtn=document.querySelector('#screen-upgrade .plan-card:first-of-type button');
+  const proBtn=document.querySelector('#screen-upgrade .plan-card.featured button');
+  const powerBtn=document.querySelector('#screen-upgrade .plan-card:last-of-type button');
+  if(starterBtn){starterBtn.disabled=plan==='free'||plan==='starter';starterBtn.textContent=plan==='free'||plan==='starter'?'Current plan':'Downgrade';}
+  if(proBtn){proBtn.disabled=plan==='pro';proBtn.textContent=plan==='pro'?'Current plan':'Get Pro — $9.99/mo';proBtn.onclick=plan==='pro'?null:()=>startUpgrade('pro');}
+  if(powerBtn){powerBtn.disabled=plan==='power';powerBtn.textContent=plan==='power'?'Current plan':'Get Power — $19.99/mo';powerBtn.onclick=plan==='power'?null:()=>startUpgrade('power');}
+}
 async function startUpgrade(plan){
   const btn=event.target;
   btn.disabled=true;
