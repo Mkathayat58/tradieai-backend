@@ -1212,10 +1212,10 @@ app.post('/api/team/invite', requireAuth, async (req, res) => {
     const { email, name, role } = req.body;
     if (!email || !name) return res.status(400).json({ error: 'Name and email required' });
 
-    // Resolve owner
+  // Resolve owner
     let ownerId = req.user.id;
     const staffCtx = await getStaffMember(req.user.id);
-    if (staffCtx && staffCtx.role === 'supervisor') {
+    if (staffCtx && isOwnerLevel(staffCtx)) {
       ownerId = staffCtx.teams.owner_user_id;
     } else if (staffCtx && staffCtx.role === 'team_member') {
       return res.status(403).json({ error: 'Team members cannot invite staff' });
