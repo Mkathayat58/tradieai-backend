@@ -1103,7 +1103,7 @@ app.post('/api/team/accept-invite', async (req, res) => {
 
     // Check if user already exists in Supabase auth
     const { data: existingUsers } = await supabase.auth.admin.listUsers();
-    const existingUser = existingUsers?.users?.find(u => u.email === invite.email);
+   const existingUser = existingUsers?.users?.find(u => u.email.toLowerCase() === invite.email.toLowerCase());
 
     let userId;
     if (existingUser) {
