@@ -786,7 +786,11 @@ app.put('/api/team/members/:id/role', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'Invalid role. Must be owner, supervisor or team_member.' });
   }
 
-  const team = await getOrCreateTeam(req.user.id);
+  let ownerId = req.user.id;
+  const staffCtx = await getStaffMember(req.user.id);
+  if (staffCtx && isOwnerLevel(staffCtx)) ownerId = staffCtx.teams.owner_user_id;
+
+  const team = await getOrCreateTeam(ownerId);
   if (!team) return res.status(404).json({ error: 'Team not found' });
 
   const { data, error } = await supabase
