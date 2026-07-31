@@ -2417,6 +2417,10 @@ async function inviteStaff(){
   const name=document.getElementById('invite-name').value.trim(),email=document.getElementById('invite-email').value.trim(),role=document.getElementById('invite-role').value;
   if(!name)return showToast('Enter a name',true);
   if(!email)return showToast('Enter an email',true);
+  // Check if already in team before payment
+  const existingMember=teamMembers.find(m=>m.email.toLowerCase()===email.toLowerCase());
+  if(existingMember&&existingMember.status==='active')return showToast(name+' is already an active team member',true);
+  if(existingMember&&existingMember.status==='pending')return showToast('An invite has already been sent to '+email,true);
   const{data:{session}}=await sb.auth.getSession();
   if(!session)return showToast('Please log in again',true);
   const btn=document.querySelector('#invite-section .btn');
